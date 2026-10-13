@@ -6,6 +6,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import './index.css';
 import './styles/slate-theme.css';
 import './styles/reference-table-theme.css';
+import './styles/usability-pass.css';
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {

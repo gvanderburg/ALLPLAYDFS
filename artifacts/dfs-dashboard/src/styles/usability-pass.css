@@ -1,0 +1,203 @@
+/* ALLPLAY usability pass: preserve the reference's graphite research desk,
+   then clarify hierarchy, navigation and touch/keyboard affordances. */
+:root {
+  --slate-background: #111211;
+  --slate-panel: #191a19;
+  --slate-raised: #222423;
+  --slate-border: #303331;
+  --slate-divider: #292b29;
+  --slate-text: #e7e9e6;
+  --slate-muted: #a2a7a0;
+  --slate-green: #56bd87;
+  --model-bg: #111211;
+  --model-raised: #1b1d1b;
+  --model-inset: #151615;
+  --model-line: #303330;
+  --model-soft-line: #292b29;
+  --model-ink: #e7e9e6;
+  --model-muted: #a2a7a0;
+  --model-dim: #828780;
+  --model-mint: #56bd87;
+  --model-mint-dim: #244433;
+  --model-amber: #d4b54a;
+  --model-coral: #d35a61;
+  --primary: 148 45% 49%;
+  --primary-foreground: 145 25% 10%;
+  --ring: 148 45% 49%;
+}
+
+html, body { background: #111211; }
+body { color: #e7e9e6; }
+.app-shell { background: #111211; }
+.topbar {
+  min-height: 62px;
+  height: auto;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: rgba(20, 22, 20, .97);
+  border-color: #303330;
+}
+.brand { min-width: max-content; }
+.brand-mark { border-radius: 5px; }
+.brand-name { letter-spacing: .025em; }
+.topbar-right { gap: 7px; }
+.account-header-link { min-height: 34px; }
+.side-rail {
+  top: 62px;
+  height: calc(100dvh - 62px);
+  min-height: 420px;
+  background: #151615;
+  border-color: #303330;
+}
+.rail-caption { color: #a0a59f; }
+.rail-link { min-height: 42px; font-size: 12px; }
+.rail-note { line-height: 1.55; }
+.main-wrap { padding-top: 31px; }
+.page-heading { align-items: center; }
+.page-heading h1 { letter-spacing: -.045em; }
+.subhead { max-width: 700px; color: #adb2aa; line-height: 1.55; }
+.control-bar { border-radius: 7px; }
+.sport-tabs { gap: 5px; }
+.sport-tab { min-width: 64px; padding: 10px 16px; border-radius: 4px; }
+.sport-tab.active { box-shadow: inset 0 -2px rgba(10, 25, 16, .25); }
+.btn { min-height: 38px; border-radius: 4px; }
+.btn-primary { font-weight: 700; }
+.panel { border-radius: 6px; }
+.panel-head, .panel-body { padding-left: 16px; padding-right: 16px; }
+.panel-head-accent { background: #202220; border-color: #303330; }
+.panel-head-accent .panel-title,
+.panel-head-accent .panel-title svg { color: #e6e9e4; }
+.panel-head-accent .panel-meta { color: #a1a69e; }
+.event-row { border-radius: 4px; }
+.event-league, .panel-meta, .micro-label { color: #a2a7a0; }
+.event-name, .news-title { color: #eceeea; }
+.event-time, .event-lines strong { color: #d0d3cd; }
+.coverage-detail, .coverage-legend-note { color: #a3a8a0; }
+.state-box { color: #aab0a7; }
+.state-box strong { color: #e7e9e6; }
+.date-field, select, input, textarea { accent-color: #56bd87; }
+button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, a:focus-visible, [tabindex="0"]:focus-visible {
+  outline: 2px solid #90dfb0;
+  outline-offset: 3px;
+}
+.model-app .side-rail { background: #151615; border-color: #303330; }
+.model-app .model-main { padding-top: 23px; }
+.model-app .model-heading { margin-bottom: 19px; }
+.model-app .model-heading h1 { font-size: clamp(29px, 3.2vw, 43px); }
+.model-app .model-heading .subhead { font-size: 13px; }
+.model-app .model-control-top { gap: 12px 16px; }
+.model-app .model-sport-tab { min-height: 36px; }
+.model-app .model-grid-scroll { max-height: min(74vh, 900px); overscroll-behavior: contain; }
+.model-app .model-grid th { color: #a4a9a1; }
+.model-app .model-grid td { font-size: 10px; }
+.model-app .model-table-tools { position: relative; }
+.model-app .model-search input { min-height: 36px; }
+.model-app .model-salary-filter { min-height: 36px; }
+.model-app .model-salary-filter select { min-height: 32px; }
+.model-app .model-published-notes { color: #bac0b7; }
+.model-app .model-salary-coverage { color: #a1a69e; line-height: 1.55; }
+.model-app .model-detail-dialog { max-height: min(88dvh, 900px); overflow: auto; }
+.model-app .model-detail-table-wrap { overflow-x: auto; }
+.takes-app .takes-main, .feedback-app .feedback-main { min-width: 0; }
+.takes-app .takes-top-nav, .feedback-app .feedback-top-nav {
+  display: flex; align-items: center; flex-wrap: nowrap; gap: 6px; overflow-x: auto;
+}
+.takes-app .takes-top-nav .btn, .feedback-app .feedback-top-nav .btn { min-height: 34px; }
+.takes-app .takes-heading .subhead,
+.feedback-app .feedback-heading .subhead { color: #adb2aa; }
+.takes-app .takes-toolbar { gap: 12px; }
+.takes-app .take-card { border-radius: 5px; }
+.takes-app .takes-filter select,
+.feedback-app .feedback-field input,
+.feedback-app .feedback-field select,
+.feedback-app .feedback-field textarea { min-height: 40px; }
+.feedback-app .feedback-field textarea { min-height: 110px; }
+.news-desk { background: #111211; }
+.news-desk-header { min-height: 62px; padding: 10px clamp(14px, 4vw, 44px); background: #151615; }
+.news-desk-nav { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.news-desk-main { max-width: 1200px; padding-top: 34px; }
+.news-desk-heading h1 { font-size: clamp(28px, 3.4vw, 42px); }
+.news-desk-sports { gap: 6px; padding: 3px 2px 16px; }
+.news-desk-sports button { min-height: 38px; }
+.news-desk-feed .news-item { gap: 16px; padding: 18px 0; }
+.news-desk-feed .news-title { font-size: 15px; }
+.news-desk-feed .news-byline { color: #a2a7a0; }
+.account-page { background: #111211; }
+.account-top { gap: 12px; }
+.account-top > div { flex-wrap: wrap; justify-content: flex-end; }
+.account-hero, .account-panel { border-radius: 6px; }
+.account-panel-intro, .membership-footnote { color: #aeb3ab; line-height: 1.65; }
+
+@media (max-width: 767px) {
+  .topbar { padding: 8px 12px; gap: 10px; }
+  .topbar-right {
+    min-width: 0;
+    max-width: calc(100vw - 128px);
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex: 1;
+    justify-content: flex-start;
+  }
+  .topbar-right::-webkit-scrollbar, .takes-top-nav::-webkit-scrollbar,
+  .feedback-top-nav::-webkit-scrollbar { display: none; }
+  .topbar-right .account-header-link { flex: 0 0 auto; min-height: 32px; padding: 0 9px; }
+  .topbar-right .user-dot { display: none; }
+  .topbar-right .header-install-btn {
+    order: -1;
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+  .today-label { display: none; }
+  .main-wrap { padding: 23px 12px 36px; }
+  .page-heading { display: block; }
+  .page-heading h1 { font-size: clamp(28px, 8vw, 36px); }
+  .date-stamp { text-align: left; white-space: normal; line-height: 1.4; }
+  .control-bar { gap: 10px; }
+  .action-group { gap: 6px; }
+  .action-group .btn { flex: 1 0 auto; }
+  .sport-tabs { padding-bottom: 10px; }
+  .sport-tab { min-height: 42px; }
+  .summary-strip { overflow-x: auto; }
+  .event-row { align-items: start; }
+  .competitors { flex-wrap: wrap; }
+  .takes-app .takes-top-nav, .feedback-app .feedback-top-nav {
+    max-width: calc(100vw - 145px);
+    justify-content: flex-start;
+  }
+  .takes-app .takes-top-nav .btn, .feedback-app .feedback-top-nav .btn {
+    flex: 0 0 auto;
+    padding: 0 9px;
+  }
+  .takes-app .takes-toolbar { align-items: stretch; flex-direction: column; }
+  .takes-app .takes-toolbar-actions { display: flex; flex-wrap: wrap; }
+  .takes-app .takes-toolbar-actions > * { flex: 1 1 auto; }
+  .takes-app .takes-stats { justify-content: space-between; }
+  .feedback-app .feedback-layout { grid-template-columns: minmax(0, 1fr); }
+  .feedback-app .feedback-fields-row { grid-template-columns: 1fr; }
+  .feedback-app .feedback-submit-row { align-items: stretch; flex-direction: column; }
+  .feedback-app .feedback-submit-row .btn { width: 100%; }
+  .model-app .model-main { padding: 18px 10px 36px; }
+  .model-app .model-control-top { align-items: stretch; }
+  .model-app .model-control-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .model-app .model-control-actions .btn { min-width: 0; white-space: normal; }
+  .model-app .model-sport-scroll { padding-left: 10px; padding-right: 10px; }
+  .model-app .model-sport-tab { padding: 9px 13px; }
+  .model-app .model-grid-scroll { max-height: 68vh; }
+  .model-app .model-grid { min-width: 1050px; }
+  .model-app .model-grid th, .model-app .model-grid td { padding-left: 8px; padding-right: 8px; }
+  .news-desk-header { align-items: flex-start; flex-direction: column; }
+  .news-desk-nav { width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; }
+  .news-desk-nav .btn { flex: 0 0 auto; }
+  .news-desk-main { padding: 24px 12px 38px; }
+  .news-desk-heading { align-items: flex-start; }
+  .news-desk-heading h1 { font-size: 28px; }
+  .account-top { align-items: flex-start; flex-wrap: wrap; }
+  .account-top > div { justify-content: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .model-app .model-grid-scroll, .news-desk-nav { scroll-behavior: auto; }
+}

@@ -1,0 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import '../allplay-reference/_group.css';
+
+/* Source app index.css theme tokens and font declarations. */
+:root {
+  --background: 210 12% 5%;
+  --foreground: 144 10% 91%;
+  --card: 210 11% 8%;
+  --card-foreground: 144 10% 91%;
+  --card-border: 210 9% 17%;
+  --border: 210 9% 17%;
+  --input: 210 9% 21%;
+  --primary: 95 86% 56%;
+  --primary-foreground: 210 18% 7%;
+  --secondary: 210 10% 13%;
+  --secondary-foreground: 210 20% 91%;
+  --muted: 210 10% 13%;
+  --muted-foreground: 210 8% 57%;
+  --accent: 95 35% 17%;
+  --accent-foreground: 95 78% 68%;
+  --destructive: 0 65% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --popover: 210 11% 8%;
+  --popover-foreground: 210 20% 91%;
+  --popover-border: 218 16% 20%;
+  --ring: 157 70% 51%;
+  --chart-1: 157 70% 51%;
+  --chart-2: 35 84% 62%;
+  --chart-3: 198 70% 58%;
+  --chart-4: 280 55% 67%;
+  --chart-5: 4 68% 62%;
+  --sidebar: 210 13% 6%;
+  --sidebar-foreground: 210 20% 91%;
+  --sidebar-border: 218 16% 18%;
+  --sidebar-primary: 95 86% 56%;
+  --sidebar-primary-foreground: 222 22% 8%;
+  --sidebar-accent: 210 10% 13%;
+  --sidebar-accent-foreground: 210 20% 91%;
+  --sidebar-ring: 157 70% 51%;
+  --app-font-sans: 'DM Sans', sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: 'DM Mono', monospace;
+  --radius: 0.7rem;
+  color-scheme: dark;
+}
+
+.dark {
+  --background: 210 12% 5%;
+  --foreground: 144 10% 91%;
+  --border: 210 9% 17%;
+  --card: 210 11% 8%;
+  --card-foreground: 144 10% 91%;
+  --card-border: 210 9% 17%;
+  --sidebar: 210 13% 6%;
+  --sidebar-foreground: 210 20% 91%;
+  --sidebar-border: 218 16% 18%;
+  --sidebar-primary: 95 86% 56%;
+  --sidebar-primary-foreground: 222 22% 8%;
+  --sidebar-accent: 210 10% 13%;
+  --sidebar-accent-foreground: 210 20% 91%;
+  --sidebar-ring: 157 70% 51%;
+  --popover: 222 20% 11%;
+  --popover-foreground: 210 20% 91%;
+  --popover-border: 218 16% 20%;
+  --primary: 95 86% 56%;
+  --primary-foreground: 210 18% 7%;
+  --secondary: 210 10% 13%;
+  --secondary-foreground: 210 20% 91%;
+  --muted: 210 10% 13%;
+  --muted-foreground: 210 8% 57%;
+  --accent: 95 35% 17%;
+  --accent-foreground: 95 78% 68%;
+  --input: 210 9% 21%;
+  --ring: 157 70% 51%;
+  --chart-1: 157 70% 51%;
+  --chart-2: 35 84% 62%;
+  --chart-3: 198 70% 58%;
+  --chart-4: 280 55% 67%;
+  --chart-5: 4 68% 62%;
+}
+
+/* These are the final source theme imports (slate-theme then reference-table-theme). */
+:root, .dark {
+  --slate-background: #111211;
+  --slate-panel: #191a19;
+  --slate-raised: #222423;
+  --slate-border: #303331;
+  --slate-divider: #292b29;
+  --slate-text: #e7e9e6;
+  --slate-muted: #929692;
+  --slate-green: #45b47b;
+  --background: 120 2% 7%;
+  --foreground: 90 5% 91%;
+  --card: 120 2% 10%;
+  --card-foreground: 90 5% 91%;
+  --card-border: 120 2% 20%;
+  --border: 120 2% 20%;
+  --input: 120 2% 24%;
+  --primary: 148 45% 49%;
+  --primary-foreground: 145 25% 10%;
+  --secondary: 120 2% 15%;
+  --secondary-foreground: 90 5% 91%;
+  --muted: 120 2% 15%;
+  --muted-foreground: 110 3% 59%;
+  --accent: 148 20% 20%;
+  --accent-foreground: 145 43% 69%;
+  --popover: 120 2% 10%;
+  --popover-foreground: 90 5% 91%;
+  --popover-border: 120 2% 20%;
+  --ring: 148 45% 49%;
+}
+
+.dashboard-extraction { display: grid; grid-template-columns: 205px minmax(0, 1fr); grid-template-rows: 62px minmax(calc(100dvh - 62px), auto); }
+.dashboard-extraction, html, body { background: #111211; color: #e7e9e6; }
+.dashboard-extraction { min-height: 100dvh; background-image: none; }
+.dashboard-extraction .topbar { grid-column: 1 / -1; grid-row: 1; height: 62px; padding: 0 25px; background: #151615; border-color: #292b29; }
+.dashboard-extraction .brand { gap: 9px; }
+.dashboard-extraction .brand-mark { width: 26px; height: 26px; border-radius: 7px; }
+.dashboard-extraction .brand-name { font-size: 16px; letter-spacing: -.045em; }
+.dashboard-extraction .user-dot { border-color: #303330; color: #999d98; }
+.dashboard-extraction .side-rail { grid-column: 1; grid-row: 2; position: sticky; top: 62px; align-self: start; height: calc(100dvh - 62px); min-height: 540px; padding: 30px 13px 19px; border-right: 1px solid #303330; background: #151615; display: flex; flex-direction: column; }
+.dashboard-extraction .rail-caption { color: #929692; padding: 0 11px; font: 500 9px var(--app-font-mono); letter-spacing: .13em; }
+.dashboard-extraction .rail-link { display: flex; align-items: center; gap: 11px; min-height: 39px; padding: 0 11px; margin-top: 4px; border-radius: 6px; color: #aeb2ad; text-decoration: none; font-size: 12px; }
+.dashboard-extraction .rail-link:first-of-type { margin-top: 12px; }
+.dashboard-extraction .rail-link:hover { background: #222423; color: #f0f1ee; }
+.dashboard-extraction .rail-link.selected { background: #20392b; color: #8ad7aa; }
+.dashboard-extraction .rail-link svg { color: #838a83; }
+.dashboard-extraction .rail-link.selected svg { color: #56bd87; }
+.dashboard-extraction .rail-note { margin: 25px 7px 0; padding: 12px 10px; border: 1px solid #303330; border-radius: 6px; color: #999d98; font-size: 10px; line-height: 1.5; }
+.dashboard-extraction .rail-live-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: #56bd87; }
+.dashboard-extraction .rail-bottom { margin-top: auto; padding: 16px 0 0; border-top: 1px solid #303330; }
+.dashboard-extraction .rail-bottom .rail-caption { padding: 0 9px; }
+.dashboard-extraction .rail-sports { padding: 9px; color: #929692; font: 9px/1.8 var(--app-font-mono); }
+.dashboard-extraction .main-wrap { grid-column: 2; grid-row: 2; width: min(1640px, 100%); min-width: 0; padding: 30px clamp(20px, 3vw, 43px) 42px; }
+.dashboard-extraction .page-heading { margin-bottom: 20px; }
+.dashboard-extraction h1 { color: #e7e9e6; font-size: clamp(28px, 2.7vw, 37px); }
+.dashboard-extraction .control-bar { border-radius: 8px; padding: 10px 12px; margin-bottom: 17px; }
+.dashboard-extraction .sport-tabs { gap: 5px; padding-bottom: 10px; }
+.dashboard-extraction .sport-tab { border-color: transparent; border-radius: 5px; padding: 10px 16px; font-size: 11px; }
+.dashboard-extraction .btn { border-radius: 5px; }
+.dashboard-extraction .content-grid { grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr); gap: 15px; }
+.dashboard-extraction .left-stack, .dashboard-extraction .right-stack { gap: 15px; }
+.dashboard-extraction .sandbox-data-note { margin: 0 0 16px; padding: 8px 11px; border-left: 2px solid #45b47b; background: #191f1b; color: #a5b7aa; font: 9px/1.5 var(--app-font-mono); letter-spacing: .02em; }
+.dashboard-extraction .summary-strip { display: grid; grid-template-columns: minmax(105px, 1.1fr) repeat(4, minmax(90px, 1fr)); align-items: center; gap: 0; min-height: 67px; margin: 0 0 15px; padding: 9px 13px; border: 1px solid #303330; border-radius: 7px; background: #191a19; }
+.dashboard-extraction .summary-intro, .dashboard-extraction .summary-metric { display: flex; flex-direction: column; gap: 4px; padding: 0 12px; border-left: 1px solid #303330; min-width: 0; }
+.dashboard-extraction .summary-intro { border-left: 0; }
+.dashboard-extraction .summary-kicker, .dashboard-extraction .summary-metric span { color: #929692; font: 9px var(--app-font-mono); letter-spacing: .08em; white-space: nowrap; }
+.dashboard-extraction .summary-sport { color: #e7e9e6; font: 600 13px 'Space Grotesk', sans-serif; }
+.dashboard-extraction .summary-metric { text-decoration: none; }
+.dashboard-extraction .summary-metric strong { color: #65c98e; font: 600 17px/1 var(--app-font-mono); font-variant-numeric: tabular-nums; }
+.dashboard-extraction .summary-metric span { overflow: hidden; text-overflow: ellipsis; }
+.dashboard-extraction .panel-head-accent { background: #202220; border-color: #303330; }
+.dashboard-extraction .panel-head-accent .panel-title, .dashboard-extraction .panel-head-accent .panel-title svg { color: #e6e9e4; }
+.dashboard-extraction .panel-head-accent .panel-meta { color: #959a94; }
+.dashboard-extraction .member-cta { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:15px 16px; margin:0 0 15px; border:1px solid #52675f; border-radius:8px; background:linear-gradient(110deg,#283a39,#222d38 70%); }
+.dashboard-extraction .member-cta-copy { min-width:0; }
+.dashboard-extraction .member-cta-title { display:flex; align-items:center; gap:8px; color:#e8f0eb; font:600 14px 'Space Grotesk',sans-serif; margin:0 0 4px; }
+.dashboard-extraction .member-cta-title svg { color:#9adcb9; }
+.dashboard-extraction .member-cta p { margin:0; color:#b3c0c5; font-size:11px; line-height:1.5; }
+.dashboard-extraction .member-cta-action { display:flex; align-items:center; gap:9px; flex-shrink:0; }
+.dashboard-extraction .model-preview { background: #151615; border-color: #303330; }
+.dashboard-extraction .model-preview-head, .dashboard-extraction .model-preview-meta, .dashboard-extraction .model-preview-link { border-color: #303330; }
+.dashboard-extraction .model-preview-meta, .dashboard-extraction .model-preview th { background: #202220; color: #929692; border-color: #303330; }
+.dashboard-extraction .model-preview td { border-color: #292b29; color: #d8dbd6; }
+.dashboard-extraction .model-preview td small, .dashboard-extraction .model-preview-head p, .dashboard-extraction .model-preview-lock, .dashboard-extraction .model-preview-state { color: #929692; }
+.dashboard-extraction .model-preview .model-preview-value, .dashboard-extraction .model-preview-link, .dashboard-extraction .model-preview-lock svg { color: #81cd99; }
+.dashboard-extraction .account-header-link { height: 32px; padding: 0 10px; color: #c8d2d8; font-size: 11px; text-decoration: none; }
+.dashboard-extraction .brand-mark { background: #45b47b; color: #122019; border-radius: 5px; }
+.dashboard-extraction .brand-name { color: #e7e9e6; font-family: 'Space Grotesk', sans-serif; letter-spacing: .01em; }
+.dashboard-extraction .brand { color: #e7e9e6; }
+.dashboard-extraction h1, .dashboard-extraction .panel-title, .dashboard-extraction .event-name, .dashboard-extraction .news-title { color: #e7e9e6; }
+.dashboard-extraction .eyebrow, .dashboard-extraction .panel-title svg, .dashboard-extraction .total-pill { color: #56bd87; }
+.dashboard-extraction .subhead, .dashboard-extraction .panel-meta, .dashboard-extraction .event-league,
+.dashboard-extraction .news-byline, .dashboard-extraction .news-desc, .dashboard-extraction .coverage-detail { color: #929692; }
+.dashboard-extraction .control-bar, .dashboard-extraction .summary-strip { background: #191a19; border-color: #303330; }
+.dashboard-extraction .date-field { background: #131413; border-color: #343734; color: #e2e4e0; }
+.dashboard-extraction .sport-tab, .dashboard-extraction .btn { background: #222423; border-color: #363936; color: #d8dbd6; }
+.dashboard-extraction .btn-quiet { background: transparent; }
+.dashboard-extraction .sport-tab:hover:not(.active), .dashboard-extraction .btn:hover { background: #2a2c2a; border-color: #50544f; }
+.dashboard-extraction .btn-primary, .dashboard-extraction .sport-tab.active { background: #45b47b; border-color: #45b47b; color: #102117; }
+.dashboard-extraction .btn-primary:hover, .dashboard-extraction .sport-tab.active:hover { background: #5ac88e; border-color: #5ac88e; }
+.dashboard-extraction .panel { background: #191a19; border-color: #303330; }
+.dashboard-extraction .panel-head { background: #202220; border-color: #303330; }
+.dashboard-extraction .panel-head .panel-title { color: #e6e9e4; }
+.dashboard-extraction .panel-head .panel-meta { color: #959a94; }
+.dashboard-extraction .state-icon { background: #262826; color: #70ca94; }
+.dashboard-extraction .total-pill { color: #65c98e; }
+.dashboard-extraction .event-row { background: #151615; border-color: #303330; }
+.dashboard-extraction .team-chip, .dashboard-extraction .news-byline .type-tag { background: #282a28; color: #d6dad4; }
+.dashboard-extraction .event-time { color: #ccd0ca; }
+.dashboard-extraction .news-thumb { background: #262826; }
+.dashboard-extraction .summary-kicker, .dashboard-extraction .summary-metric span { color: #929692; }
+.dashboard-extraction .summary-metric strong { color: #65c98e; }
+.dashboard-extraction .news-item, .dashboard-extraction .coverage-detail { border-color: #303330; }
+.dashboard-extraction .install-modal { background: #191a19; border-color: #414440; }
+.dashboard-extraction .sandbox-data-note + .page-heading { margin-top: 0; }
+.dashboard-extraction .summary-strip { grid-template-columns: minmax(105px, 1.1fr) repeat(4, minmax(90px, 1fr)); }
+.dashboard-extraction .summary-strip .summary-metric:last-child { border-left: 1px solid #303330; }
+@media (max-width: 950px) {
+  .dashboard-extraction { grid-template-columns: minmax(0, 1fr); grid-template-rows: 62px auto; }
+  .dashboard-extraction .side-rail { display: none; }
+  .dashboard-extraction .main-wrap { grid-column: 1; }
+  .dashboard-extraction .content-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .dashboard-extraction { grid-template-rows: 58px auto; }
+  .dashboard-extraction .topbar { height: 58px; padding: 0 10px; }
+  .dashboard-extraction .topbar-right .today-label, .dashboard-extraction .topbar-right .account-header-link { display: none; }
+  .dashboard-extraction .topbar-right { gap: 6px; }
+  .dashboard-extraction .topbar-right .user-dot { display: none; }
+  .dashboard-extraction .main-wrap { padding: 21px 12px 34px; }
+  .dashboard-extraction .page-heading { display: block; margin-bottom: 15px; }
+  .dashboard-extraction .date-stamp { text-align: left; margin-top: 10px; }
+  .dashboard-extraction .sport-tab { padding: 9px 13px; }
+  .dashboard-extraction .content-grid { gap: 12px; }
+  .dashboard-extraction .summary-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 59px; padding: 8px 6px; }
+  .dashboard-extraction .summary-intro { display: none; }
+  .dashboard-extraction .summary-metric { padding: 0 6px; }
+  .dashboard-extraction .summary-metric strong { font-size: 15px; }
+  .dashboard-extraction .summary-kicker, .dashboard-extraction .summary-metric span { font-size: 8px; letter-spacing: .025em; }
+  .dashboard-extraction .right-stack { grid-template-columns: 1fr; }
+  .dashboard-extraction .panel-head, .dashboard-extraction .panel-body { padding: 12px; }
+  .dashboard-extraction .action-group .btn { flex: 1 1 auto; }
+  .dashboard-extraction .member-cta { align-items: flex-start; flex-direction: column; gap: 11px; }
+  .dashboard-extraction .member-cta-action { width: 100%; }
+  .dashboard-extraction .member-cta-action .btn { flex: 1; }
+}

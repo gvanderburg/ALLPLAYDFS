@@ -170,7 +170,8 @@ export default function FeedbackPage() {
       <nav className="feedback-top-nav" aria-label="Dashboard navigation">
         <Link href="/user-portal" className="btn btn-quiet"><ArrowLeft size={14} />Dashboard</Link>
         <Link href="/projections" className="btn btn-quiet">Model</Link>
-        <Link href="/takes" className="btn btn-quiet">Takes</Link>
+         <Link href="/takes" className="btn btn-quiet">Takes</Link>
+         <Link href="/news" className="btn btn-quiet">News</Link>
         {signedIn ? <Link href="/account" className="btn btn-quiet">Account</Link> : <Link href="/sign-in" className="btn btn-quiet">Sign in</Link>}
       </nav>
     </header>
@@ -179,6 +180,7 @@ export default function FeedbackPage() {
       <Link className="rail-link" href="/user-portal"><Activity size={15} />Overview</Link>
       <Link className="rail-link" href="/projections">Projections</Link>
       <Link className="rail-link" href="/takes">Game takes</Link>
+       <a className="rail-link" href={`${import.meta.env.BASE_URL}news`} target="_blank" rel="noopener noreferrer" aria-label="News desk (opens in a new tab)">News desk</a>
       <Link className="rail-link selected" href="/feedback" aria-current="page"><MessageSquareText size={15} />Feedback</Link>
       <Link className="rail-link" href="/account">Account</Link>
       <div className="rail-bottom"><span className="rail-caption">FEEDBACK & SUPPORT</span><div className="rail-sports">Issues · requests<br />Research feedback</div></div>

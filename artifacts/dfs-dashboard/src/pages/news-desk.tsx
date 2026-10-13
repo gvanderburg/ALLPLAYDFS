@@ -36,7 +36,7 @@ export default function NewsDesk() {
   return <div className="news-desk">
     <header className="news-desk-header">
       <span className="brand-name">ALLPLAY <span>NEWS DESK</span></span>
-      <Link className="btn btn-quiet" href={isSignedIn ? '/user-portal' : '/'}><ArrowLeft size={14} />Dashboard</Link>
+      <nav className="news-desk-nav" aria-label="ALLPLAY sections"><Link className="btn btn-quiet" href={isSignedIn ? '/user-portal' : '/'}><ArrowLeft size={14} />Dashboard</Link><Link className="btn btn-quiet" href="/projections">Projections</Link><Link className="btn btn-quiet" href="/takes">Takes</Link><Link className="btn btn-quiet" href="/feedback">Feedback</Link>{isSignedIn ? <Link className="btn btn-quiet" href="/account">Account</Link> : <Link className="btn btn-quiet" href="/sign-in">Sign in</Link>}</nav>
     </header>
     <main className="news-desk-main">
       <div className="news-desk-heading">
