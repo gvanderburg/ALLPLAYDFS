@@ -81,13 +81,17 @@ export function deriveLineupInsights(
   let excludedPlayers = 0;
   const metricMap = new Map(sheet.metrics.map(m => [m.id, m]));
   for (const player of sheet.players) {
+    if (player.roleContext?.eligible === false) { excludedPlayers++; continue; }
     const forecast = player.fantasy?.find(f => f.site === site);
     if (/\b(out|inactive|suspended|doubtful|ir|injured[- ]reserve|reserve\/injured|physically unable)\b/i.test(player.availability)) { excludedPlayers++; continue; }
     if (forecast?.status !== 'ready' || !finite(forecast.mean) || forecast.mean <= 0) continue;
     const matched = site === platform ? findUniqueSelectedSlateSalary(player, sheet, dashboard, platform) : undefined;
     const salary = finite(matched?.salary) && matched.salary > 0 ? matched.salary : null;
     const value = salary ? forecast.mean / (salary / 1000) : null;
-    const reasons = [`${round(forecast.mean)} ${site} points from ALLPLAY's matchup-adjusted stat forecasts.`];
+    const reasons = [
+      ...(player.roleContext ? [`${player.roleContext.label}: ${player.roleContext.source}. ${player.roleContext.recentWorkload != null ? `Recent ${player.roleContext.workloadUnit}: ${player.roleContext.recentWorkload}.` : ''}`] : []),
+      `${round(forecast.mean)} ${site} points from ALLPLAY's matchup-adjusted stat forecasts.`,
+    ];
     const cautions: string[] = [];
     const favorable = player.stats.filter(s => s.projected !== null && s.defenseGames >= 2 &&
       (metricMap.get(s.id)?.higherIsBetter ? s.matchupMultiplier >= 1.03 : s.matchupMultiplier <= .97))
@@ -96,7 +100,11 @@ export function deriveLineupInsights(
     else if (!player.stats.some(s => s.defenseGames >= 2)) cautions.push('Opponent sample unavailable; matchup adjustment is neutral.');
     const workload = player.stats.find(s => ['minutes', 'timeOnIce', 'inningsPitched', 'targets', 'rushingAttempts', 'passingAttempts'].includes(s.id) && finite(s.projected) && s.projected > 0);
     if (workload) reasons.push(`Expected ${metricMap.get(workload.id)?.label ?? workload.id}: ${round(workload.projected!)}.`);
-    if (value !== null) reasons.push(`${round(value)} projected points per $1,000 at the matched ${platform} salary.`);
+    if (value !== null) reasons.push(`${value.toFixed(1)}x projected value at the selected DFS site.`);
+    for (const rating of player.publishedMatchups ?? []) {
+      if (rating.status !== 'available' || rating.rank === null) continue;
+      reasons.push(`${rating.source === 'pff' ? 'PFF' : 'FantasyPros'} opponent ${rating.unit}: #${rating.rank}/${rating.rankedTeams} (${rating.period}; #1 = ${rating.rankOneMeans === 'strongest' ? 'strongest defense' : 'most fantasy points allowed'}). Published context, not a forecast adjustment.`);
+    }
     if (finite(forecast.p85)) reasons.push(`Modeled 85th-percentile outcome: ${round(forecast.p85)} points, not a confidence limit.`);
     if (player.historicalGames < 5) cautions.push(`Small sample: ${player.historicalGames} recorded appearances.`);
     const latest = Math.max(...player.history.map(h => Date.parse(h.date)).filter(Number.isFinite));
@@ -146,7 +154,7 @@ export function deriveLineupInsights(
   rows.sort((a, b) => scores.get(b.playerId)! - scores.get(a.playerId)! || b.points - a.points || a.playerId.localeCompare(b.playerId));
   rows.forEach((row, i) => {
     row.rank = i + 1;
-    if (row.value !== null && percentile(row.value, priced.map(r => r.value!)) >= .75) row.tags.push('Salary value');
+    if (row.value !== null && percentile(row.value, priced.map(r => r.value!)) >= .75) row.tags.push('Strong value');
     if (percentile(row.points, rows.map(r => r.points)) >= .75) row.tags.push('High projection');
     if (row.estimatedOwnership !== null && row.estimatedOwnership < 15 && percentile(row.points, rows.map(r => r.points)) >= .5)
       row.tags.push('Lower modeled ownership');

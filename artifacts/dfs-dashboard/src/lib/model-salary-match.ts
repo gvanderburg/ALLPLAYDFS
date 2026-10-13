@@ -5,6 +5,7 @@ export function findUniqueSelectedSlateSalary(
   player: ModelPlayerProjection, sheet: ModelProjectionSheet,
   dashboard: DfsDashboard | undefined, platform: DfsSalaryPlatform,
 ) {
+  if (player.roleContext?.eligible === false) return undefined;
   const selected = dashboard?.salaryCoverage?.platform === platform ? dashboard.salaryCoverage.selectedSlateId : null;
   if (!selected || !sheet.slateDate || dashboard?.date?.slice(0, 10) !== sheet.slateDate.slice(0, 10)) return undefined;
   const name = player.name.trim().toLocaleLowerCase(), team = player.team.trim().toLocaleLowerCase();

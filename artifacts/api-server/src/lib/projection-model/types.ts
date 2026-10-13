@@ -27,6 +27,7 @@ export interface SlatePlayer {
   position: string;
   availability: string;
   participation: string;
+  roleContext?: import("@workspace/api-zod").ModelPlayerRole;
 }
 export interface ModelSettings {
   recentGames: number;

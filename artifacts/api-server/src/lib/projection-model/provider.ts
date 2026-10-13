@@ -6,6 +6,7 @@ import { list, normalizeRace, normalizeSummary, numeric, obj, str, type Json } f
 import { annualHistoryRanges } from "./date-ranges";
 import { completedScheduleIds } from "./schedule-history";
 import { baseballBoxFor } from "./baseball-scoring";
+import { loadTeamRoles } from "./playing-roles";
 
 const SITE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE = "https://sports.core.api.espn.com/v2/sports";
@@ -166,12 +167,16 @@ export async function slateCandidates(
       ...driver, team: "Driver pool", teamId: "field", opponent: slate.venue, opponentId: "",
       position: "Driver", availability: "Driver availability not verified",
       participation: confirmed ? "Published entrant; start not guaranteed" : "Conditional pool: upcoming entry list not published",
+      roleContext: { status: confirmed ? "entrant" : "unknown", label: confirmed ? "Published entrant" : "Entry unverified",
+        eligible: confirmed, depthRank: null, source: "ESPN race entry list", sourceUrl: `https://www.espn.com/racing/race/_/id/${str(slate.events[0]?.id)}`,
+        asOf: new Date(), recentWorkload: null, workloadUnit: null, recentAppearances: 0, teamGames: 0,
+        note: "NASCAR uses race-entry eligibility, not a team depth chart; entry is not a guarantee of starting." },
     });
     if (!confirmed) notes.push("NASCAR's upcoming entry list is not published. These are conditional estimates for drivers from the last two completed races, not confirmed starters.");
     notes.push("NASCAR forecasts finishing position only. Laps led, fastest laps, qualifying position and place differential are not available from this source and are not invented.");
     return { players, notes };
   }
-  const matchups = new Map<string, { team: string; opponentId: string; opponent: string; probable: string }>();
+  const matchups = new Map<string, { team: string; teamName: string; opponentName: string; opponentId: string; opponent: string; probable: string; startTime: string; season: number }>();
   for (const event of slate.events) {
     const competitors = list(obj(list(event.competitions)[0]).competitors).map(obj);
     for (const competitor of competitors) {
@@ -179,6 +184,8 @@ export async function slateCandidates(
       const opponentTeam = obj(opponent?.team);
       matchups.set(str(competitor.id || team.id), {
         team: str(team.abbreviation || team.displayName), opponentId: str(opponent?.id),
+        teamName: str(team.displayName), opponentName: str(opponentTeam.displayName), startTime: str(event.date),
+        season: Number(obj(event.season).year),
         opponent: str(opponentTeam.abbreviation || opponentTeam.displayName),
         probable: str(obj(obj(list(competitor.probables)[0]).athlete).id),
       });
@@ -196,11 +203,12 @@ export async function slateCandidates(
         .map(p => [p.id, { id: p.id, displayName: p.name, position: { abbreviation: p.position } }] as const))).values()];
       notes.push(`${matchup.team}: current roster unavailable; the recent player pool is conditional and may omit new players.`);
     }
+    const teamPlayers: SlatePlayer[] = [];
     for (const athlete of roster) {
       const position = str(obj(athlete.position).abbreviation), id = str(athlete.id);
       if (!id || ((sport === "nfl" || sport === "cfb") && position && !["QB", "RB", "FB", "WR", "TE", "K"].includes(position))) continue;
       const injury = obj(list(athlete.injuries)[0]);
-      players.push({
+      teamPlayers.push({
         id, name: str(athlete.displayName || athlete.fullName), teamId, team: matchup.team,
         opponentId: matchup.opponentId, opponent: matchup.opponent, position,
         availability: str(injury.status) || "Injury status not verified",
@@ -208,6 +216,10 @@ export async function slateCandidates(
           verified ? "On current roster; participation/starting role unconfirmed" : "Recent player pool; current roster unverified",
       });
     }
+    const roles = await loadTeamRoles({ sport, teamId, teamName: matchup.teamName, opponentName: matchup.opponentName,
+      date: slate.date, season: matchup.season, startTime: matchup.startTime, probable: matchup.probable, players: teamPlayers, history });
+    players.push(...roles.players);
+    notes.push(roles.note);
   }));
   return { players: [...new Map(players.map(player => [`${player.id}:${player.teamId}`, player])).values()], notes };
 }

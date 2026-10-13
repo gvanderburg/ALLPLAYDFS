@@ -22,11 +22,16 @@ import type {
 import type {
   CreateMembershipCheckout200,
   DfsDashboard,
+  FeedbackTicket,
+  FeedbackTicketInput,
+  FeedbackTicketPage,
+  FeedbackTicketUpdate,
   GameTake,
   GameTakeInput,
   GetDfsDashboardParams,
   GetModelProjectionsParams,
   HealthStatus,
+  ListFeedbackTicketsParams,
   ListGameTakes200,
   MembershipStatus,
   ModelProjectionSheet,
@@ -61,6 +66,255 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListFeedbackTicketsUrl = (params?: ListFeedbackTicketsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/feedback?${stringifiedParams}` : `/api/feedback`
+}
+
+/**
+ * @summary Signed-in users see their tickets; owners may review all tickets
+ */
+export const listFeedbackTickets = async (params?: ListFeedbackTicketsParams, options?: Parameters<typeof customFetch>[1]): Promise<FeedbackTicketPage> => {
+
+  return customFetch<FeedbackTicketPage>(getListFeedbackTicketsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFeedbackTicketsQueryKey = (params?: ListFeedbackTicketsParams,) => {
+    return [
+    `/api/feedback`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFeedbackTicketsQueryOptions = <TData = Awaited<ReturnType<typeof listFeedbackTickets>>, TError = ErrorType<void>>(params?: ListFeedbackTicketsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeedbackTickets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFeedbackTicketsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFeedbackTickets>>> = ({ signal }) => listFeedbackTickets(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFeedbackTickets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFeedbackTicketsQueryResult = NonNullable<Awaited<ReturnType<typeof listFeedbackTickets>>>
+export type ListFeedbackTicketsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Signed-in users see their tickets; owners may review all tickets
+ */
+
+export function useListFeedbackTickets<TData = Awaited<ReturnType<typeof listFeedbackTickets>>, TError = ErrorType<void>>(
+ params?: ListFeedbackTicketsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFeedbackTickets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFeedbackTicketsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateFeedbackTicketUrl = () => {
+
+
+
+
+  return `/api/feedback`
+}
+
+export const createFeedbackTicket = async (feedbackTicketInput: FeedbackTicketInput, options?: Parameters<typeof customFetch>[1]): Promise<FeedbackTicket> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FeedbackTicket>(getCreateFeedbackTicketUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(feedbackTicketInput)
+  }
+);}
+
+
+
+
+
+export const getCreateFeedbackTicketMutationKey = () => ['createFeedbackTicket'] as const;
+
+export const getCreateFeedbackTicketMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFeedbackTicket>>, TError,CreateFeedbackTicketMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFeedbackTicket>>, TError,CreateFeedbackTicketMutationVariables, TContext> => {
+
+const mutationKey = getCreateFeedbackTicketMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFeedbackTicket>>, CreateFeedbackTicketMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFeedbackTicket(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFeedbackTicketMutationResult = NonNullable<Awaited<ReturnType<typeof createFeedbackTicket>>>
+    export type CreateFeedbackTicketMutationBody = BodyType<FeedbackTicketInput>
+    export type CreateFeedbackTicketMutationError = ErrorType<void>
+    export type CreateFeedbackTicketMutationVariables = {data: BodyType<FeedbackTicketInput>}
+
+    export const useCreateFeedbackTicket = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFeedbackTicket>>, TError,CreateFeedbackTicketMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFeedbackTicket>>,
+        TError,
+        CreateFeedbackTicketMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateFeedbackTicketMutationOptions(options));
+    }
+
+export const getUpdateFeedbackTicketUrl = (ticketId: number,) => {
+
+
+
+
+  return `/api/feedback/${ticketId}`
+}
+
+export const updateFeedbackTicket = async (ticketId: number,
+    feedbackTicketUpdate: FeedbackTicketUpdate, options?: Parameters<typeof customFetch>[1]): Promise<FeedbackTicket> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FeedbackTicket>(getUpdateFeedbackTicketUrl(ticketId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(feedbackTicketUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateFeedbackTicketMutationKey = () => ['updateFeedbackTicket'] as const;
+
+export const getUpdateFeedbackTicketMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFeedbackTicket>>, TError,UpdateFeedbackTicketMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFeedbackTicket>>, TError,UpdateFeedbackTicketMutationVariables, TContext> => {
+
+const mutationKey = getUpdateFeedbackTicketMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFeedbackTicket>>, UpdateFeedbackTicketMutationVariables> = (props) => {
+          const {ticketId,data} = props ?? {};
+
+          return  updateFeedbackTicket(ticketId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFeedbackTicketMutationResult = NonNullable<Awaited<ReturnType<typeof updateFeedbackTicket>>>
+    export type UpdateFeedbackTicketMutationBody = BodyType<FeedbackTicketUpdate>
+    export type UpdateFeedbackTicketMutationError = ErrorType<void>
+    export type UpdateFeedbackTicketMutationVariables = {ticketId: number;data: BodyType<FeedbackTicketUpdate>}
+
+    export const useUpdateFeedbackTicket = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFeedbackTicket>>, TError,UpdateFeedbackTicketMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFeedbackTicket>>,
+        TError,
+        UpdateFeedbackTicketMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateFeedbackTicketMutationOptions(options));
+    }
 
 export const getListGameTakesUrl = () => {
 

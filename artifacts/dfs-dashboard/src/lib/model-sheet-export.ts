@@ -7,6 +7,7 @@ import type {
 } from '@workspace/api-client-react';
 import { findUniqueSelectedSlateSalary } from './model-salary-match';
 import { deriveLineupInsights } from './lineup-insights';
+import { positionRanks, formatValueMultiple } from './position-ranks';
 export { findUniqueSelectedSlateSalary } from './model-salary-match';
 
 export const MODEL_REFERENCE_HEADERS = [
@@ -46,17 +47,23 @@ export function buildModelSheetCsv(
 ): string {
   if (sheet.status !== 'ready') return '';
   const insights = new Map(deriveLineupInsights(sheet, dashboard, platform).rows.map(row => [row.playerId, row]));
+  const ranksBySite = new Map(FORECAST_SITES.map(([site]) => [site, positionRanks(sheet, site)]));
   const headers = [...MODEL_REFERENCE_HEADERS, 'modelRole', 'modelPlayerId', 'participation', 'availability',
     'historicalGames', 'statusReason', 'modelTeamTotal', 'modelGameTotal', 'salarySource', 'salarySlateId',
     'model', 'backtested', 'fantasyResult', 'ownership', 'ownEVLineAssignment', 'ownPPLineAssignment',
     'exposureDefaultsNote', 'history', 'source', 'caveat', 'sport', 'requestedDate', 'slateDate',
     'generatedAt', 'effectiveAsOf', 'recentGames', 'recentWeightPct', 'matchupWeightPct',
     'gameCount', 'processedGames', 'totalGames', 'failedGames', 'observedTeams', 'modelFormula', 'sheetNotes', 'platform',
-    'ALLPLAY Research Rank', 'ALLPLAY Pick Reasons', 'ALLPLAY Pick Cautions', 'Ownership Method'];
+    'ALLPLAY Research Rank', 'ALLPLAY Pick Reasons', 'ALLPLAY Pick Cautions', 'Ownership Method',
+    'Value Multiple', 'Position Rank Scope',
+    'PFF Secondary Rank', 'PFF Period', 'PFF Source', 'PFF Status',
+    'FantasyPros Position Rank', 'FantasyPros Period', 'FantasyPros Source', 'FantasyPros Status',
+    'Playing Role', 'Depth Rank', 'Role Eligible', 'Role Source', 'Role Source URL', 'Role As Of', 'Role Note', 'Recent Workload', 'Workload Unit'];
 
   for (const [, prefix] of FORECAST_SITES) {
     headers.push(`${prefix} Status`, `${prefix} Tracked Mean`, `${prefix} Missing Stats`, `${prefix} Notes`,
-      `${prefix} Scoring Source`, `${prefix} Rules As Of`, `${prefix} Sample Size`, `${prefix} Simulations`);
+      `${prefix} Scoring Source`, `${prefix} Rules As Of`, `${prefix} Sample Size`, `${prefix} Simulations`,
+      `${prefix} Position Rank`, `${prefix} Position Peer Count`, `${prefix} Rank Role`);
   }
   for (const metric of sheet.metrics) {
     headers.push(
@@ -112,12 +119,24 @@ export function buildModelSheetCsv(
        sheet.totalGames, sheet.failedGames, sheet.observedTeams, sheet.modelFormula, sheet.notes.join('; '), platform,
        insight?.rank ?? '', insight?.reasons.join('; ') ?? '', insight?.cautions.join('; ') ?? '', insight?.ownershipMethod ?? '',
     ];
+    audit.push(formatValueMultiple(typeof salaryValue === 'number' ? salaryValue : null),
+      'Own full fantasy projection, current-slate primary-role candidates; ties share rank. OUT/IR/inactive/doubtful excluded.');
+    for (const source of ['pff', 'fantasypros']) {
+      const ranking = player.publishedMatchups?.find(row => row.source === source);
+      audit.push(ranking?.status === 'available' ? ranking.rank ?? '' : '', ranking?.period ?? '',
+        ranking?.sourceUrl ?? '', ranking?.status ?? 'unavailable');
+    }
+    audit.push(player.roleContext?.label ?? '', player.roleContext?.depthRank ?? '', player.roleContext?.eligible ?? '',
+      player.roleContext?.source ?? '', player.roleContext?.sourceUrl ?? '', player.roleContext?.asOf ?? '', player.roleContext?.note ?? '',
+      player.roleContext?.recentWorkload ?? '', player.roleContext?.workloadUnit ?? '');
     for (const [site] of FORECAST_SITES) {
       const forecast = forecastBySite.get(site);
+      const rank = ranksBySite.get(site)?.get(player.id);
       audit.push(
         forecast?.status ?? 'unavailable', forecast?.trackedMean ?? '',
         forecast?.missingStats.join('; ') ?? '', forecast?.notes.join('; ') ?? '',
         forecast?.scoringSource ?? '', forecast?.rulesAsOf ?? '', forecast?.sampleSize ?? '', forecast?.simulations ?? '',
+        rank?.rank ?? '', rank?.count ?? '', rank?.position ?? '',
       );
     }
     for (const metric of sheet.metrics) {

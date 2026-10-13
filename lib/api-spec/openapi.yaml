@@ -13,6 +13,67 @@ tags:
   - name: dfs
     description: Daily fantasy sports dashboard
 paths:
+  /feedback:
+    get:
+      operationId: listFeedbackTickets
+      tags: [feedback]
+      summary: Signed-in users see their tickets; owners may review all tickets
+      parameters:
+        - in: query
+          name: scope
+          schema: { type: string, enum: [mine, all], default: mine }
+        - in: query
+          name: before
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Private ticket page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeedbackTicketPage" }
+        "401": { description: Sign-in required }
+        "403": { description: Owner access required for all tickets }
+    post:
+      operationId: createFeedbackTicket
+      tags: [feedback]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FeedbackTicketInput" }
+      responses:
+        "201":
+          description: Saved ticket
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeedbackTicket" }
+        "400": { description: Invalid feedback }
+        "401": { description: Sign-in required }
+        "429": { description: At most five submissions per hour }
+  /feedback/{ticketId}:
+    patch:
+      operationId: updateFeedbackTicket
+      tags: [feedback]
+      parameters:
+        - in: path
+          name: ticketId
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FeedbackTicketUpdate" }
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeedbackTicket" }
+        "400": { description: Invalid status or response }
+        "401": { description: Sign-in required }
+        "403": { description: Owner access required }
+        "404": { description: Ticket not found }
   /takes:
     get:
       operationId: listGameTakes
@@ -257,6 +318,50 @@ paths:
           description: Invalid date or sport
 components:
   schemas:
+    FeedbackTicketInput:
+      type: object
+      required: [category, subject, details]
+      properties:
+        category: { type: string, enum: [issue, request, general] }
+        subject: { type: string, minLength: 3, maxLength: 120 }
+        details: { type: string, minLength: 10, maxLength: 4000 }
+        sport:
+          anyOf:
+            - { $ref: "#/components/schemas/DfsSport" }
+            - { type: "null" }
+        contextPath: { type: ["string", "null"], maxLength: 200, pattern: "^/[a-zA-Z0-9/_-]*$" }
+    FeedbackTicketUpdate:
+      type: object
+      required: [status, ownerResponse]
+      properties:
+        status: { type: string, enum: [open, in_progress, resolved] }
+        ownerResponse: { type: string, maxLength: 2000 }
+    FeedbackTicket:
+      type: object
+      required: [id, category, subject, details, sport, contextPath, status, ownerResponse, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        category: { type: string, enum: [issue, request, general] }
+        subject: { type: string }
+        details: { type: string }
+        sport:
+          anyOf:
+            - { $ref: "#/components/schemas/DfsSport" }
+            - { type: "null" }
+        contextPath: { type: ["string", "null"] }
+        status: { type: string, enum: [open, in_progress, resolved] }
+        ownerResponse: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    FeedbackTicketPage:
+      type: object
+      required: [isOwner, items, nextCursor]
+      properties:
+        isOwner: { type: boolean }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/FeedbackTicket" }
+        nextCursor: { type: ["integer", "null"] }
     ModelProjectionSheet:
       type: object
       required: [status, sport, requestedDate, slateDate, generatedAt, effectiveAsOf, recentGames, recentWeight, matchupWeight, gameCount, processedGames, totalGames, failedGames, observedTeams, players, metrics, modelFormula, notes]
@@ -307,6 +412,8 @@ components:
         position: { type: string }
         availability: { type: string }
         participation: { type: string }
+        roleContext:
+          $ref: "#/components/schemas/ModelPlayerRole"
         historicalGames: { type: integer }
         reason: { type: ["string", "null"] }
         modelTeamTotal: { type: ["number", "null"] }
@@ -314,12 +421,29 @@ components:
         fantasy:
           type: array
           items: { $ref: "#/components/schemas/ModelFantasyForecast" }
+        publishedMatchups:
+          type: array
+          items: { $ref: "#/components/schemas/PublishedMatchupRanking" }
         stats:
           type: array
           items: { $ref: "#/components/schemas/ModelStatEstimate" }
         history:
           type: array
           items: { $ref: "#/components/schemas/ModelHistoryAppearance" }
+    PublishedMatchupRanking:
+      type: object
+      required: [source, unit, rank, rankedTeams, rankOneMeans, sourceUrl, period, asOf, status, note]
+      properties:
+        source: { type: string, enum: [pff, fantasypros] }
+        unit: { type: string }
+        rank: { type: ["integer", "null"] }
+        rankedTeams: { type: integer }
+        rankOneMeans: { type: string, enum: [strongest, most-allowed] }
+        sourceUrl: { type: string }
+        period: { type: string }
+        asOf: { type: ["string", "null"], format: date-time }
+        status: { type: string, enum: [available, unavailable, unsupported] }
+        note: { type: string }
     ModelStatEstimate:
       type: object
       required: [id, projected, recentAverage, baselineAverage, matchupMultiplier, opponentRank, rankedTeams, defenseGames, opponentMean, leagueMean, sampleSize, recentSampleSize]
@@ -361,6 +485,22 @@ components:
           items: { type: string }
         scoringSource: { type: ["string", "null"] }
         rulesAsOf: { type: string }
+    ModelPlayerRole:
+      type: object
+      required: [status, label, depthRank, eligible, source, sourceUrl, asOf, note, recentWorkload, workloadUnit, recentAppearances, teamGames]
+      properties:
+        status: { type: string, enum: [starter, projected-starter, rotation, backup, unknown, entrant] }
+        label: { type: string }
+        depthRank: { type: ["integer", "null"] }
+        eligible: { type: boolean }
+        source: { type: string }
+        sourceUrl: { type: ["string", "null"] }
+        asOf: { type: ["string", "null"], format: date-time }
+        note: { type: string }
+        recentWorkload: { type: ["number", "null"] }
+        workloadUnit: { type: ["string", "null"] }
+        recentAppearances: { type: integer }
+        teamGames: { type: integer }
     ModelHistoryAppearance:
       type: object
       required: [eventId, date, opponent, stats]

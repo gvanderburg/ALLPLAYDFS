@@ -19,4 +19,5 @@
 
 export * from "./membership";
 export * from "./game-takes";
+export * from "./feedback";
 export * from "./projection-history";

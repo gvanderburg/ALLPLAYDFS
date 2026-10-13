@@ -5,15 +5,13 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-export type ModelProjectionSheetStatus = typeof ModelProjectionSheetStatus[keyof typeof ModelProjectionSheetStatus];
+export type FeedbackTicketInputCategory = typeof FeedbackTicketInputCategory[keyof typeof FeedbackTicketInputCategory];
 
 
-export const ModelProjectionSheetStatus = {
-  locked: 'locked',
-  warming: 'warming',
-  ready: 'ready',
-  unavailable: 'unavailable',
-  error: 'error',
+export const FeedbackTicketInputCategory = {
+  issue: 'issue',
+  request: 'request',
+  general: 'general',
 } as const;
 
 export type DfsSport = typeof DfsSport[keyof typeof DfsSport];
@@ -28,6 +26,124 @@ export const DfsSport = {
   nascar: 'nascar',
   cfb: 'cfb',
 } as const;
+
+export interface FeedbackTicketInput {
+  category: FeedbackTicketInputCategory;
+  /**
+     * @minLength 3
+     * @maxLength 120
+     */
+  subject: string;
+  /**
+     * @minLength 10
+     * @maxLength 4000
+     */
+  details: string;
+  sport?: DfsSport | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     * @pattern ^/[a-zA-Z0-9/_-]*$
+     */
+  contextPath?: string | null;
+}
+
+export type FeedbackTicketUpdateStatus = typeof FeedbackTicketUpdateStatus[keyof typeof FeedbackTicketUpdateStatus];
+
+
+export const FeedbackTicketUpdateStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  resolved: 'resolved',
+} as const;
+
+export interface FeedbackTicketUpdate {
+  status: FeedbackTicketUpdateStatus;
+  /** @maxLength 2000 */
+  ownerResponse: string;
+}
+
+export type FeedbackTicketCategory = typeof FeedbackTicketCategory[keyof typeof FeedbackTicketCategory];
+
+
+export const FeedbackTicketCategory = {
+  issue: 'issue',
+  request: 'request',
+  general: 'general',
+} as const;
+
+export type FeedbackTicketStatus = typeof FeedbackTicketStatus[keyof typeof FeedbackTicketStatus];
+
+
+export const FeedbackTicketStatus = {
+  open: 'open',
+  in_progress: 'in_progress',
+  resolved: 'resolved',
+} as const;
+
+export interface FeedbackTicket {
+  id: number;
+  category: FeedbackTicketCategory;
+  subject: string;
+  details: string;
+  sport: DfsSport | null;
+  /** @nullable */
+  contextPath: string | null;
+  status: FeedbackTicketStatus;
+  ownerResponse: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackTicketPage {
+  isOwner: boolean;
+  items: FeedbackTicket[];
+  /** @nullable */
+  nextCursor: number | null;
+}
+
+export type ModelProjectionSheetStatus = typeof ModelProjectionSheetStatus[keyof typeof ModelProjectionSheetStatus];
+
+
+export const ModelProjectionSheetStatus = {
+  locked: 'locked',
+  warming: 'warming',
+  ready: 'ready',
+  unavailable: 'unavailable',
+  error: 'error',
+} as const;
+
+export type ModelPlayerRoleStatus = typeof ModelPlayerRoleStatus[keyof typeof ModelPlayerRoleStatus];
+
+
+export const ModelPlayerRoleStatus = {
+  starter: 'starter',
+  'projected-starter': 'projected-starter',
+  rotation: 'rotation',
+  backup: 'backup',
+  unknown: 'unknown',
+  entrant: 'entrant',
+} as const;
+
+export interface ModelPlayerRole {
+  status: ModelPlayerRoleStatus;
+  label: string;
+  /** @nullable */
+  depthRank: number | null;
+  eligible: boolean;
+  source: string;
+  /** @nullable */
+  sourceUrl: string | null;
+  /** @nullable */
+  asOf: string | null;
+  note: string;
+  /** @nullable */
+  recentWorkload: number | null;
+  /** @nullable */
+  workloadUnit: string | null;
+  recentAppearances: number;
+  teamGames: number;
+}
 
 export type ModelFantasyForecastSite = typeof ModelFantasyForecastSite[keyof typeof ModelFantasyForecastSite];
 
@@ -78,6 +194,46 @@ export interface ModelFantasyForecast {
   rulesAsOf: string;
 }
 
+export type PublishedMatchupRankingSource = typeof PublishedMatchupRankingSource[keyof typeof PublishedMatchupRankingSource];
+
+
+export const PublishedMatchupRankingSource = {
+  pff: 'pff',
+  fantasypros: 'fantasypros',
+} as const;
+
+export type PublishedMatchupRankingRankOneMeans = typeof PublishedMatchupRankingRankOneMeans[keyof typeof PublishedMatchupRankingRankOneMeans];
+
+
+export const PublishedMatchupRankingRankOneMeans = {
+  strongest: 'strongest',
+  'most-allowed': 'most-allowed',
+} as const;
+
+export type PublishedMatchupRankingStatus = typeof PublishedMatchupRankingStatus[keyof typeof PublishedMatchupRankingStatus];
+
+
+export const PublishedMatchupRankingStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+  unsupported: 'unsupported',
+} as const;
+
+export interface PublishedMatchupRanking {
+  source: PublishedMatchupRankingSource;
+  unit: string;
+  /** @nullable */
+  rank: number | null;
+  rankedTeams: number;
+  rankOneMeans: PublishedMatchupRankingRankOneMeans;
+  sourceUrl: string;
+  period: string;
+  /** @nullable */
+  asOf: string | null;
+  status: PublishedMatchupRankingStatus;
+  note: string;
+}
+
 export interface ModelStatEstimate {
   id: string;
   /** @nullable */
@@ -118,6 +274,7 @@ export interface ModelPlayerProjection {
   position: string;
   availability: string;
   participation: string;
+  roleContext?: ModelPlayerRole;
   historicalGames: number;
   /** @nullable */
   reason: string | null;
@@ -126,6 +283,7 @@ export interface ModelPlayerProjection {
   /** @nullable */
   modelGameTotal?: number | null;
   fantasy?: ModelFantasyForecast[];
+  publishedMatchups?: PublishedMatchupRanking[];
   stats: ModelStatEstimate[];
   history: ModelHistoryAppearance[];
 }
@@ -383,6 +541,22 @@ export interface DfsDashboard {
   salaryCoverage: DfsSalaryCoverage;
   sourceNotes: string[];
 }
+
+export type ListFeedbackTicketsParams = {
+scope?: ListFeedbackTicketsScope;
+/**
+ * @minimum 1
+ */
+before?: number;
+};
+
+export type ListFeedbackTicketsScope = typeof ListFeedbackTicketsScope[keyof typeof ListFeedbackTicketsScope];
+
+
+export const ListFeedbackTicketsScope = {
+  mine: 'mine',
+  all: 'all',
+} as const;
 
 export type ListGameTakes200 = {
   hasAccess: boolean;

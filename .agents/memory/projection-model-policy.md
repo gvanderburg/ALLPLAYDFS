@@ -26,3 +26,9 @@ Opponent and defensive-unit power rankings should use published sources, not an 
 **Why:** The user explicitly chose published power rankings for position-specific matchup research. This does not replace the requirement for ALLPLAY's own player forecasts.
 
 **How to apply:** Identify the publisher, rating scope and publication period. Keep published power ratings separate from ALLPLAY's observed-stat matchup ranks. Do not present preseason ratings as weekly updates, or fill missing published ratings with unlabeled internal estimates.
+
+For NFL matchup context, the user selected both PFF secondary strength and FantasyPros defense-versus-position ratings.
+
+**Why:** They want both defensive-unit quality and position-specific matchup information, while retaining independent ALLPLAY player forecasts.
+
+**How to apply:** Keep the two ratings separately labeled and dated. Public preview coverage is not permission to retrieve gated report rows. Do not invent an ordinal-rank-to-stat adjustment: incorporating published ratings into numerical forecasts requires an explicit, tested mapping rather than an arbitrary bonus.

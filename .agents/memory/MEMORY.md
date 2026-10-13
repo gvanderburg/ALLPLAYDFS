@@ -3,10 +3,12 @@
 - [X feed policy](x-feed-policy.md) — feed removed by user request; any explicitly requested return must use free embeds, not paid API reads.
 - [Dashboard reference scope](reference-design.md) — latest reference is a compact near-black table; match visuals without inventing betting metrics.
 - [Membership scope](membership-policy.md) — $1.99/month locks player data and owner-uploaded Game Takes; news and game slates remain free.
+- [Private feedback access](feedback-policy.md) — support is free for signed-in accounts; reports and replies are visible only to their author and app owners.
 - [Whop membership bridge](whop-membership-bridge.md) — bind purchases to verified app identity; verify checkout ownership, provider access and period-end cancellation.
 - [Auth UI runtime](auth-ui-runtime.md) — build checks can miss stale development dependencies; use supported Clerk appearance styling and check phone layouts.
 - [Slate selection](slate-selection.md) — empty today advances per sport to a published slate; provider calendars differ and UTC game dates can shift the slate day.
 - [Independent projection model](projection-model-policy.md) — ALLPLAY calculates player stat forecasts from history and matchups, not relabeled provider forecasts.
+- [Current playing roles](playing-role-policy.md) — value requires supported next-game workload; backups cannot inherit fantasy scores from past starts.
 - [Owner-gated browser tests](owner-test-identities.md) — approve the actual synthetic Clerk subject; preserve recovery identity temporarily and restore owner configuration.
 - [Race-results integrity](race-results-integrity.md) — NASCAR schedules can prefill “actual” lap counts before a race; require verified completed results.
 - [New-window navigation](new-window-navigation.md) — use native artifact-prefixed anchors; the client router intercepts ordinary Link clicks despite a blank target.

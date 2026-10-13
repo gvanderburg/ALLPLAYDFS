@@ -7,7 +7,9 @@
  */
 import type { ModelFantasyForecast } from './modelFantasyForecast';
 import type { ModelHistoryAppearance } from './modelHistoryAppearance';
+import type { ModelPlayerRole } from './modelPlayerRole';
 import type { ModelStatEstimate } from './modelStatEstimate';
+import type { PublishedMatchupRanking } from './publishedMatchupRanking';
 
 export interface ModelPlayerProjection {
   id: string;
@@ -19,6 +21,7 @@ export interface ModelPlayerProjection {
   position: string;
   availability: string;
   participation: string;
+  roleContext?: ModelPlayerRole;
   historicalGames: number;
   /** @nullable */
   reason: string | null;
@@ -27,6 +30,7 @@ export interface ModelPlayerProjection {
   /** @nullable */
   modelGameTotal?: number | null;
   fantasy?: ModelFantasyForecast[];
+  publishedMatchups?: PublishedMatchupRanking[];
   stats: ModelStatEstimate[];
   history: ModelHistoryAppearance[];
 }

@@ -182,9 +182,14 @@ export function fantasyForecasts(
         "Simulated outcome percentiles, not confidence intervals or guarantees; model not backtested.",
         "Mean applies published weights to ALLPLAY stat means plus simulated expected threshold bonuses; range/std estimates come from outcome scenarios.",
         "Count variances shrink toward Poisson; limited same-player consistency constraints, no cross-player/team correlation model. Sparse samples weaken tail estimates.",
-        "Published base scoring references were reviewed on the rules-as-of date; confirm the chosen contest's current rules. Ownership and starting/line assignments are not inferred.",
+        "Published base scoring references were reviewed on the rules-as-of date; confirm the chosen contest's current rules. Role evidence is reported separately and must be rechecked before lock. This stat forecast does not supply actual contest ownership.",
       ],
     };
+    if (player.roleContext?.eligible === false) {
+      base.status = "unavailable";
+      base.notes.push(`No supported slate workload: ${player.roleContext.note}`);
+      forecasts.push(base); continue;
+    }
     if (!rule) { forecasts.push(base); continue; }
     const known = Object.entries(rule.weights).filter(([key]) => means[key] !== undefined);
     base.trackedMean = known.length ? round(known.reduce((n, [key, weight]) => n + means[key] * weight, 0)) : null;

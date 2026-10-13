@@ -4,6 +4,7 @@ import { calculatePlayers } from "./calculate";
 import { loadHistory, resolveModelSlate, slateCandidates } from "./provider";
 import type { ModelSettings, ModelSport } from "./types";
 import { list, obj, str } from "./normalize";
+import { publishedMatchups } from "./published-rankings";
 
 interface Job { expiresAt: number; sheet: ModelProjectionSheet; }
 const jobs = new Map<string, Job>();
@@ -91,12 +92,16 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
     const eligible = history.games.filter(game => game.phase === slate.phase);
     const candidates = await slateCandidates(sport, slate, eligible);
     const calculated = calculatePlayers(sport, candidates.players, eligible, settings, cutoff, slate.phase, slate.venue);
-    job.sheet.players = calculated.players;
+    const published = await publishedMatchups(calculated.players, sport, Number(obj(slate.events[0]?.season).year), slate.date, new Date(cutoff));
+    job.sheet.players = published.players;
+    job.sheet.generatedAt = new Date();
+    job.sheet.notes.push(...published.notes);
     job.sheet.observedTeams = calculated.observedTeams;
     job.sheet.status = calculated.players.some(player => player.stats.some(stat => stat.projected !== null)) ? "ready" : "unavailable";
     job.sheet.generatedAt = new Date();
     job.sheet.notes.push(
       ...candidates.notes,
+      "Current depth charts / dated lineups and observed recent workload determine role eligibility. Backup QBs, unconfirmed goalies, non-probable pitchers and unverified entrants cannot become full-game value picks. Basketball bench rotations may still offer value based on recorded minutes. Missing roles are not zero-point forecasts.",
       `Recent form uses the last ${settings.recentGames} published appearances with weights 0.8^age; its blend weight is ${settings.recentWeight}%. Baseline is up to 10 earlier appearances, not a full-season average.`,
       `Matchup influence is ${settings.matchupWeight}%, shrunk by opponent games/5 and observed teams/8 (each capped at 1). Adjustment never exceeds ±20%.`,
       "Only completed games before the displayed UTC cutoff are used. Requested-day games, live games and future results are excluded; preseason and regular-season data are not mixed.",
@@ -123,7 +128,7 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
     if (history.truncated) job.sheet.notes.push("The history provider exceeded the bounded event limit; the observed sample is incomplete.");
     if (Date.parse(slate.date) > Date.now() + 14 * 86400000) job.sheet.notes.push("This slate is more than two weeks ahead. Current rosters and roles may change; refresh near the event.");
     if (job.sheet.status === "unavailable") job.sheet.notes.push("No player has two usable recorded appearances for the matched season phase. The sheet remains unfilled rather than copying a provider forecast.");
-    job.expiresAt = Date.now() + 30 * 60_000;
+    job.expiresAt = Date.now() + 5 * 60_000;
   } catch {
     job.sheet.status = "error";
     job.sheet.players = [];

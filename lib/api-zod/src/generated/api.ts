@@ -9,6 +9,99 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Signed-in users see their tickets; owners may review all tickets
+ */
+export const listFeedbackTicketsQueryScopeDefault = `mine`;
+
+
+export const ListFeedbackTicketsQueryParams = zod.object({
+  "scope": zod.enum(['mine', 'all']).default(listFeedbackTicketsQueryScopeDefault),
+  "before": zod.coerce.number().int().min(1).optional()
+})
+
+export const ListFeedbackTicketsResponse = zod.object({
+  "isOwner": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number().int(),
+  "category": zod.enum(['issue', 'request', 'general']),
+  "subject": zod.string(),
+  "details": zod.string(),
+  "sport": zod.union([zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),zod.null()]),
+  "contextPath": zod.string().nullable(),
+  "status": zod.enum(['open', 'in_progress', 'resolved']),
+  "ownerResponse": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "nextCursor": zod.number().int().nullable()
+})
+
+
+export const createFeedbackTicketBodySubjectMin = 3;
+export const createFeedbackTicketBodySubjectMax = 120;
+
+export const createFeedbackTicketBodyDetailsMin = 10;
+export const createFeedbackTicketBodyDetailsMax = 4000;
+
+export const createFeedbackTicketBodyContextPathMax = 200;
+
+
+export const createFeedbackTicketBodyContextPathRegExp = new RegExp('^/[a-zA-Z0-9/_-]*$');
+
+
+export const CreateFeedbackTicketBody = zod.object({
+  "category": zod.enum(['issue', 'request', 'general']),
+  "subject": zod.string().min(createFeedbackTicketBodySubjectMin).max(createFeedbackTicketBodySubjectMax),
+  "details": zod.string().min(createFeedbackTicketBodyDetailsMin).max(createFeedbackTicketBodyDetailsMax),
+  "sport": zod.union([zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),zod.null()]).optional(),
+  "contextPath": zod.string().max(createFeedbackTicketBodyContextPathMax).regex(createFeedbackTicketBodyContextPathRegExp).nullish()
+})
+
+export const CreateFeedbackTicketResponse = zod.object({
+  "id": zod.number().int(),
+  "category": zod.enum(['issue', 'request', 'general']),
+  "subject": zod.string(),
+  "details": zod.string(),
+  "sport": zod.union([zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),zod.null()]),
+  "contextPath": zod.string().nullable(),
+  "status": zod.enum(['open', 'in_progress', 'resolved']),
+  "ownerResponse": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+
+
+
+export const UpdateFeedbackTicketParams = zod.object({
+  "ticketId": zod.coerce.number().int().min(1)
+})
+
+export const updateFeedbackTicketBodyOwnerResponseMax = 2000;
+
+
+
+export const UpdateFeedbackTicketBody = zod.object({
+  "status": zod.enum(['open', 'in_progress', 'resolved']),
+  "ownerResponse": zod.string().max(updateFeedbackTicketBodyOwnerResponseMax)
+})
+
+export const UpdateFeedbackTicketResponse = zod.object({
+  "id": zod.number().int(),
+  "category": zod.enum(['issue', 'request', 'general']),
+  "subject": zod.string(),
+  "details": zod.string(),
+  "sport": zod.union([zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),zod.null()]),
+  "contextPath": zod.string().nullable(),
+  "status": zod.enum(['open', 'in_progress', 'resolved']),
+  "ownerResponse": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List members-only game takes; unpaid accounts receive no items
  */
 export const listGameTakesResponseItemsItemOneTitleMax = 150;
@@ -269,6 +362,20 @@ export const GetModelProjectionsResponse = zod.object({
   "position": zod.string(),
   "availability": zod.string(),
   "participation": zod.string(),
+  "roleContext": zod.object({
+  "status": zod.enum(['starter', 'projected-starter', 'rotation', 'backup', 'unknown', 'entrant']),
+  "label": zod.string(),
+  "depthRank": zod.number().int().nullable(),
+  "eligible": zod.boolean(),
+  "source": zod.string(),
+  "sourceUrl": zod.string().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "note": zod.string(),
+  "recentWorkload": zod.number().nullable(),
+  "workloadUnit": zod.string().nullable(),
+  "recentAppearances": zod.number().int(),
+  "teamGames": zod.number().int()
+}).optional(),
   "historicalGames": zod.number().int(),
   "reason": zod.string().nullable(),
   "modelTeamTotal": zod.number().nullish(),
@@ -291,6 +398,18 @@ export const GetModelProjectionsResponse = zod.object({
   "notes": zod.array(zod.string()),
   "scoringSource": zod.string().nullable(),
   "rulesAsOf": zod.string()
+})).optional(),
+  "publishedMatchups": zod.array(zod.object({
+  "source": zod.enum(['pff', 'fantasypros']),
+  "unit": zod.string(),
+  "rank": zod.number().int().nullable(),
+  "rankedTeams": zod.number().int(),
+  "rankOneMeans": zod.enum(['strongest', 'most-allowed']),
+  "sourceUrl": zod.string(),
+  "period": zod.string(),
+  "asOf": zod.coerce.date().nullable(),
+  "status": zod.enum(['available', 'unavailable', 'unsupported']),
+  "note": zod.string()
 })).optional(),
   "stats": zod.array(zod.object({
   "id": zod.string(),

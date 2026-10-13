@@ -3,6 +3,7 @@ import type { DfsDashboard, DfsSalaryPlatform, ModelProjectionSheet } from '@wor
 import { AlertCircle, ArrowUpRight, ChartNoAxesCombined, ShieldAlert } from 'lucide-react';
 import { deriveLineupInsights, type LineupStyle } from '@/lib/lineup-insights';
 import { InjuryBadge } from '@/components/injury-badge';
+import { formatValueMultiple } from '@/lib/position-ranks';
 
 const num = (value: number | null | undefined, digits = 1) =>
   value == null || !Number.isFinite(value) ? '—' : value.toFixed(digits);
@@ -56,7 +57,7 @@ export function ResearchShortlist({
           </div>
           <div className="research-stat"><small>POINTS</small><strong>{num(pick.points)}</strong></div>
           <div className="research-stat research-range"><small>P25 / P85</small><strong>{num(pick.floor)} <i>/</i> {num(pick.ceiling)}</strong></div>
-          <div className="research-stat research-value"><small>PTS / $1K</small><strong>{num(pick.value, 2)}</strong></div>
+          <div className="research-stat research-value"><small>VALUE</small><strong>{formatValueMultiple(pick.value)}</strong></div>
           <div className="research-stat research-ownership" title={pick.ownershipMethod ?? 'No supported estimate for this slate format and covered player pool.'}><small>EST. OWNERSHIP</small><strong>{pick.estimatedOwnership == null ? '—' : `${num(pick.estimatedOwnership)}%`}</strong></div>
           {(pick.reasons.length > 0 || pick.cautions.length > 0) && <details className="research-detail">
             <summary>Why / watch</summary>

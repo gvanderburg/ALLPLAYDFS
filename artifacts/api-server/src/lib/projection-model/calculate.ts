@@ -150,11 +150,33 @@ export function calculatePlayers(
         game.teams.find(team => team.id !== player.teamId)?.abbreviation ?? "", stats: player.stats }] : [];
     }).slice(0, 10);
     const workload: Record<string, number> = {};
+    let priorRoleWorkload: number | null = null;
     const stats = metrics.map(metric => {
       const estimateValue = estimate(metric, history, settings, profiles.get(metric.id)?.get(candidate.opponentId), workload);
+      // Current observed rotation workload replaces old full-game opportunity;
+      // never assign an arbitrary backup percentage or turn unknown playing time into zero.
+      if (candidate.roleContext?.eligible === false) estimateValue.projected = null;
+      else if (candidate.roleContext?.workloadUnit === metric.id && candidate.roleContext.recentWorkload != null &&
+        ["minutes", "timeOnIce", "atBats", "passingAttempts", "rushingAttempts", "targets", "receptions", "inningsPitched"].includes(metric.id) &&
+        estimateValue.sampleSize >= 2) {
+        priorRoleWorkload = estimateValue.projected == null ? null : estimateValue.projected / (estimateValue.matchupMultiplier || 1);
+        estimateValue.projected = Math.min(metric.maximum ?? Infinity, Math.max(metric.minimum ?? 0, candidate.roleContext.recentWorkload));
+      }
       if (!metric.exposure && estimateValue.projected !== null) workload[metric.id] = estimateValue.projected;
       return estimateValue;
     }).filter(stat => stat.sampleSize > 0);
+    if ((sport === "nfl" || sport === "cfb") && priorRoleWorkload != null && priorRoleWorkload > 0 &&
+      candidate.roleContext?.recentWorkload != null && candidate.roleContext.eligible) {
+      const related: Record<string, string[]> = {
+        passingAttempts: ["passingYards", "passingTDs", "passingCompletions", "interceptionsThrown"],
+        rushingAttempts: ["rushingYards", "rushingTDs"],
+        targets: ["receptions", "receivingYards", "receivingTDs"],
+        receptions: ["receivingYards", "receivingTDs"],
+      };
+      const ratio = candidate.roleContext.recentWorkload / priorRoleWorkload;
+      for (const stat of stats) if (stat.projected != null && (related[candidate.roleContext.workloadUnit ?? ""] ?? []).includes(stat.id))
+        stat.projected = round(stat.projected * ratio);
+    }
     if (sport === "nascar") {
       const finish = stats.find(stat => stat.id === "finish");
       // Published venue labels can combine different configurations; do not infer
@@ -183,7 +205,7 @@ export function calculatePlayers(
       modelTeamTotal: teamTotalFor(totals, candidate.teamId, candidate.opponentId),
       modelGameTotal: teamTotalFor(totals, candidate.teamId, candidate.opponentId) != null && teamTotalFor(totals, candidate.opponentId, candidate.teamId) != null
         ? round(teamTotalFor(totals, candidate.teamId, candidate.opponentId)! + teamTotalFor(totals, candidate.opponentId, candidate.teamId)!) : null,
-      reason: available ? null : history.length < 2 ? "At least two published appearances are required; no estimate is substituted." :
+      reason: candidate.roleContext?.eligible === false ? candidate.roleContext.note : available ? null : history.length < 2 ? "At least two published appearances are required; no estimate is substituted." :
         "Tracked stat coverage is insufficient for this player.",
     };
   });

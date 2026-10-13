@@ -10,6 +10,7 @@ import ProjectionsPage from '@/pages/projections';
 import Account from '@/pages/account';
 import GameTakesPage from '@/pages/game-takes';
 import NewsDesk from '@/pages/news-desk';
+import FeedbackPage from '@/pages/feedback';
 import { Route, Switch, useLocation, Redirect, Router as WouterRouter } from 'wouter';
 import { type ReactNode, useEffect, useRef } from 'react';
 import NotFound from '@/pages/not-found';
@@ -143,6 +144,7 @@ function Router() {
         <Route path="/takes" component={GameTakesPage} />
         <Route path="/news" component={NewsDesk} />
         <Route path="/account" component={AccountRoute} />
+        <Route path="/feedback" component={FeedbackPage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route component={NotFound} />

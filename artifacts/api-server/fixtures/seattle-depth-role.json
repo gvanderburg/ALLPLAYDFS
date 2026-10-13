@@ -1,0 +1,13 @@
+{
+  "season": {"year": 2026},
+  "depthchart": [
+    {"name": "Offense", "positions": {"qb": {"athletes": [
+      {"id": "3912547", "displayName": "Sam Darnold"},
+      {"id": "3924327", "displayName": "Drew Lock"},
+      {"id": "4432734", "displayName": "Jalen Milroe"}
+    ]}}},
+    {"name": "Special Teams", "positions": {"h": {"athletes": [
+      {"id": "3924327", "displayName": "Drew Lock"}
+    ]}}}
+  ]
+}

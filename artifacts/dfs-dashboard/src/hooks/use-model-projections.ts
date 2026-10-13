@@ -31,7 +31,7 @@ export function useModelProjections(params: GetModelProjectionsParams, active = 
       refetchOnMount: 'always',
       refetchOnWindowFocus: true,
       retry: 1,
-      refetchInterval: (current) => current.state.data?.status === 'warming' ? 3000 : false,
+      refetchInterval: (current) => current.state.data?.status === 'warming' ? 3000 : current.state.data?.status === 'ready' ? 60_000 : false,
     },
   });
   const sheet = verified && !query.isError && query.data?.status !== 'locked' ? query.data : undefined;

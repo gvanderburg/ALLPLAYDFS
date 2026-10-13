@@ -85,6 +85,7 @@ export default function Account() {
         <Link href="/" className="account-brand"><span className="account-brand-mark">A</span>ALLPLAY</Link>
         <div style={{ display: 'flex', gap: 8 }}>
           <Link href="/user-portal" className="btn btn-quiet"><ArrowLeft size={14} /> Dashboard</Link>
+          <Link href="/feedback" className="btn btn-quiet">Feedback</Link>
           <button className="btn btn-quiet" onClick={() => void signOut({ redirectUrl: basePathForSignout() })}>Sign out</button>
         </div>
       </header>
