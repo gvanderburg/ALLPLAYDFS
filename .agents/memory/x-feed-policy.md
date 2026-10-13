@@ -8,3 +8,15 @@ Use X's free website HTML widgets for ALLPLAY's sports feed. Do not use the atta
 **Why:** The user explicitly replaced the connected API feed with free HTML embedding after X required API credits. A connected credential is not permission to introduce paid data requests.
 
 **How to apply:** Preserve this restriction when changing the feed. Do not restore X API queries or billing-dependent polling without explicit user approval. Use public profile/list sources supported by X's widget; never promise an embedded personal Home timeline.
+
+The user chose separate public feeds for each sport rather than a single custom profile/list.
+
+**Why:** Sports must stay separate, including the X widget.
+
+**How to apply:** Keep the embedded source tied to the selected sport, with a public-account link when X restricts widget visibility.
+
+For NASCAR, use Underdog's main account even though it contains posts about multiple sports.
+
+**Why:** The user explicitly requested the main Underdog account for the NASCAR tab. This is an exception to the usual sport-specific source rule.
+
+**How to apply:** Disclose that the NASCAR X source is a mixed-sport main account. Do not extend this exception to other sports without asking.

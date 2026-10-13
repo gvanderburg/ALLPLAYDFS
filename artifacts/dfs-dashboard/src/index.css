@@ -409,6 +409,13 @@ h1 { color: #f0f2ec; font-size: clamp(28px, 2.7vw, 37px); }
 .x-feed-state { padding: 25px 12px; text-align: center; color: #8a9488; }
 .x-feed-state strong { display: block; color: #dbe2d6; margin: 9px 0 5px; }
 .x-feed-state p { font-size: 11px; line-height: 1.55; margin-bottom: 12px; }
+.x-timeline-scroll { min-height: 130px; }
+.x-timeline-host { width: 100%; min-width: 0; }
+.x-timeline-host iframe { max-width: 100% !important; }
+.x-timeline-host .twitter-timeline { color: #a4ed5c; font-size: 12px; }
+.x-embed-status { color: #929e8e; font-size: 11px; margin: 0 0 12px; }
+.x-embed-footer { padding: 12px 14px; border-top: 1px solid #252b25; }
+.x-embed-footer p { color: #8a9488; font-size: 10px; line-height: 1.5; margin: 8px 0 0; }
 .text-link { display: inline-flex; gap: 6px; align-items: center; font-size: 10px; }
 .x-next-refresh { padding: 8px 14px; color: #788376; border-top: 1px solid #252b25; background: #0e120f; font: 9px var(--app-font-mono); }
 .x-post-skeleton { display: flex; gap: 10px; padding: 9px 0; }

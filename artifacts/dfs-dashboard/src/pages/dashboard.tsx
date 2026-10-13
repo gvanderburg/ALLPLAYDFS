@@ -3,6 +3,7 @@ import { useGetDfsDashboard, getGetDfsDashboardQueryKey } from '@workspace/api-c
 import type { DfsEvent, DfsNewsItem, DfsPlayerProjection, DfsSport, DfsSalaryPlatform } from '@workspace/api-client-react';
 import ProjectionTable from '@/components/projection-table';
 import SalaryControls from '@/components/salary-controls';
+import XTimeline from '@/components/x-timeline';
 import {
   Activity, AlertCircle, ArrowDownToLine, CalendarDays, CircleHelp,
   Clock3, Download, ExternalLink, Info, Newspaper, RefreshCw, ShieldCheck,
@@ -264,12 +265,7 @@ export default function Dashboard() {
             <div className="panel-head panel-head-accent"><h2 className="panel-title" id="news-heading"><Newspaper size={16} /> {sportName} news</h2><span className="panel-meta">{loading ? 'UPDATING' : `${news.length} STORIES`}</span></div>
             <div key={sport} className="panel-body news-scroll" role="region" aria-labelledby="news-heading" tabIndex={0} data-testid="news-scroll"><NewsFeed news={news} loading={loading && !data} /></div>
           </section>
-          <section className="panel x-panel" id="x-section" aria-labelledby="x-heading">
-            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="x-heading"><span className="x-mark">𝕏</span> {sportName} on X</h2><span className="panel-meta">FREE HTML EMBED</span></div>
-            <div className="panel-body x-scroll" role="region" aria-labelledby="x-heading" tabIndex={0} data-testid="x-feed-scroll">
-              <div className="x-feed-state"><div className="state-icon"><MessageCircle size={17} /></div><strong>A public feed URL is needed</strong><p>The supplied x.com/home link is X’s Home page. It cannot embed your personal timeline. Choose a public profile or list for the free widget.</p><a className="text-link" href="https://x.com/home?ref_src=twsrc%5Etfw" target="_blank" rel="noopener noreferrer">Open your supplied X link <ExternalLink size={12} /></a><p>The paid X API feed has been removed.</p></div>
-            </div>
-          </section>
+          <XTimeline key={sport} sport={sport} />
           <section className="panel" aria-labelledby="coverage-heading">
             <div className="panel-head"><h2 className="panel-title" id="coverage-heading"><ShieldCheck size={16} /> Coverage & sources</h2><CircleHelp size={15} color="#71808c" /></div>
             <div className="panel-body">
