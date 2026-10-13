@@ -20,3 +20,9 @@ ALLPLAY must turn its independent history/matchup forecasts into actionable DFS 
 **Why:** On 2026-10-13 the user clarified that they need suggestions for upcoming games/slates, not merely raw statistical projections.
 
 **How to apply:** Separate full fantasy scores from incomplete inputs. Ownership inferred without contest ownership history is an uncalibrated selection-share heuristic, not observed or validated contest ownership. Label its assumptions and supported slate/pool restrictions; never fill unsupported estimates with provider values or fabricated percentages.
+
+Opponent and defensive-unit power rankings should use published sources, not an ALLPLAY-generated replacement.
+
+**Why:** The user explicitly chose published power rankings for position-specific matchup research. This does not replace the requirement for ALLPLAY's own player forecasts.
+
+**How to apply:** Identify the publisher, rating scope and publication period. Keep published power ratings separate from ALLPLAY's observed-stat matchup ranks. Do not present preseason ratings as weekly updates, or fill missing published ratings with unlabeled internal estimates.
