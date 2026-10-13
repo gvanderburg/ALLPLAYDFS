@@ -5,6 +5,7 @@ export interface MetricDefinition extends ModelMetric {
   exposure?: string;
   matchup?: { metric: string; mode: "allowed" | "attack" };
   maximum?: number;
+  minimum?: number;
 }
 const metric = (id: string, label: string, group: string, options: Partial<MetricDefinition> = {}): MetricDefinition => ({
   id, label, group, unit: "count", higherIsBetter: true, ...options,
@@ -47,6 +48,14 @@ export const METRICS: Record<ModelSport, MetricDefinition[]> = {
     metric("shotsAgainst", "Shots faced", "Goalie", { exposure: "timeOnIce", matchup: { metric: "shots", mode: "attack" }, higherIsBetter: false }),
     metric("goalsAgainst", "Goals allowed", "Goalie", { exposure: "timeOnIce", matchup: { metric: "goals", mode: "attack" }, higherIsBetter: false }),
     metric("saves", "Saves", "Goalie", { exposure: "timeOnIce", matchup: { metric: "shots", mode: "attack" } }),
+    allowed("shotAttempts", "ShAtt", "Skater", { exposure: "timeOnIce" }),
+    allowed("powerPlayPoints", "PPP", "Skater", { exposure: "timeOnIce" }),
+    allowed("shortHandedPoints", "SHP", "Skater", { exposure: "timeOnIce" }),
+    metric("shootoutGoals", "SO goals", "Skater", { maximum: 1 }),
+    metric("plusMinus", "+/−", "Skater", { minimum: -Infinity }),
+    allowed("wins", "W", "Goalie", { maximum: 1 }),
+    allowed("shutouts", "SO", "Goalie", { maximum: 1 }),
+    metric("overtimeLosses", "OTL", "Goalie", { maximum: 1 }),
   ],
   mlb: [
     metric("atBats", "At bats", "Hitter"),

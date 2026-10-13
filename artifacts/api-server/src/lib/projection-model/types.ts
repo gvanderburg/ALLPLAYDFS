@@ -43,4 +43,4 @@ export const MODEL_SPORTS: Record<ModelSport, { path: string; historyDays: numbe
   nascar: { path: "racing/nascar-premier", historyDays: 730 },
 };
 // Bump together when parsing, eligibility or historical-data meaning changes.
-export const HISTORY_VERSION = 1;
+export const HISTORY_VERSION = 3;

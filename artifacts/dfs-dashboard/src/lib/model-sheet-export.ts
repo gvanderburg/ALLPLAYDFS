@@ -1,0 +1,166 @@
+import type {
+  DfsDashboard,
+  DfsSalaryPlatform,
+  ModelFantasyForecast,
+  ModelPlayerProjection,
+  ModelProjectionSheet,
+} from '@workspace/api-client-react';
+
+export const MODEL_REFERENCE_HEADERS = [
+  'DFS ID', 'Name', 'Pos', 'Team', 'Opp', 'Status', 'Salary', 'Actual', 'ALLPLAY Proj', 'My Proj', 'Value',
+  'My Own', 'Adj Own', 'Min Exp', 'Max Exp', 'ALLPLAY Team', 'ALLPLAY Total',
+  ...(['DK', 'FD', 'Yahoo', 'OB'] as const).flatMap((site) => [
+    `${site} Points`, `${site} p25`, `${site} p50`, `${site} p75`, `${site} p85`, `${site} p95`, `${site} p99`, `${site} Std`,
+  ]),
+  'EV Line', 'PP Line', 'G', 'A', 'SOG', 'ShAtt', 'BLK', 'SV', 'GA', 'SO', 'W',
+] as const;
+
+const FORECAST_SITES = [
+  ['draftkings', 'DK'],
+  ['fanduel', 'FD'],
+  ['yahoo', 'Yahoo'],
+  ['ownersbox', 'OB'],
+] as const;
+type Site = typeof FORECAST_SITES[number][0];
+type ForecastKey = 'mean' | 'std' | 'p25' | 'p50' | 'p75' | 'p85' | 'p95' | 'p99';
+
+const fullForecastValue = (forecast: ModelFantasyForecast | undefined, key: ForecastKey): number | null =>
+  forecast?.status === 'ready' ? forecast[key] : null;
+
+function salaryRowsFor(sheet: ModelProjectionSheet, dashboard: DfsDashboard | undefined, platform: DfsSalaryPlatform) {
+  const selectedSlateId = dashboard?.salaryCoverage?.platform === platform ? dashboard.salaryCoverage.selectedSlateId : null;
+  const datesMatch = !!sheet.slateDate && dashboard?.date?.slice(0, 10) === sheet.slateDate;
+  if (!datesMatch || !selectedSlateId) return [];
+  return (dashboard?.projections ?? []).filter((row) =>
+    row.sport === sheet.sport
+    && row.salaryPlatform === platform
+    && row.salary != null
+    && row.salarySlateId === selectedSlateId,
+  );
+}
+
+/** Returns only a unique exact normalized name+team match from the selected slate/platform. */
+export function findUniqueSelectedSlateSalary(
+  player: ModelPlayerProjection,
+  sheet: ModelProjectionSheet,
+  dashboard: DfsDashboard | undefined,
+  platform: DfsSalaryPlatform,
+) {
+  const name = player.name.trim().toLocaleLowerCase();
+  const team = player.team.trim().toLocaleLowerCase();
+  if (!name || !team) return undefined;
+  const sameModelIdentity = sheet.players.filter((item) =>
+    item.name.trim().toLocaleLowerCase() === name
+    && item.team.trim().toLocaleLowerCase() === team,
+  );
+  if (sameModelIdentity.length !== 1) return undefined;
+  const matches = salaryRowsFor(sheet, dashboard, platform).filter((row) =>
+    row.name.trim().toLocaleLowerCase() === name
+    && row.team?.trim().toLocaleLowerCase() === team,
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+const metricFor = (player: ModelPlayerProjection, id: string) => player.stats.find((stat) => stat.id === id);
+const csvCell = (value: unknown) => {
+  if (value == null) return '""';
+  let text = String(value);
+  // Escape spreadsheet formulas only for strings. Numeric negative model stats remain numeric.
+  if (typeof value === 'string' && /^\s*[=+\-@]/.test(value)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+};
+
+export function buildModelSheetCsv(
+  sheet: ModelProjectionSheet,
+  dashboard: DfsDashboard | undefined,
+  platform: DfsSalaryPlatform,
+): string {
+  if (sheet.status !== 'ready') return '';
+  const headers = [...MODEL_REFERENCE_HEADERS, 'modelRole', 'modelPlayerId', 'participation', 'availability',
+    'historicalGames', 'statusReason', 'modelTeamTotal', 'modelGameTotal', 'salarySource', 'salarySlateId',
+    'model', 'backtested', 'fantasyResult', 'ownership', 'ownEVLineAssignment', 'ownPPLineAssignment',
+    'exposureDefaultsNote', 'history', 'source', 'caveat', 'sport', 'requestedDate', 'slateDate',
+    'generatedAt', 'effectiveAsOf', 'recentGames', 'recentWeightPct', 'matchupWeightPct',
+    'gameCount', 'processedGames', 'totalGames', 'failedGames', 'observedTeams', 'modelFormula', 'sheetNotes', 'platform'];
+
+  for (const [, prefix] of FORECAST_SITES) {
+    headers.push(`${prefix} Status`, `${prefix} Tracked Mean`, `${prefix} Missing Stats`, `${prefix} Notes`,
+      `${prefix} Scoring Source`, `${prefix} Rules As Of`, `${prefix} Sample Size`, `${prefix} Simulations`);
+  }
+  for (const metric of sheet.metrics) {
+    headers.push(
+      `raw_${metric.id}`, `${metric.id}_recentAverage`, `${metric.id}_baselineAverage`,
+      `${metric.id}_opponentRank`, `${metric.id}_rankedTeams`, `${metric.id}_opponentMultiplier`,
+      `${metric.id}_opponentSampleGames`, `${metric.id}_opponentMean`, `${metric.id}_leagueMean`,
+      `${metric.id}_sampleSize`, `${metric.id}_recentSampleSize`,
+    );
+  }
+
+  const values = sheet.players.map((player) => {
+    const salary = findUniqueSelectedSlateSalary(player, sheet, dashboard, platform);
+    const readyForecast = player.fantasy?.find((forecast) => forecast.site === platform && forecast.status === 'ready');
+    const ownMean = readyForecast?.mean ?? '';
+    const salaryValue = typeof ownMean === 'number' && salary?.salary != null && salary.salary > 0
+      ? ownMean / (salary.salary / 1000)
+      : '';
+    const forecastBySite = new Map(player.fantasy?.map((forecast) => [forecast.site, forecast]) ?? []);
+    const rawMetricIds = ['goals', 'assists', 'shots', 'shotAttempts', 'blockedShots', 'saves', 'goalsAgainst', 'shutouts', 'wins'];
+    const rawMetricValues = rawMetricIds.map((id) => metricFor(player, id)?.projected ?? '');
+    const reference = [
+      salary?.salaryPlayerId ?? '', player.name, salary?.rosterPositions ?? '', player.team, player.opponent,
+      player.availability, salary?.salary ?? '', '', ownMean, ownMean, salaryValue,
+      '', '', 0, 100, player.modelTeamTotal ?? '', player.modelGameTotal ?? '',
+    ];
+    for (const [site] of FORECAST_SITES) {
+      const forecast = forecastBySite.get(site);
+      reference.push(
+        fullForecastValue(forecast, 'mean') ?? '',
+        fullForecastValue(forecast, 'p25') ?? '',
+        fullForecastValue(forecast, 'p50') ?? '',
+        fullForecastValue(forecast, 'p75') ?? '',
+        fullForecastValue(forecast, 'p85') ?? '',
+        fullForecastValue(forecast, 'p95') ?? '',
+        fullForecastValue(forecast, 'p99') ?? '',
+        fullForecastValue(forecast, 'std') ?? '',
+      );
+    }
+    reference.push('', '', ...rawMetricValues);
+
+    const audit: unknown[] = [
+      player.position, player.id, player.participation, player.availability, player.historicalGames,
+      player.reason ?? '', player.modelTeamTotal ?? '', player.modelGameTotal ?? '', salary?.salarySource ?? '',
+      salary?.salarySlateId ?? '', 'ALLPLAY custom model', 'No', '', '', '', '',
+      'Research defaults only (0–100); not optimizer controls.', player.history.map((appearance) =>
+        `${appearance.date} vs ${appearance.opponent}: ${Object.entries(appearance.stats).map(([key, value]) => `${key}=${value}`).join('; ')}`,
+      ).join(' | '),
+      'ALLPLAY independent historical-performance matchup model',
+      'Conditional on participation; observed ranks are not calibrated probabilities. Fantasy percentiles are simulation outcomes, not confidence intervals. Not backtested.',
+      sheet.sport.toUpperCase(), sheet.requestedDate, sheet.slateDate, sheet.generatedAt, sheet.effectiveAsOf ?? '',
+      sheet.recentGames, sheet.recentWeight, sheet.matchupWeight, sheet.gameCount, sheet.processedGames,
+      sheet.totalGames, sheet.failedGames, sheet.observedTeams, sheet.modelFormula, sheet.notes.join('; '), platform,
+    ];
+    for (const [site] of FORECAST_SITES) {
+      const forecast = forecastBySite.get(site);
+      audit.push(
+        forecast?.status ?? 'unavailable', forecast?.trackedMean ?? '',
+        forecast?.missingStats.join('; ') ?? '', forecast?.notes.join('; ') ?? '',
+        forecast?.scoringSource ?? '', forecast?.rulesAsOf ?? '', forecast?.sampleSize ?? '', forecast?.simulations ?? '',
+      );
+    }
+    for (const metric of sheet.metrics) {
+      const stat = metricFor(player, metric.id);
+      audit.push(
+        stat?.projected ?? '', stat?.recentAverage ?? '', stat?.baselineAverage ?? '',
+        stat?.opponentRank ?? '', stat?.rankedTeams ?? '', stat?.matchupMultiplier ?? '',
+        stat?.defenseGames ?? '', stat?.opponentMean ?? '', stat?.leagueMean ?? '',
+        stat?.sampleSize ?? '', stat?.recentSampleSize ?? '',
+      );
+    }
+    return [...reference, ...audit];
+  });
+
+  return [
+    headers.map(csvCell).join(','),
+    ...values.map((row) => row.map(csvCell).join(',')),
+  ].join('\r\n');
+}

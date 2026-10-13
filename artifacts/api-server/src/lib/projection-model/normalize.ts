@@ -30,7 +30,7 @@ const football: Record<string, Record<string, string>> = {
   receiving: { receptions: "receptions", receivingYards: "receivingYards", receivingTouchdowns: "receivingTDs", receivingTargets: "targets" },
 };
 const basketball = { points: "points", rebounds: "rebounds", assists: "assists", steals: "steals", blocks: "blocks", turnovers: "turnovers" };
-const skater = { goals: "goals", assists: "assists", shotsTotal: "shots", blockedShots: "blockedShots" };
+const skater = { goals: "goals", assists: "assists", shotsTotal: "shots", shotsMissed: "missedShots", blockedShots: "blockedShots", plusMinus: "plusMinus", shootoutGoals: "shootoutGoals" };
 const goalie = { shotsAgainst: "shotsAgainst", goalsAgainst: "goalsAgainst", saves: "saves" };
 const batting = { atBats: "atBats", hits: "hits", runs: "runs", RBIs: "rbi", homeRuns: "homeRuns", walks: "walks", strikeouts: "battingStrikeouts" };
 const pitching = { hits: "hitsAllowed", earnedRuns: "earnedRuns", walks: "walksAllowed", strikeouts: "pitcherStrikeouts" };
@@ -96,11 +96,112 @@ export function normalizeSummary(payload: unknown, sport: ModelSport): Historica
     }
   }
   if (teams.length !== 2 || !players.size) return null;
+  if (sport === "nhl") enrichHockey(data, competition, players);
   return {
     version: HISTORY_VERSION, id, date, teams, players: [...players.values()],
     phase: Number(obj(header.season).type ?? 0), season: Number(obj(header.season).year ?? 0),
     venue: str(obj(obj(data.gameInfo).venue).fullName),
   };
+}
+
+// Derive supplemental HISTORY only when the full play log reconciles to the box.
+// Never turn a missing/incomplete play log into observed zeros.
+function enrichHockey(data: Json, competition: Json, players: Map<string, HistoricalPlayer>) {
+  const skaters = [...players.values()].filter(p => p.stats.goals !== undefined);
+  const plays = list(data.plays).map(obj).filter(p => Number(obj(p.period).number) < 5);
+  const goals = plays.filter(p => str(obj(p.type).text) === "Goal");
+  const totals = new Map<string, { goals: number; assists: number; shots: number; attempts: number; misses: number; blocks: number; pp: number; sh: number }>();
+  const get = (id: string) => {
+    let t = totals.get(id);
+    if (!t) { t = { goals: 0, assists: 0, shots: 0, attempts: 0, misses: 0, blocks: 0, pp: 0, sh: 0 }; totals.set(id, t); }
+    return t;
+  };
+  let goalLogComplete = goals.length === skaters.reduce((n, p) => n + p.stats.goals, 0);
+  let shotLogComplete = plays.length > 0;
+  const ambiguousStrengthTeams = new Set<string>();
+  const specialGoals = new Map<string, { pp: number; sh: number }>();
+  for (const play of plays) {
+    const kind = str(obj(play.type).text);
+    if (!["Goal", "Shot", "Missed", "Blocked"].includes(kind)) continue;
+    const participants = list(play.participants).map(obj);
+    const shooter = participants.find(p => ["shooter", "scorer"].includes(str(p.type)));
+    const shooterId = str(obj(shooter?.athlete).id);
+    if (!shooterId || !players.has(shooterId)) { shotLogComplete = false; if (kind === "Goal") goalLogComplete = false; continue; }
+    const t = get(shooterId);
+    t.attempts++;
+    if (kind === "Shot" || kind === "Goal") t.shots++;
+    if (kind === "Missed") t.misses++;
+    if (kind === "Blocked") {
+      const defender = participants.find(p => str(p.type) === "defender");
+      const defenderId = str(obj(defender?.athlete).id);
+      if (!defenderId || !players.has(defenderId)) shotLogComplete = false;
+      else get(defenderId).blocks++;
+    }
+    if (kind !== "Goal") continue;
+    t.goals++;
+    const strength = str(obj(play.strength).abbreviation);
+    const teamId = players.get(shooterId)!.teamId;
+    if (strength === "empty-net") ambiguousStrengthTeams.add(teamId);
+    else if (!["even-strength", "power-play", "short-handed"].includes(strength)) goalLogComplete = false;
+    const special = specialGoals.get(teamId) ?? { pp: 0, sh: 0 };
+    if (strength === "power-play") special.pp++;
+    if (strength === "short-handed") special.sh++;
+    specialGoals.set(teamId, special);
+    for (const part of participants.filter(p => ["scorer", "assister"].includes(str(p.type)))) {
+      const id = str(obj(part.athlete).id);
+      if (!players.has(id)) { goalLogComplete = false; continue; }
+      const pt = get(id);
+      if (str(part.type) === "assister") pt.assists++;
+      if (strength === "power-play") pt.pp++;
+      if (strength === "short-handed") pt.sh++;
+    }
+  }
+  // Empty-net strength does not reveal manpower. Only resolve it as neither
+  // PP nor SH if the identified special-team goals reconcile to team box totals.
+  for (const teamId of ambiguousStrengthTeams) {
+    const boxTeam = list(obj(data.boxscore).teams).map(obj).find(t => str(obj(t.team).id) === teamId);
+    const totalsByName = new Map(list(boxTeam?.statistics).map(obj).map(s => [str(s.name), numeric(s.displayValue)]));
+    const identified = specialGoals.get(teamId) ?? { pp: 0, sh: 0 };
+    if (totalsByName.get("powerPlayGoals") !== identified.pp || totalsByName.get("shortHandedGoals") !== identified.sh) goalLogComplete = false;
+  }
+  goalLogComplete = goalLogComplete && plays.length > 0 && skaters.every(p =>
+    (totals.get(p.id)?.goals ?? 0) === p.stats.goals && (totals.get(p.id)?.assists ?? 0) === p.stats.assists);
+  shotLogComplete = shotLogComplete && skaters.every(p =>
+    (totals.get(p.id)?.shots ?? 0) === p.stats.shots
+    && (totals.get(p.id)?.misses ?? 0) === p.stats.missedShots
+    && (totals.get(p.id)?.blocks ?? 0) === p.stats.blockedShots);
+  for (const player of skaters) {
+    const t = totals.get(player.id);
+    if (goalLogComplete) { player.stats.powerPlayPoints = t?.pp ?? 0; player.stats.shortHandedPoints = t?.sh ?? 0; }
+    if (shotLogComplete) player.stats.shotAttempts = t?.attempts ?? 0;
+  }
+  const competitors = list(competition.competitors).map(obj);
+  const status = obj(competition.status);
+  const endPlay = list(data.plays).map(obj).reverse().find(p => str(obj(p.type).text) === "End of Game");
+  const endPeriod = Number(status.period || obj(endPlay?.period).number);
+  const featured = list(status.featuredAthletes).map(obj);
+  const winningGoalie = str(featured.find(a => str(a.name) === "winningGoalie")?.playerId);
+  const losingGoalie = str(featured.find(a => str(a.name) === "losingGoalie")?.playerId);
+  for (const competitor of competitors) {
+    const teamId = str(competitor.id || obj(competitor.team).id);
+    const goalies = [...players.values()].filter(p => p.teamId === teamId && p.stats.saves !== undefined);
+    const opponent = competitors.find(c => str(c.id || obj(c.team).id) !== teamId);
+    const opponentGoals = [...players.values()].filter(p => p.teamId !== teamId && p.stats.goals !== undefined);
+    const allowed = opponentGoals.length ? opponentGoals.reduce((n, p) => n + p.stats.goals, 0) : null;
+    for (const player of goalies) {
+      if (typeof competitor.winner === "boolean") {
+        if (!competitor.winner) player.stats.wins = 0;
+        else if (goalies.some(g => g.id === winningGoalie)) player.stats.wins = player.id === winningGoalie ? 1 : 0;
+        else if (goalies.length === 1) player.stats.wins = 1;
+        if (competitor.winner) player.stats.overtimeLosses = 0;
+        else if (endPeriod > 0 && endPeriod < 4) player.stats.overtimeLosses = 0;
+        else if (endPeriod >= 4 && (goalies.length === 1 || goalies.some(g => g.id === losingGoalie)))
+          player.stats.overtimeLosses = goalies.length === 1 || player.id === losingGoalie ? 1 : 0;
+      }
+      if (allowed !== null && opponent && typeof competitor.winner === "boolean")
+        player.stats.shutouts = allowed === 0 && goalies.length === 1 ? 1 : 0;
+    }
+  }
 }
 
 export function normalizeRace(eventValue: unknown): HistoricalGame | null {

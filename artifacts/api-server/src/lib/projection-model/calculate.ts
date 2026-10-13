@@ -1,6 +1,7 @@
 import type { ModelHistoryAppearance, ModelPlayerProjection, ModelStatEstimate } from "@workspace/api-zod";
 import { METRICS, type MetricDefinition } from "./metrics";
 import type { HistoricalGame, ModelSettings, ModelSport, SlatePlayer, StatValues } from "./types";
+import { fantasyForecasts, modelTeamTotals, teamTotalFor } from "./fantasy";
 
 const round = (n: number) => Math.round(n * 100) / 100;
 const mean = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length;
@@ -88,7 +89,7 @@ function estimate(
   const reliability = profile ? Math.min(1, profile.games / 5) * Math.min(1, profile.teams / 8) : 0;
   const factor = profile && profile.league > 0 ?
     clamp(1 + (profile.value / profile.league - 1) * settings.matchupWeight / 100 * reliability, 0.8, 1.2) : 1;
-  const projected = rows.length >= 2 && base !== null ? round(clamp(base * factor, 0, metric.maximum ?? Infinity)) : null;
+  const projected = rows.length >= 2 && base !== null ? round(clamp(base * factor, metric.minimum ?? 0, metric.maximum ?? Infinity)) : null;
   return {
     id: metric.id, projected, recentAverage: recentAverage === null ? null : round(recentAverage),
     baselineAverage: baselineAverage === null ? null : round(baselineAverage), matchupMultiplier: round(factor),
@@ -108,6 +109,17 @@ function enforceConsistency(stats: ModelStatEstimate[]) {
   limit("receptions", "targets");
   limit("hits", "atBats");
   limit("homeRuns", "hits");
+  limit("goals", "shots");
+  const g = byId.get("goals")?.projected, a = byId.get("assists")?.projected;
+  if (g != null && a != null) {
+    const pp = byId.get("powerPlayPoints"), sh = byId.get("shortHandedPoints");
+    if (pp?.projected != null) pp.projected = Math.min(pp.projected, g + a);
+    if (sh?.projected != null) sh.projected = Math.min(sh.projected, Math.max(0, g + a - (pp?.projected ?? 0)));
+  }
+  const attempts = byId.get("shotAttempts"), sog = byId.get("shots");
+  if (attempts?.projected != null && sog?.projected != null) attempts.projected = Math.max(attempts.projected, sog.projected);
+  const win = byId.get("wins"), otl = byId.get("overtimeLosses");
+  if (win?.projected != null && otl?.projected != null) otl.projected = Math.min(otl.projected, 1 - win.projected);
   const saves = byId.get("saves"), shots = byId.get("shotsAgainst"), goals = byId.get("goalsAgainst");
   if (saves?.projected != null && shots?.projected != null && goals?.projected != null) {
     goals.projected = Math.min(goals.projected, shots.projected);
@@ -124,6 +136,7 @@ export function calculatePlayers(
   const metrics = METRICS[sport];
   const profiles = new Map(metrics.map(metric => [metric.id, makeProfiles(games, metric)]));
   const observedTeams = new Set(games.flatMap(game => game.teams.map(team => team.id))).size;
+  const totals = modelTeamTotals(sport, games, settings);
   const players = candidates.map((candidate): ModelPlayerProjection => {
     const history: ModelHistoryAppearance[] = games.flatMap(game => {
       const player = game.players.find(p => p.id === candidate.id);
@@ -160,6 +173,10 @@ export function calculatePlayers(
     const available = stats.some(stat => stat.projected !== null);
     return {
       ...candidate, historicalGames: history.length, history, stats,
+      fantasy: fantasyForecasts(sport, candidate, stats, history),
+      modelTeamTotal: teamTotalFor(totals, candidate.teamId, candidate.opponentId),
+      modelGameTotal: teamTotalFor(totals, candidate.teamId, candidate.opponentId) != null && teamTotalFor(totals, candidate.opponentId, candidate.teamId) != null
+        ? round(teamTotalFor(totals, candidate.teamId, candidate.opponentId)! + teamTotalFor(totals, candidate.opponentId, candidate.teamId)!) : null,
       reason: available ? null : history.length < 2 ? "At least two published appearances are required; no estimate is substituted." :
         "Tracked stat coverage is insufficient for this player.",
     };

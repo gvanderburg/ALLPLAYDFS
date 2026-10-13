@@ -29,6 +29,55 @@ export const DfsSport = {
   cfb: 'cfb',
 } as const;
 
+export type ModelFantasyForecastSite = typeof ModelFantasyForecastSite[keyof typeof ModelFantasyForecastSite];
+
+
+export const ModelFantasyForecastSite = {
+  draftkings: 'draftkings',
+  fanduel: 'fanduel',
+  yahoo: 'yahoo',
+  ownersbox: 'ownersbox',
+} as const;
+
+export type ModelFantasyForecastStatus = typeof ModelFantasyForecastStatus[keyof typeof ModelFantasyForecastStatus];
+
+
+export const ModelFantasyForecastStatus = {
+  ready: 'ready',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export interface ModelFantasyForecast {
+  site: ModelFantasyForecastSite;
+  status: ModelFantasyForecastStatus;
+  /** @nullable */
+  mean: number | null;
+  /** @nullable */
+  trackedMean: number | null;
+  /** @nullable */
+  std: number | null;
+  /** @nullable */
+  p25: number | null;
+  /** @nullable */
+  p50: number | null;
+  /** @nullable */
+  p75: number | null;
+  /** @nullable */
+  p85: number | null;
+  /** @nullable */
+  p95: number | null;
+  /** @nullable */
+  p99: number | null;
+  sampleSize: number;
+  simulations: number;
+  missingStats: string[];
+  notes: string[];
+  /** @nullable */
+  scoringSource: string | null;
+  rulesAsOf: string;
+}
+
 export interface ModelStatEstimate {
   id: string;
   /** @nullable */
@@ -72,6 +121,11 @@ export interface ModelPlayerProjection {
   historicalGames: number;
   /** @nullable */
   reason: string | null;
+  /** @nullable */
+  modelTeamTotal?: number | null;
+  /** @nullable */
+  modelGameTotal?: number | null;
+  fantasy?: ModelFantasyForecast[];
   stats: ModelStatEstimate[];
   history: ModelHistoryAppearance[];
 }

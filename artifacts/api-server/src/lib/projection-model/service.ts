@@ -97,8 +97,11 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
       "Historical samples count published box-score appearances, not scheduled games. DNPs and unpublished categories are not filled with zero; observed zero stats remain valid zeros.",
       "Opponent ranks are calculated from observed stat totals per game, lowest to highest, among covered teams with at least two games. They are not official overall or position-specific league power rankings.",
       "Goalie and pitcher matchups use opponent attacking production. NBA/WNBA minutes, NHL ice time and MLB innings/at-bats determine opportunity where available. Saves are reconciled to shots faced minus goals allowed; catches/completions/hits cannot exceed their opportunity estimates.",
-      "These are conditional-on-playing estimates. Injuries, trades, confirmed lineups, starting roles, pace, game totals and coaching changes are not learned automatically. Check availability before using any estimate.",
-      "No fantasy-point scoring or DraftKings/FanDuel predictions enter the model. Data source: ESPN completed box scores, current rosters and published schedules.",
+      "These are conditional-on-playing estimates. Injuries, trades, confirmed lineups, starting roles, pace and coaching changes are not learned automatically. Check availability before using any estimate.",
+      "ALLPLAY forecasts raw stats from ESPN completed box scores. Published site scoring rules convert those own forecasts to fantasy points; provider fantasy forecasts and ownership predictions are never copied.",
+      "Fantasy outcome ranges use 2,048 deterministic count simulations from ALLPLAY means and sample-shrunk historical variance. NHL and basketball scoring is available where all needed inputs have at least two appearances. Missing scoring inputs leave full totals/ranges blank; known-stat subtotals are not full projections.",
+      "Model team/game totals use covered teams' historical scoring production and a sample-shrunk opponent allowance adjustment. They are independent model estimates, not market lines. Totals are unavailable outside NHL/NBA/WNBA or with fewer than two team appearances.",
+      "Hockey PP/SH points and shot attempts are derived only from play logs that reconcile to box scores. Wins/OT losses need verified goalie decisions or unambiguous appearances; missing input is not zero. EV/PP line assignments and contest ownership are unavailable.",
       "Fractional stat counts are expected values, not guaranteed game lines or calibrated probabilities. Projected minutes, ice time and innings use decimal units; historical baseball innings are converted from outs notation.",
     );
     if (sport === "nascar") job.sheet.notes.push(

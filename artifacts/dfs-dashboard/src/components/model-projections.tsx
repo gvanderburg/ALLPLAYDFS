@@ -5,6 +5,7 @@ import { getGetDfsDashboardQueryKey, useGetDfsDashboard } from '@workspace/api-c
 import type { DfsDashboard, DfsSalaryPlatform, DfsSport, GetDfsDashboardParams, GetModelProjectionsParams, ModelMetric, ModelPlayerProjection, ModelProjectionSheet, ModelStatEstimate } from '@workspace/api-client-react';
 import MembershipCheckoutButton from '@/components/membership-checkout-button';
 import { useModelProjections } from '@/hooks/use-model-projections';
+import { buildModelSheetCsv } from '@/lib/model-sheet-export';
 import {
   Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, BarChart3,
   CalendarDays, ChevronRight, CircleHelp, Download, Film, Info,
@@ -29,51 +30,19 @@ const defaultSettings = { recentGames: 5, recentWeight: 70, matchupWeight: 25 };
 type Settings = typeof defaultSettings;
 const fmt = (value: number | null | undefined, unit = '') => value == null || !Number.isFinite(value) ? '—' : `${Number(value.toFixed(2))}${unit ? ` ${unit}` : ''}`;
 const readableDate = (value?: string | null) => value ? new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', ...(value.includes('T') ? { hour: 'numeric', minute: '2-digit' } : {}) }) : '—';
-const escapeCsv = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+const fantasySites = ['draftkings', 'fanduel', 'yahoo', 'ownersbox'] as const;
+type FantasySite = typeof fantasySites[number];
+const siteLabel = (site: FantasySite) => ({ draftkings: 'DraftKings', fanduel: 'FanDuel', yahoo: 'Yahoo', ownersbox: 'OwnersBox' })[site];
+const forecastFor = (player: ModelPlayerProjection, site: FantasySite) => player.fantasy?.find((item) => item.site === site);
 
-function exportSheet(sheet: ModelProjectionSheet) {
-  const rows = sheet.players.flatMap((player) => player.stats.map((stat) => ({
-    model: 'ALLPLAY custom model',
-    backtested: 'No',
-    sport: sheet.sport.toUpperCase(),
-    requestedDate: sheet.requestedDate,
-    slateDate: sheet.slateDate,
-    generatedAt: sheet.generatedAt,
-    effectiveAsOf: sheet.effectiveAsOf ?? '',
-    recentGames: sheet.recentGames,
-    recentWeightPct: sheet.recentWeight,
-    matchupWeightPct: sheet.matchupWeight,
-    player: player.name,
-    team: player.team,
-    opponent: player.opponent,
-    position: player.position,
-    availability: player.availability,
-    participation: player.participation,
-    historicalGames: player.historicalGames,
-    statusReason: player.reason ?? '',
-    stat: stat.id,
-    projectedRawStat: stat.projected ?? '',
-    recentAverage: stat.recentAverage ?? '',
-    baselineAverage: stat.baselineAverage ?? '',
-    opponentRank: stat.opponentRank ?? '',
-    rankedTeams: stat.rankedTeams,
-    opponentMultiplier: stat.matchupMultiplier,
-    opponentSampleGames: stat.defenseGames,
-    opponentMean: stat.opponentMean ?? '',
-    leagueMean: stat.leagueMean ?? '',
-    sampleSize: stat.sampleSize,
-    recentSampleSize: stat.recentSampleSize,
-    history: player.history.map((appearance) => `${appearance.date} vs ${appearance.opponent}: ${Object.entries(appearance.stats).map(([key, value]) => `${key}=${value}`).join('; ')}`).join(' | '),
-    source: 'ALLPLAY independent historical-performance matchup model',
-    caveat: 'Conditional on participation; observed ranks are not calibrated probabilities',
-  })));
-  if (!rows.length) return;
-  const headers = Object.keys(rows[0]);
-  const csv = [headers.map(escapeCsv).join(','), ...rows.map((row) => headers.map((key) => escapeCsv(row[key as keyof typeof row])).join(','))].join('\r\n');
+function exportSheet(sheet: ModelProjectionSheet, dashboard: DfsDashboard | undefined, platform: DfsSalaryPlatform) {
+  if (sheet.status !== 'ready') return;
+  const csv = buildModelSheetCsv(sheet, dashboard, platform);
+  if (!csv) return;
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = `allplay-${sheet.sport}-${sheet.slateDate}-model-stats.csv`;
+  link.download = `allplay-${sheet.sport}-${sheet.slateDate}-research.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -89,7 +58,7 @@ function AccessGate({ signedIn, membership, onRefresh }: { signedIn: boolean; me
       ? 'The model sheet stays sealed until your account is checked.'
       : unavailable
         ? 'No player estimates are shown until ALLPLAY confirms access. Retry or check your account.'
-        : 'Raw matchup stat estimates, model inputs and each player’s recent history. Not fantasy scoring.'}</p>
+        : 'Independent raw-stat estimates, site-rule fantasy simulations where supported, model inputs and each player’s recent history.'}</p>
     <div className="model-gate-actions">
       {!signedIn ? <Link href="/sign-in" className="btn btn-primary">Sign in to verify</Link>
         : unavailable ? <><button type="button" className="btn btn-primary" onClick={onRefresh}><RefreshCw size={14} /> Retry access check</button><Link href="/account" className="btn btn-quiet">Account</Link></>
@@ -116,20 +85,71 @@ function ModelState({ sheet, loading, error, onRetry }: { sheet?: ModelProjectio
   return null;
 }
 
-const MetricRank = memo(function MetricRank({ metric, stat, players }: { metric: ModelMetric; stat?: ModelStatEstimate; players: ModelPlayerProjection[] }) {
+const MetricRank = memo(function MetricRank({ stat, tier }: { stat?: ModelStatEstimate; tier?: string }) {
   const value = stat?.projected;
   if (value == null) return <span className="model-number model-missing">—</span>;
-  const valid = players.flatMap((player) => player.stats.find((item) => item.id === metric.id)?.projected ?? []);
-  const sorted = [...valid].sort((a, b) => metric.higherIsBetter ? b - a : a - b);
-  const rank = sorted.indexOf(value);
-  const percentile = sorted.length < 2 ? .5 : rank / (sorted.length - 1);
-  const tier = percentile < .25 ? 'high' : percentile < .5 ? 'mid-high' : percentile < .75 ? 'mid-low' : 'low';
-  return <span className={`model-number model-tier-${tier}`} title="Relative only to this sheet; not a calibrated probability">{value.toFixed(2)}</span>;
+  return <span className={`model-number model-tier-${tier ?? 'mid-high'}`} title="Relative only to this sheet; not a calibrated probability">{value.toFixed(2)}</span>;
 });
 
+function HistoryTrendCell({ player, metric }: { player: ModelPlayerProjection; metric?: ModelMetric }) {
+  if (!metric) return <span className="model-history-unavailable">—</span>;
+  const observations = player.history
+    .map((item, index) => ({
+      date: item.date,
+      timestamp: Date.parse(item.date),
+      value: item.stats[metric.id],
+      index,
+    }))
+    .filter((item) => Number.isFinite(item.timestamp) && Number.isFinite(item.value))
+    .sort((a, b) => a.timestamp - b.timestamp || a.index - b.index);
+  if (observations.length < 2) {
+    return <span className="model-history-unavailable" title={`Fewer than two dated actual ${metric.label} observations are available.`}>—</span>;
+  }
+  const values = observations.map((item) => item.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const points = observations.map((item, index) => ({
+    x: 3 + index * (64 / (observations.length - 1)),
+    y: 15 - ((item.value - min) / span) * 12,
+  }));
+  const accessibleText = `Actual ${metric.label} observations, oldest to newest: ${observations
+    .map((item) => `${readableDate(item.date)}: ${fmt(item.value, metric.unit)}`)
+    .join('; ')}.`;
+  const estimate = player.stats.find((stat) => stat.id === metric.id);
+  const delta = estimate?.projected != null && estimate.recentAverage != null
+    ? estimate.projected - estimate.recentAverage
+    : null;
+  const favorable = delta == null || delta === 0 ? 'neutral' : delta * (metric.higherIsBetter ? 1 : -1) > 0 ? 'favorable' : 'unfavorable';
+  return <span className="model-history-trend" title={accessibleText}>
+    <svg className="model-history-sparkline" viewBox="0 0 70 18" role="img" aria-label={accessibleText}>
+      <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} />
+      {points.map((point, index) => <circle key={`${observations[index].date}-${index}`} cx={point.x} cy={point.y} r="1.35" />)}
+    </svg>
+    {delta != null && <small className={`model-history-delta delta-${favorable}`} title={`ALLPLAY estimate minus recent actual average: ${fmt(delta, metric.unit)}. Color indicates raw-stat direction only; it is not a confidence rating.`}>Δ {delta > 0 ? '+' : ''}{delta.toFixed(2)}</small>}
+  </span>;
+}
+
 function PlayerDetail({ player, sheet, metrics }: { player: ModelPlayerProjection; sheet: ModelProjectionSheet; metrics: ModelMetric[] }) {
+  const forecasts = player.fantasy ?? [];
   return <div className="model-detail">
     {player.reason && <div className="model-reason"><Info size={14} />{player.reason}</div>}
+    <section className="fantasy-detail">
+      <div className="model-history-head"><strong>FANTASY SCORING · ALLPLAY SIMULATIONS</strong><span>Source verified where available · not backtested</span></div>
+      <p className="fantasy-detail-note">Where a scoring source is verified, published site rules convert ALLPLAY's independent stat forecasts. Unsupported scoring stays unavailable. Ready forecasts include full points and ranges. Partial tracked points are a known-stat subtotal, never a full projection. Percentiles describe simulated outcomes, not confidence intervals.</p>
+      <div className="fantasy-detail-grid">{fantasySites.map((site) => {
+        const forecast = forecasts.find((item) => item.site === site);
+        const ready = forecast?.status === 'ready';
+        return <article className="fantasy-site-detail" key={site}>
+          <div><strong>{siteLabel(site)}</strong><span className={`forecast-status forecast-${forecast?.status ?? 'unavailable'}`}>{forecast?.status ?? 'unavailable'}</span></div>
+          <dl><dt>Full mean</dt><dd>{fmt(ready ? forecast.mean : null)}</dd><dt>Tracked subtotal</dt><dd>{fmt(forecast?.trackedMean)}</dd><dt>Std / simulations</dt><dd>{ready ? `${fmt(forecast.std)} / ${forecast.simulations || '—'}` : '—'}</dd></dl>
+          <p>{forecast?.missingStats.length ? `Missing inputs: ${forecast.missingStats.join(', ')}` : forecast ? 'No missing scored inputs reported.' : 'No forecast published.'}</p>
+          {forecast?.scoringSource && <a href={forecast.scoringSource} target="_blank" rel="noreferrer">Scoring rules source</a>}
+          <small>Rules as of {forecast?.rulesAsOf || '—'} · sample {forecast?.sampleSize ?? '—'}</small>
+          {forecast?.notes.map((note, index) => <small key={`${site}-note-${index}`}>{note}</small>)}
+        </article>;
+      })}</div>
+    </section>
     <div className="model-detail-table-wrap">
       <table className="model-detail-table"><thead><tr><th>STAT</th><th>ESTIMATE</th><th>RECENT AVG</th><th>BASELINE ≤10</th><th>OPP RANK</th><th>ADJUSTMENT</th><th>OPP AVG</th><th>LEAGUE AVG</th><th>SAMPLE</th></tr></thead>
         <tbody>{player.stats.map((stat) => {
@@ -151,10 +171,17 @@ function PlayerDetail({ player, sheet, metrics }: { player: ModelPlayerProjectio
 function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: ModelProjectionSheet; dashboard?: DfsDashboard; platform: DfsSalaryPlatform; onPlatformChange: (platform: DfsSalaryPlatform) => void }) {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [direction, setDirection] = useState<'asc' | 'desc'>('asc');
+  const hasScoring = sheet.players.some(player => forecastFor(player, platform)?.status === 'ready');
+  const historyMetric = useMemo(() => sheet.metrics.find((metric) => sheet.players.some((player) =>
+    player.history.filter((item) => Number.isFinite(Date.parse(item.date)) && Number.isFinite(item.stats[metric.id])).length >= 2,
+  )) ?? sheet.metrics[0], [sheet.metrics, sheet.players]);
+  const [sortBy, setSortBy] = useState(hasScoring ? 'fantasy:mean' : 'name');
+  const [direction, setDirection] = useState<'asc' | 'desc'>('desc');
+  const [columnView, setColumnView] = useState<'raw' | 'fantasy'>(hasScoring ? 'fantasy' : 'raw');
+  const [fantasySite, setFantasySite] = useState<FantasySite>(platform);
   const [detailPlayer, setDetailPlayer] = useState<ModelPlayerProjection | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const detailDialogRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   useEffect(() => { setDetailPlayer(null); }, [sheet]);
   useEffect(() => {
@@ -163,8 +190,23 @@ function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setDetailPlayer(null);
       if (event.key === 'Tab') {
-        event.preventDefault();
-        closeButtonRef.current?.focus();
+        const focusable = detailDialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        const elements = [...(focusable ?? [])].filter((element) => element.getAttribute('aria-hidden') !== 'true');
+        if (!elements.length) {
+          event.preventDefault();
+          return;
+        }
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !detailDialogRef.current?.contains(document.activeElement))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !detailDialogRef.current?.contains(document.activeElement))) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -203,54 +245,126 @@ function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: 
     return games[0].competitors.find((item) => item.abbreviation.trim().toLocaleLowerCase() === team);
   };
   const roles = useMemo(() => [...new Set(sheet.players.map((player) => player.position).filter(Boolean))].sort(), [sheet.players]);
+  const rankTiers = useMemo(() => {
+    const result = new Map<string, Map<string, string>>();
+    for (const metric of sheet.metrics) {
+      const players = sheet.players.flatMap((player) => {
+        const value = player.stats.find((stat) => stat.id === metric.id)?.projected;
+        return value == null ? [] : [{ id: player.id, value }];
+      });
+      const sorted = players.map((player) => player.value).sort((a, b) => metric.higherIsBetter ? b - a : a - b);
+      const tiers = new Map<string, string>();
+      for (const player of players) {
+        const rank = sorted.indexOf(player.value);
+        const percentile = sorted.length < 2 ? .5 : rank / (sorted.length - 1);
+        tiers.set(player.id, percentile < .25 ? 'high' : percentile < .5 ? 'mid-high' : percentile < .75 ? 'mid-low' : 'low');
+      }
+      result.set(metric.id, tiers);
+    }
+    return result;
+  }, [sheet.metrics, sheet.players]);
+  const fantasyTiers = useMemo(() => {
+    const result = new Map<string, Map<string, string>>();
+    const keys = ['mean', 'value', 'p25', 'p50', 'p75', 'p85', 'p95', 'p99', 'std'] as const;
+    for (const key of keys) {
+      const ranked = sheet.players.flatMap((player) => {
+        const forecast = forecastFor(player, fantasySite);
+        if (forecast?.status !== 'ready') return [];
+        const salary = salaryFor(player.id);
+        const value = key === 'value'
+          ? fantasySite === platform && salary != null && salary > 0 ? (forecast.mean ?? NaN) / (salary / 1000) : null
+          : forecast[key];
+        return value == null || !Number.isFinite(value) ? [] : [{ id: player.id, value }];
+      });
+      const sorted = ranked.map((item) => item.value).sort((a, b) => b - a);
+      const tiers = new Map<string, string>();
+      for (const item of ranked) {
+        const percentile = sorted.length < 2 ? .5 : sorted.indexOf(item.value) / (sorted.length - 1);
+        tiers.set(item.id, percentile < .25 ? 'high' : percentile < .5 ? 'mid-high' : percentile < .75 ? 'mid-low' : 'low');
+      }
+      result.set(`fantasy:${key}`, tiers);
+    }
+    return result;
+  }, [sheet.players, fantasySite, platform, salaryRows]);
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return sheet.players.filter((player) =>
-      (!term || [player.name, player.team, player.opponent, player.position].some((value) => value.toLowerCase().includes(term)))
+      (!term || [player.id, player.name, player.team, player.opponent, player.position].some((value) => value.toLowerCase().includes(term)))
       && (role === 'all' || player.position === role),
     ).sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name) * (direction === 'asc' ? 1 : -1);
-      const av = a.stats.find((stat) => stat.id === sortBy)?.projected;
-      const bv = b.stats.find((stat) => stat.id === sortBy)?.projected;
+      const valueFor = (player: ModelPlayerProjection) => {
+        if (sortBy.startsWith('fantasy:')) {
+          const key = sortBy.slice('fantasy:'.length) as 'mean' | 'value' | 'p25' | 'p50' | 'p75' | 'p85' | 'p95' | 'p99' | 'std';
+          const forecast = forecastFor(player, fantasySite);
+          if (forecast?.status !== 'ready') return null;
+          if (key === 'value') {
+            const salary = salaryFor(player.id);
+            return fantasySite === platform && salary != null && salary > 0 && forecast.mean != null
+              ? forecast.mean / (salary / 1000)
+              : null;
+          }
+          return forecast[key];
+        }
+        return player.stats.find((stat) => stat.id === sortBy)?.projected;
+      };
+      const av = valueFor(a);
+      const bv = valueFor(b);
       if (av == null) return bv == null ? a.name.localeCompare(b.name) : 1;
       if (bv == null) return -1;
       return (av - bv) * (direction === 'asc' ? 1 : -1);
     });
-  }, [sheet.players, search, role, sortBy, direction]);
+  }, [sheet.players, search, role, sortBy, direction, fantasySite, platform, salaryRows]);
   const toggleSort = (id: string) => {
     if (sortBy === id) setDirection((current) => current === 'asc' ? 'desc' : 'asc');
     else { setSortBy(id); setDirection(id === 'name' ? 'asc' : 'desc'); }
   };
+  const sortHeader = (label: string, id: string, detail?: string) => <th key={id} aria-sort={sortBy === id ? direction === 'asc' ? 'ascending' : 'descending' : 'none'}>
+    <button onClick={() => toggleSort(id)} title={`Sort by ${label}`}>{label}{sortBy === id ? direction === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} /> : <ArrowUpDown size={11} />}{detail && <small>{detail}</small>}</button>
+  </th>;
   return <div className="model-table-area">
-    <div className="model-table-tools">
+     <div className="model-table-tools">
       <label className="model-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a player, team, opponent…" aria-label="Search model players" /><kbd>/</kbd></label>
       <label className="model-role-filter"><UserRound size={14} /><span className="sr-only">Filter by role</span><select value={role} onChange={(event) => setRole(event.target.value)}><option value="all">All roles</option>{roles.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-      <label className="model-salary-filter"><span>Salary metadata</span><select value={platform} onChange={(event) => onPlatformChange(event.target.value as DfsSalaryPlatform)} aria-label="Salary platform"><option value="draftkings">DraftKings</option><option value="fanduel">FanDuel</option></select></label>
+      <label className="model-salary-filter"><span>Salary metadata</span><select value={platform} onChange={(event) => { const next = event.target.value as DfsSalaryPlatform; onPlatformChange(next); setFantasySite(next); setSortBy('fantasy:mean'); setDirection('desc'); }} aria-label="Salary platform"><option value="draftkings">DraftKings</option><option value="fanduel">FanDuel</option></select></label>
+      <label className="model-salary-filter"><span>Columns</span><select value={columnView} onChange={(event) => { const next = event.target.value as 'raw' | 'fantasy'; setColumnView(next); setSortBy(next === 'fantasy' ? 'fantasy:mean' : 'name'); setDirection(next === 'fantasy' ? 'desc' : 'asc'); }} aria-label="Sheet columns"><option value="raw">Raw stats</option><option value="fantasy">Fantasy scoring</option></select></label>
+      {columnView === 'fantasy' && <label className="model-salary-filter"><span>Scoring rules</span><select value={fantasySite} onChange={(event) => { setFantasySite(event.target.value as FantasySite); setSortBy('fantasy:mean'); setDirection('desc'); }} aria-label="Fantasy scoring site">{fantasySites.map((site) => <option key={site} value={site}>{siteLabel(site)}</option>)}</select></label>}
       <span className="model-result-count">{visible.length} <i>/</i> {sheet.players.length}</span>
     </div>
-    <div className="model-salary-coverage" role="status">{salaryCoverage?.platform === platform && salaryCoverage.available ? `${platform === 'draftkings' ? 'DraftKings' : 'FanDuel'} salaries for the selected slate · only unique player/team matches are shown · unmatched salaries shown as —` : 'Salary coverage unavailable for this platform and slate · salary shown as —'}</div>
+      <div className="model-salary-coverage" role="status">{salaryCoverage?.platform === platform && salaryCoverage.available ? `${platform === 'draftkings' ? 'DraftKings' : 'FanDuel'} salaries for the selected slate · only unique player/team matches are shown · unmatched salaries shown as —` : 'Salary coverage unavailable for this platform and slate · salary shown as —'}{columnView === 'fantasy' ? ` · ${siteLabel(fantasySite)} forecast availability follows published scoring coverage; unsupported scoring stays blank. ` : ''}Min/Max Exp export defaults are research metadata only (0–100), not optimizer controls.</div>
     {sheet.players.length === 0 ? <div className="model-state model-empty"><TrendingUp size={22} /><h3>No player estimates published</h3><p>There are no model rows for this date. Missing samples stay blank; they are never filled with zero.</p></div>
       : visible.length === 0 ? <div className="model-state model-empty"><Search size={20} /><h3>No matching players</h3><p>Try another name or role.</p><button className="btn btn-quiet" onClick={() => { setSearch(''); setRole('all'); }}>Clear filters</button></div>
         : <div className="model-grid-scroll" role="region" aria-label="ALLPLAY raw stat projection sheet" tabIndex={0}>
           <table className="model-grid">
-            <thead><tr><th className="model-player-column"><button onClick={() => toggleSort('name')}>PLAYER {sortBy === 'name' ? direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} /> : <ArrowUpDown size={12} />}</button></th>
-              <th>ROLE</th><th>TEAM / OPP</th><th className="model-salary-cell">SALARY</th><th>AVAILABILITY</th>
-              {sheet.metrics.map((metric) => <th className="model-stat-header" key={metric.id}><button onClick={() => toggleSort(metric.id)} title={`Sort by ${metric.label}`}>{metric.label}{sortBy === metric.id ? direction === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} /> : <ArrowUpDown size={11} />}<small>{metric.unit || metric.group}</small></button></th>)}
+             <thead><tr><th className="model-player-column"><button onClick={() => toggleSort('name')}>PLAYER {sortBy === 'name' ? direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} /> : <ArrowUpDown size={12} />}</button></th>
+               <th className="model-history-cell">{historyMetric ? `RECENT ${historyMetric.label}` : 'RECENT HISTORY'}<small>actual · Δ model−recent</small></th><th>ROLE</th><th>TEAM / OPP</th><th className="model-salary-cell">SALARY</th><th>AVAILABILITY</th>
+               {columnView === 'raw' ? sheet.metrics.map((metric) => <th className="model-stat-header" key={metric.id}><button onClick={() => toggleSort(metric.id)} title={`Sort by ${metric.label}`}>{metric.label}{sortBy === metric.id ? direction === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} /> : <ArrowUpDown size={11} />}<small>{metric.unit || metric.group}</small></button></th>) : <>{sortHeader(`${siteLabel(fantasySite)} Points`, 'fantasy:mean')}{sortHeader(`${platform === 'draftkings' ? 'DK' : 'FD'} Value / $1K`, 'fantasy:value')}{sortHeader('P25', 'fantasy:p25')}{sortHeader('P50', 'fantasy:p50')}{sortHeader('P75', 'fantasy:p75')}{sortHeader('P85', 'fantasy:p85')}{sortHeader('P95', 'fantasy:p95')}{sortHeader('P99', 'fantasy:p99')}{sortHeader('Std', 'fantasy:std')}<th>STATUS / INPUTS</th></>}
+                <th>ALLPLAY TEAM</th><th>ALLPLAY GAME</th>
               <th className="model-samples-head">SAMPLE</th><th aria-label="Details" /></tr></thead>
-            <tbody>{visible.map((player) => <tr key={player.id} className="model-player-row">
-              <td className="model-player-name"><span><strong>{player.name}</strong><small>{player.participation === 'conditional' ? 'IF ACTIVE' : player.participation.toUpperCase()}</small></span></td>
+             <tbody>{visible.map((player, rowIndex) => <tr key={player.id} className="model-player-row">
+               <td className="model-player-name"><span className="model-player-cell"><span className="model-row-index" title={`Row ${rowIndex + 1} in the current sorted view`}>{rowIndex + 1}</span><span title={player.participation}><strong>{player.name}</strong></span></span></td>
+               <td className="model-history-cell"><HistoryTrendCell player={player} metric={historyMetric} /></td>
               <td className="model-mono">{player.position || '—'}</td>
               <td><span className="model-team">{matchupFor(player)?.logo && <img className="model-team-logo" src={matchupFor(player)?.logo ?? undefined} alt="" loading="lazy" onError={(event) => { event.currentTarget.hidden = true; }} />}{player.team || '—'}</span><small className="model-opponent">{matchupFor(player)?.homeAway === 'away' ? 'at' : 'vs'} {player.opponent || '—'}</small></td>
               <td className="model-salary-cell">{salaryFor(player.id) == null ? '—' : `$${salaryFor(player.id)?.toLocaleString('en-US')}`}</td>
               <td><span className={`availability-pill ${/out|inactive|doubtful/i.test(player.availability) ? 'availability-alert' : ''}`}>{player.availability || '—'}</span></td>
-              {sheet.metrics.map((metric) => <td key={metric.id} className="model-stat-cell"><MetricRank metric={metric} stat={player.stats.find((stat) => stat.id === metric.id)} players={sheet.players} /></td>)}
+               {columnView === 'raw' ? sheet.metrics.map((metric) => <td key={metric.id} className="model-stat-cell"><MetricRank stat={player.stats.find((stat) => stat.id === metric.id)} tier={rankTiers.get(metric.id)?.get(player.id)} /></td>) : (() => {
+                 const forecast = forecastFor(player, fantasySite);
+                 const ready = forecast?.status === 'ready';
+                 const mean = ready ? forecast.mean : null;
+                 const salary = salaryFor(player.id);
+                 const value = fantasySite === platform && mean != null && salary != null && salary > 0 ? mean / (salary / 1000) : null;
+                 const fantasyNumber = (key: 'mean' | 'value' | 'p25' | 'p50' | 'p75' | 'p85' | 'p95' | 'p99' | 'std', number: number | null) => <span className={`model-number ${number == null ? 'model-missing' : `model-tier-${fantasyTiers.get(`fantasy:${key}`)?.get(player.id) ?? 'mid-high'}`}`} title="Relative rank within this sheet only; not a chance or calibrated probability">{fmt(number)}</span>;
+                  return <><td className="model-stat-cell fantasy-mean" title={forecast?.status === 'partial' ? `Partial forecast; tracked subtotal ${fmt(forecast.trackedMean)} is not a full projection. ${forecast.missingStats.join(', ')}` : forecast?.notes.join(' ') || forecast?.status || 'No forecast published'}>{fantasyNumber('mean', mean)}</td><td className="model-stat-cell">{fantasyNumber('value', value)}</td>{(['p25', 'p50', 'p75', 'p85', 'p95', 'p99'] as const).map((key) => <td className="model-stat-cell" key={key}>{fantasyNumber(key, ready ? forecast[key] : null)}</td>)}<td className="model-stat-cell">{fantasyNumber('std', ready ? forecast.std : null)}</td><td className="forecast-cell" title={forecast?.missingStats.join(', ')}><span className={`forecast-status forecast-${forecast?.status ?? 'unavailable'}`}>{forecast?.status ?? 'unavailable'}</span><small>{forecast?.missingStats.length ? `${forecast.missingStats.length} missing inputs · see details` : ready ? 'Scored inputs complete' : 'See scoring details'}</small></td></>;
+               })()}
+                <td className="model-stat-cell">{fmt(player.modelTeamTotal)}</td><td className="model-stat-cell">{fmt(player.modelGameTotal)}</td>
               <td className="model-sample">{player.historicalGames || '—'} <small>games</small></td>
               <td className="model-expand"><button type="button" aria-label={`Show ${player.name} calculation and history`} title="Calculation & history" onClick={(event) => { returnFocusRef.current = event.currentTarget; setDetailPlayer(player); }}><Info size={14} /></button></td>
             </tr>)}</tbody>
           </table>
         </div>}
     <div className="model-legend"><span><i className="legend-dot legend-mint" /> Higher within this sheet</span><span><i className="legend-dot legend-amber" /> Mid-range</span><span><i className="legend-dot legend-coral" /> Lower within this sheet</span><span className="legend-disclaimer">Color is relative to this slate only.</span></div>
-    {detailPlayer && <div className="model-detail-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailPlayer(null); }}><section className="model-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="player-detail-title"><div className="model-detail-dialog-head"><div><span className="model-kicker">PLAYER DETAIL · PRIVATE MODEL</span><h2 id="player-detail-title">{detailPlayer.name}</h2></div><button ref={closeButtonRef} className="btn btn-quiet" type="button" onClick={() => setDetailPlayer(null)}>Close</button></div><PlayerDetail player={detailPlayer} sheet={sheet} metrics={sheet.metrics} /></section></div>}
+    {detailPlayer && <div className="model-detail-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailPlayer(null); }}><section ref={detailDialogRef} className="model-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="player-detail-title"><div className="model-detail-dialog-head"><div><span className="model-kicker">PLAYER DETAIL · PRIVATE MODEL</span><h2 id="player-detail-title">{detailPlayer.name}</h2><small className="model-id-caption">ALLPLAY model player ID · {detailPlayer.id}</small></div><button ref={closeButtonRef} className="btn btn-quiet" type="button" onClick={() => setDetailPlayer(null)}>Close</button></div><PlayerDetail player={detailPlayer} sheet={sheet} metrics={sheet.metrics} /></section></div>}
   </div>;
 }
 
@@ -267,7 +381,7 @@ function SheetBody({ sheet, loading, error, retry, dashboard, platform, onPlatfo
         <div className="model-method-title"><BarChart3 size={15} /><strong>WHAT PRODUCES THE NUMBER</strong><span>ALLPLAY CUSTOM MODEL · NOT BACKTESTED</span></div>
         <p>{sheet.modelFormula || 'Recent player performance is blended with up to ten appearances, then adjusted by observed opponent matchup history.'}</p>
         <ul>{sheet.notes.map((note, index) => <li key={`${index}-${note}`}>{note}</li>)}</ul>
-        <div className="model-caveats"><span>Conditional on participation</span><span>Observed ranks are not calibrated probabilities</span><span>Rank 1 = lowest observed metric</span><span>Raw stats only · no fantasy-point conversion</span>{sheet.sport === 'nascar' && <span>Same-venue history only where supported; entry pool is conditional if published</span>}</div>
+         <div className="model-caveats"><span>Conditional on participation</span><span>Observed ranks are not calibrated probabilities</span><span>Rank 1 = lowest observed metric</span><span>Site-rule scoring · simulation ranges are not confidence intervals</span><span>Not backtested</span>{sheet.sport === 'nascar' && <span>Same-venue history only where supported; entry pool is conditional if published</span>}</div>
       </div>
       <div className="model-sheet-footer"><span>Generated {readableDate(sheet.generatedAt)}</span><span>Source: ALLPLAY independent historical-performance matchup model</span></div>
     </div>}
@@ -284,7 +398,7 @@ export function ModelPreview({ sport, date }: { sport: DfsSport; date: string })
   const previewPlayers = (sheet?.players ?? []).filter(player => supportedColumns(player) > 0)
     .sort((a, b) => supportedColumns(b) - supportedColumns(a)).slice(0, 5);
   return <div className="model-preview">
-    <div className="model-preview-head"><div><span className="model-kicker">ALLPLAY CUSTOM MODEL</span><h3>Raw stat matchup sheet</h3><p>Historical performance, adjusted by observed opponent data. Not fantasy scoring.</p></div><Link to="/projections" className="btn btn-quiet">Open full sheet <ChevronRight size={14} /></Link></div>
+     <div className="model-preview-head"><div><span className="model-kicker">ALLPLAY CUSTOM MODEL</span><h3>Independent player research</h3><p>Historical stat estimates plus site-rule fantasy simulations where scoring inputs are supported. Not a provider forecast.</p></div><Link to="/projections" className="btn btn-quiet">Open full sheet <ChevronRight size={14} /></Link></div>
     {!canRead ? <div className="model-preview-lock"><LockKeyhole size={16} />{membership.isLoading && signedIn ? 'Verifying member access…' : 'Member access required to inspect model estimates.'}</div>
       : <><div className="model-preview-meta">{sheet?.status === 'warming' ? `Processing ${sheet.processedGames} / ${sheet.totalGames} games` : sheet?.status === 'ready' ? `${sheet.players.length} players · ${sheet.gameCount} games · cutoff ${readableDate(sheet.effectiveAsOf)}` : sheet?.status === 'unavailable' ? 'No published model sheet for this date' : query.isError ? 'Model sheet unavailable' : 'Preparing requested sport sheet'}</div>
         {sheet?.status === 'ready' ? <div className="model-preview-scroll"><table><thead><tr><th>PLAYER</th><th>TEAM / OPP</th>{previewMetrics.map((metric) => <th key={metric.id}>{metric.label}</th>)}</tr></thead><tbody>{previewPlayers.map((player) => <tr key={player.id}><td>{player.name}<small>{player.position || player.availability}</small></td><td>{player.team}<small>vs {player.opponent}</small></td>{previewMetrics.map((metric) => <td className="model-preview-value" key={metric.id}>{fmt(player.stats.find((stat) => stat.id === metric.id)?.projected, metric.unit)}</td>)}</tr>)}</tbody></table></div>
@@ -334,12 +448,12 @@ export default function ModelProjectionsPage() {
         <div><div className="eyebrow">OWNER-OPERATED RESEARCH <span>/</span> RAW STAT PREDICTIONS</div><h1>Matchup projections<span>.</span></h1><p className="subhead">A transparent estimate, with the ingredients left on the table.</p></div>
         <div className="model-heading-badge"><span className="model-live-dot" />PRIVATE MODEL SHEET</div>
       </div>
-      <div className="model-identity-strip"><span className="identity-flag"><Activity size={13} /> ALLPLAY CUSTOM MODEL</span><span>Independent algorithm</span><i /> <span>Not a provider forecast</span><i /> <span>Not fantasy scoring</span><i /> <span>Not backtested</span></div>
+       <div className="model-identity-strip"><span className="identity-flag"><Activity size={13} /> ALLPLAY CUSTOM MODEL</span><span>Independent algorithm</span><i /> <span>Not a provider forecast</span><i /> <span>Published scoring rules where supported</span><i /> <span>Not backtested</span></div>
       <div className="model-controls panel">
         <div className="model-control-top">
           <div className="model-control-date"><label htmlFor="model-date"><CalendarDays size={14} /> LOCAL SLATE DATE</label><input id="model-date" className="date-field" type="date" value={date} onChange={(event) => setDate(event.target.value)} data-testid="input-model-date" /></div>
         <div className="model-control-applied"><span className="model-live-dot" /> APPLIED MODEL SETTINGS <span>·</span> RECENT {applied.recentGames} <span>·</span> FORM {applied.recentWeight}% <span>·</span> OPP {applied.matchupWeight}%</div>
-          <div className="model-control-actions"><button className="btn btn-quiet" aria-expanded={settingsOpen} aria-controls="model-settings" onClick={() => setSettingsOpen((open) => !open)}><Settings2 size={14} /> Model inputs</button><button className="btn btn-quiet" onClick={retry} disabled={query.isFetching || membership.isFetching}><RefreshCw size={14} className={query.isFetching ? 'spin' : ''} /> Refresh</button><button className="btn btn-primary" onClick={() => usableSheet && exportSheet(usableSheet)} disabled={!usableSheet} title={usableSheet ? 'Download ALLPLAY model data' : 'CSV is available only when the verified sheet is ready'}><Download size={14} /> Export model CSV</button></div>
+         <div className="model-control-actions"><button className="btn btn-quiet" aria-expanded={settingsOpen} aria-controls="model-settings" onClick={() => setSettingsOpen((open) => !open)}><Settings2 size={14} /> Model inputs</button><button className="btn btn-quiet" onClick={retry} disabled={query.isFetching || membership.isFetching}><RefreshCw size={14} className={query.isFetching ? 'spin' : ''} /> Refresh</button><button className="btn btn-primary" onClick={() => usableSheet && exportSheet(usableSheet, dashboardQuery.data, salaryPlatform)} disabled={!usableSheet} title={usableSheet ? 'Download ALLPLAY model data' : 'CSV is available only when the verified sheet is ready'}><Download size={14} /> Export model CSV</button></div>
         </div>
         <div className="model-sport-scroll" role="tablist" aria-label="Model sport sheet">{MODEL_SPORTS.map((item) => <button key={item.id} role="tab" aria-selected={sport === item.id} tabIndex={sport === item.id ? 0 : -1} className={`model-sport-tab ${sport === item.id ? 'active' : ''}`} onClick={() => setSport(item.id)} onKeyDown={(event) => {
           const current = MODEL_SPORTS.findIndex((entry) => entry.id === focusSport);
@@ -356,7 +470,7 @@ export default function ModelProjectionsPage() {
           <div className="model-settings-actions"><button className="btn btn-quiet" onClick={() => { setDraft(defaultSettings); setApplied(defaultSettings); }}>Reset defaults</button><button className="btn btn-primary" onClick={applySettings}>Apply settings</button></div>
         </section>}
       </div>
-      <div className="model-disclaimer"><Info size={14} /><p><strong>{selectedSport} sheet, in raw statistics.</strong> Estimates are conditional on participation. Rank 1 is the lowest observed metric—not the universally strongest defense. For goalies and pitchers, ranks describe opponent attack versus that stat, not points allowed. A missing estimate means there is not enough published evidence; it is not zero.{sport === 'nascar' && ' NASCAR estimates use historical finish; same-named venue history is used only where supported. Entry-pool estimates are conditional on publication.'}</p></div>
+       <div className="model-disclaimer"><Info size={14} /><p><strong>{selectedSport} estimates are ALLPLAY's independent historical-stat model.</strong> Fantasy views apply published site scoring rules to the model forecasts. Partial tracked points are not full projections; unsupported inputs stay blank with an explanation. Simulation percentiles are outcome distributions, not confidence intervals. Estimates are conditional on participation, and this model is not backtested. Raw-stat rank 1 is the lowest observed metric; it is not a universal defense grade.{sport === 'nascar' && ' NASCAR estimates use historical finish; same-named venue history is used only where supported. Entry-pool estimates are conditional on publication.'}</p></div>
       {!verified ? <AccessGate signedIn={signedIn} membership={membership} onRefresh={() => void retry()} />
         : <section className="model-sheet panel" aria-labelledby="model-sheet-title">
           <div className="model-sheet-bar"><div><div className="model-sheet-mark"><BarChart3 size={17} /></div><div><span className="model-kicker">ALLPLAY / MATCHUP STAT PROJECTIONS</span><h2 id="model-sheet-title">{selectedSport} research sheet</h2></div></div><span className={`model-status-tag ${sheet?.status === 'ready' ? 'status-ready' : sheet?.status === 'warming' ? 'status-warming' : ''}`}>{query.isError ? 'ERROR' : sheet?.status?.toUpperCase() ?? (query.data?.status === 'locked' ? 'LOCKED' : query.isLoading ? 'REQUESTING' : 'PENDING')}</span></div>

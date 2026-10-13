@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ModelFantasyForecast } from './modelFantasyForecast';
 import type { ModelHistoryAppearance } from './modelHistoryAppearance';
 import type { ModelStatEstimate } from './modelStatEstimate';
 
@@ -21,6 +22,11 @@ export interface ModelPlayerProjection {
   historicalGames: number;
   /** @nullable */
   reason: string | null;
+  /** @nullable */
+  modelTeamTotal?: number | null;
+  /** @nullable */
+  modelGameTotal?: number | null;
+  fantasy?: ModelFantasyForecast[];
   stats: ModelStatEstimate[];
   history: ModelHistoryAppearance[];
 }

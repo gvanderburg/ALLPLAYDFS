@@ -309,6 +309,11 @@ components:
         participation: { type: string }
         historicalGames: { type: integer }
         reason: { type: ["string", "null"] }
+        modelTeamTotal: { type: ["number", "null"] }
+        modelGameTotal: { type: ["number", "null"] }
+        fantasy:
+          type: array
+          items: { $ref: "#/components/schemas/ModelFantasyForecast" }
         stats:
           type: array
           items: { $ref: "#/components/schemas/ModelStatEstimate" }
@@ -331,6 +336,31 @@ components:
         leagueMean: { type: ["number", "null"] }
         sampleSize: { type: integer }
         recentSampleSize: { type: integer }
+    ModelFantasyForecast:
+      type: object
+      required: [site, status, mean, trackedMean, std, p25, p50, p75, p85, p95, p99, sampleSize, simulations, missingStats, notes, scoringSource, rulesAsOf]
+      properties:
+        site: { type: string, enum: [draftkings, fanduel, yahoo, ownersbox] }
+        status: { type: string, enum: [ready, partial, unavailable] }
+        mean: { type: ["number", "null"] }
+        trackedMean: { type: ["number", "null"] }
+        std: { type: ["number", "null"] }
+        p25: { type: ["number", "null"] }
+        p50: { type: ["number", "null"] }
+        p75: { type: ["number", "null"] }
+        p85: { type: ["number", "null"] }
+        p95: { type: ["number", "null"] }
+        p99: { type: ["number", "null"] }
+        sampleSize: { type: integer }
+        simulations: { type: integer }
+        missingStats:
+          type: array
+          items: { type: string }
+        notes:
+          type: array
+          items: { type: string }
+        scoringSource: { type: ["string", "null"] }
+        rulesAsOf: { type: string }
     ModelHistoryAppearance:
       type: object
       required: [eventId, date, opponent, stats]
