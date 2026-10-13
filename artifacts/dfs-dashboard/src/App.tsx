@@ -11,6 +11,7 @@ import Account from '@/pages/account';
 import GameTakesPage from '@/pages/game-takes';
 import NewsDesk from '@/pages/news-desk';
 import FeedbackPage from '@/pages/feedback';
+import EvaluationPage from '@/pages/evaluation';
 import { Route, Switch, useLocation, Redirect, Router as WouterRouter } from 'wouter';
 import { type ReactNode, useEffect, useRef } from 'react';
 import NotFound from '@/pages/not-found';
@@ -134,6 +135,12 @@ function AccountRoute() {
   return isSignedIn ? <Account /> : <Redirect to="/sign-in" />;
 }
 
+function EvaluationRoute() {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <LoadingAuthShell />;
+  return isSignedIn ? <EvaluationPage /> : <Redirect to="/sign-in" />;
+}
+
 function Router() {
   return (
     <RoutedErrorBoundary>
@@ -145,6 +152,7 @@ function Router() {
         <Route path="/news" component={NewsDesk} />
         <Route path="/account" component={AccountRoute} />
         <Route path="/feedback" component={FeedbackPage} />
+        <Route path="/evaluation" component={EvaluationRoute} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route component={NotFound} />

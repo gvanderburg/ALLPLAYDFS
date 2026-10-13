@@ -6,6 +6,9 @@ import type { ModelSettings, ModelSport } from "./types";
 import { list, obj, str } from "./normalize";
 import { publishedMatchups } from "./published-rankings";
 import { forecastHistoryCutoff, verifiedFinalsAsOf } from "./history-cutoff";
+import { db, modelSnapshots } from "@workspace/db";
+import { logger } from "../logger";
+import { HISTORY_VERSION } from "./types";
 
 interface Job { expiresAt: number; sheet: ModelProjectionSheet; }
 const jobs = new Map<string, Job>();
@@ -112,6 +115,21 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
     job.sheet.observedTeams = calculated.observedTeams;
     job.sheet.status = calculated.players.some(player => player.stats.some(stat => stat.projected !== null)) ? "ready" : "unavailable";
     job.sheet.generatedAt = new Date();
+    const firstStart = Math.min(...slate.events.map(e => Date.parse(str(e.date))));
+    if (job.sheet.status === "ready" && job.sheet.generatedAt.getTime() < firstStart) {
+      try {
+        // Immutable first capture per settings/day. Later historical previews cannot replace it.
+        await db.insert(modelSnapshots).values({
+          id: `${HISTORY_VERSION}:${jobKey(sport, slate.date, settings)}`,
+          sport, slateDate: slate.date, asOf: job.sheet.generatedAt,
+          data: { settings, historyVersion: HISTORY_VERSION, effectiveAsOf: cutoff, players: calculated.players,
+            games: eligible, source: "ESPN completed box scores / roster at capture; official supplements where reconciled" },
+        }).onConflictDoNothing();
+      } catch (err) {
+        logger.error({ err, sport, slateDate: slate.date }, "Pregame audit snapshot could not be saved");
+        job.sheet.notes.push("The pregame audit snapshot could not be saved; forecasts remain available but this source version cannot be recovered for historical evaluation.");
+      }
+    }
     job.sheet.notes.push(
       ...candidates.notes,
       "Current depth charts / dated lineups and observed recent workload determine role eligibility. Backup QBs, unconfirmed goalies, non-probable pitchers and unverified entrants cannot become full-game value picks. Basketball bench rotations may still offer value based on recorded minutes. Missing roles are not zero-point forecasts.",

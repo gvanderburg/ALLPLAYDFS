@@ -13,6 +13,93 @@ tags:
   - name: dfs
     description: Daily fantasy sports dashboard
 paths:
+  /evaluations:
+    get:
+      operationId: listEvaluations
+      tags: [evaluations]
+      summary: Owner-only saved historical evaluations and verified imports
+      responses:
+        "200":
+          description: Private evaluation history
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runs, imports]
+                properties:
+                  runs: { type: array, items: { $ref: "#/components/schemas/EvaluationRun" } }
+                  imports: { type: array, items: { $ref: "#/components/schemas/EvaluationImport" } }
+        "401": { description: Sign in required }
+        "403": { description: Owner required }
+        "503": { description: Storage unavailable }
+    post:
+      operationId: startEvaluation
+      tags: [evaluations]
+      summary: Owner starts a bounded historical replay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluationStartInput"
+      responses:
+        "202":
+          description: Persisted replay job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EvaluationRun" }
+        "400": { description: Invalid date range or pool }
+        "401": { description: Sign in required }
+        "403": { description: Owner required }
+        "409": { description: Replay already running }
+        "503": { description: Storage unavailable }
+  /evaluations/uploads:
+    post:
+      operationId: requestEvaluationUpload
+      tags: [evaluations]
+      summary: Owner requests a private CSV direct upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluationUploadInput"
+      responses:
+        "200":
+          description: Private upload
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, uploadURL]
+                properties:
+                  id: { type: string }
+                  uploadURL: { type: string }
+        "403": { description: Owner required }
+        "401": { description: Sign in required }
+        "400": { description: Invalid CSV metadata }
+        "503": { description: Private storage unavailable }
+  /evaluations/imports:
+    post:
+      operationId: verifyEvaluationImport
+      tags: [evaluations]
+      summary: Owner attests and validates a contest ownership or historical pool CSV
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluationVerifyInput"
+      responses:
+        "201":
+          description: Validated, immutable import with provenance
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EvaluationImport" }
+        "400": { description: CSV or provenance invalid }
+        "403": { description: Owner required }
+        "401": { description: Sign in required }
+        "503": { description: Private storage unavailable }
   /feedback:
     get:
       operationId: listFeedbackTickets
@@ -318,6 +405,67 @@ paths:
           description: Invalid date or sport
 components:
   schemas:
+    EvaluationStartInput:
+      type: object
+      required: [sport, site, fromDate, toDate, recentGames, recentWeight, matchupWeight]
+      properties:
+        sport: { type: string, enum: [nfl, nhl, nba, wnba, mlb, cfb, nascar] }
+        site: { type: string, enum: [draftkings, fanduel, yahoo, ownersbox] }
+        fromDate: { type: string }
+        toDate: { type: string }
+        recentGames: { type: integer, minimum: 3, maximum: 10 }
+        recentWeight: { type: integer, minimum: 0, maximum: 100 }
+        matchupWeight: { type: integer, minimum: 0, maximum: 50 }
+        poolImportId: { type: string }
+    EvaluationUploadInput:
+      type: object
+      required: [fileName, size]
+      properties:
+        fileName: { type: string, minLength: 1, maxLength: 200 }
+        size: { type: integer, minimum: 1, maximum: 1048576 }
+    EvaluationVerifyInput:
+      type: object
+      required: [uploadId, kind, sport, site, slateDate, contestId, source, asOf, verified]
+      properties:
+        uploadId: { type: string }
+        kind: { type: string, enum: [pool, ownership] }
+        sport: { type: string, enum: [nfl, nhl, nba, wnba, mlb, cfb, nascar] }
+        site: { type: string, enum: [draftkings, fanduel, yahoo, ownersbox] }
+        slateDate: { type: string }
+        contestId: { type: string, minLength: 1, maxLength: 150 }
+        source: { type: string, minLength: 10, maxLength: 2000 }
+        asOf: { type: string, format: date-time }
+        verified: { type: boolean }
+        runId: { type: string }
+    EvaluationRun:
+      type: object
+      required: [id, sport, site, fromDate, toDate, status, createdAt, report]
+      properties:
+        id: { type: string }
+        sport: { type: string }
+        site: { type: string }
+        fromDate: { type: string }
+        toDate: { type: string }
+        status: { type: string, enum: [running, ready, error] }
+        createdAt: { type: string, format: date-time }
+        report:
+          type: object
+          additionalProperties: true
+    EvaluationImport:
+      type: object
+      required: [id, kind, sport, site, slateDate, contestId, source, asOf, hash, rowCount, verifiedAt]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [pool, ownership] }
+        sport: { type: string }
+        site: { type: string }
+        slateDate: { type: string }
+        contestId: { type: string }
+        source: { type: string }
+        asOf: { type: string }
+        hash: { type: string }
+        rowCount: { type: integer }
+        verifiedAt: { type: string, format: date-time }
     FeedbackTicketInput:
       type: object
       required: [category, subject, details]
@@ -718,4 +866,3 @@ components:
         projectionsAvailable: { type: boolean }
         newsAvailable: { type: boolean }
         message: { type: string }
-

@@ -626,6 +626,9 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.102.8(react@19.1.4)
+      '@workspace/api-zod':
+        specifier: workspace:*
+        version: link:../api-zod
 
   lib/api-spec:
     devDependencies:

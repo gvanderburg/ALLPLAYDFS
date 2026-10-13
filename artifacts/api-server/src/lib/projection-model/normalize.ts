@@ -72,6 +72,18 @@ export function normalizeSummary(payload: unknown, sport: ModelSport): Historica
   if (obj(obj(competition.status).type).completed !== true) return null;
   const id = str(header.id || competition.id), date = str(competition.date || header.date);
   if (!id || !Number.isFinite(Date.parse(date))) return null;
+  const competitors = list(competition.competitors).map(obj);
+  const finalScore = (side: string) => {
+    const competitor = competitors.find(c => c.homeAway === side);
+    return numeric(competitor?.score) ?? numeric(obj(competitor?.score).value);
+  };
+  const finalPlays = [...list(data.plays), ...list(obj(data.allplayFootballPlays).items)].map(obj).filter(play =>
+    /^(end (of )?(the )?game|game (end|over))$/i.test(str(play.text || obj(play.type).text)) &&
+    finalScore("home") !== null && finalScore("away") !== null &&
+    numeric(play.homeScore) === finalScore("home") && numeric(play.awayScore) === finalScore("away") &&
+    Number.isFinite(Date.parse(str(play.wallclock))) &&
+    Date.parse(str(play.wallclock)) >= Date.parse(date));
+  const completedAt = finalPlays.length ? finalPlays.map(p => str(p.wallclock)).sort().at(-1) : undefined;
   const teams = list(competition.competitors).map((c) => {
     const team = obj(obj(c).team);
     return { id: str(team.id || obj(c).id), name: str(team.displayName), abbreviation: str(team.abbreviation) };
@@ -103,7 +115,7 @@ export function normalizeSummary(payload: unknown, sport: ModelSport): Historica
   if (sport === "nfl" || sport === "cfb") enrichFootball(data, competition, players);
   if (sport === "mlb") enrichBaseball(data, competition, players);
   return {
-    version: HISTORY_VERSION, id, date, finalObservedAt: new Date().toISOString(), teams, players: [...players.values()],
+    version: HISTORY_VERSION, id, date, completedAt, finalObservedAt: new Date().toISOString(), teams, players: [...players.values()],
     phase: Number(obj(header.season).type ?? 0), season: Number(obj(header.season).year ?? 0),
     venue: str(obj(obj(data.gameInfo).venue).fullName),
   };

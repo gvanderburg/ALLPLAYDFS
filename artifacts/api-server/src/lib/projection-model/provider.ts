@@ -60,6 +60,24 @@ function storedHistory(value: unknown): value is HistoricalGame {
     Array.isArray(record.teams) && Array.isArray(record.players);
 }
 
+/** Only normalized observed final results; never reads a provider forecast. */
+export async function loadCompletedEvent(sport: ModelSport, id: string): Promise<HistoricalGame | null> {
+  if (!/^\d+$/.test(id)) throw new Error("Invalid provider event ID.");
+  const config = MODEL_SPORTS[sport];
+  const corePath = config.path.replace("/", "/leagues/");
+  const payload = obj(await fetchSportsJson(`${SITE}/${config.path}/summary?event=${id}`));
+  if (sport === "nfl" || sport === "cfb") {
+    try { payload.allplayFootballPlays = await fetchSportsJson(`${CORE}/${corePath}/events/${id}/competitions/${id}/plays?limit=1000`); }
+    catch { /* Missing categories stay missing. */ }
+  }
+  if (sport === "mlb") {
+    try { payload.allplayBaseballBox = await baseballBoxFor(payload, fetchSportsJson); }
+    catch { /* Missing categories stay missing. */ }
+  }
+  const game = normalizeSummary(payload, sport);
+  if (game) game.recordedAt = new Date().toISOString();
+  return game;
+}
 export async function loadHistory(
   sport: ModelSport, cutoff: string, progress: (completed: number, total: number, failed: number) => void,
   context?: { teams: string[]; phase: number; season: number },
@@ -107,7 +125,7 @@ export async function loadHistory(
   const saved = await db.select().from(projectionHistory).where(and(eq(projectionHistory.sport, sport), inArray(projectionHistory.eventId, ids)));
   const cached = new Map(saved.filter(row =>
     storedHistory(row.data) && row.fetchedAt.getTime() > Date.now() - 86400000,
-  ).map(row => [row.eventId, row.data as HistoricalGame]));
+  ).map(row => [row.eventId, { ...row.data as HistoricalGame, recordedAt: row.fetchedAt.toISOString() }]));
   const games: HistoricalGame[] = [];
   let completed = 0, failed = 0, next = 0;
   const deadline = Date.now() + 150_000;
@@ -116,22 +134,12 @@ export async function loadHistory(
     while (next < ids.length && Date.now() < deadline) {
       const id = ids[next++];
       try {
-        let game = cached.get(id);
+        let game: HistoricalGame | undefined = cached.get(id);
         if (!game) {
-          const payload = obj(await fetchSportsJson(`${SITE}/${config.path}/summary?event=${id}`));
-          if (sport === "nfl" || sport === "cfb") {
-            try {
-              payload.allplayFootballPlays = await fetchSportsJson(
-                `${CORE}/${corePath}/events/${id}/competitions/${id}/plays?limit=1000`);
-            } catch { /* Explicitly missing rare inputs: never replace a failed log with zero. */ }
-          }
-          if (sport === "mlb") {
-            try { payload.allplayBaseballBox = await baseballBoxFor(payload, fetchSportsJson); }
-            catch { /* Keep unsupported scoring inputs missing, not observed zeros. */ }
-          }
-          game = normalizeSummary(payload, sport) ?? undefined;
+          game = await loadCompletedEvent(sport, id) ?? undefined;
           if (game) {
             const fetchedAt = new Date();
+            game.recordedAt = fetchedAt.toISOString();
             await db.insert(projectionHistory).values({
               sport, eventId: id, occurredAt: new Date(game.date), data: game, fetchedAt,
             }).onConflictDoUpdate({

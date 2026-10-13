@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:evaluation": "node --test tests/model-evaluation.test.mjs",
     "test:model": "node --test tests/projection-model.test.mjs",
     "test:takes": "node --test tests/take-files.test.mjs",
     "test:membership": "node --test tests/membership.test.mjs",

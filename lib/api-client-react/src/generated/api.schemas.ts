@@ -5,6 +5,161 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type EvaluationStartInputSport = typeof EvaluationStartInputSport[keyof typeof EvaluationStartInputSport];
+
+
+export const EvaluationStartInputSport = {
+  nfl: 'nfl',
+  nhl: 'nhl',
+  nba: 'nba',
+  wnba: 'wnba',
+  mlb: 'mlb',
+  cfb: 'cfb',
+  nascar: 'nascar',
+} as const;
+
+export type EvaluationStartInputSite = typeof EvaluationStartInputSite[keyof typeof EvaluationStartInputSite];
+
+
+export const EvaluationStartInputSite = {
+  draftkings: 'draftkings',
+  fanduel: 'fanduel',
+  yahoo: 'yahoo',
+  ownersbox: 'ownersbox',
+} as const;
+
+export interface EvaluationStartInput {
+  sport: EvaluationStartInputSport;
+  site: EvaluationStartInputSite;
+  fromDate: string;
+  toDate: string;
+  /**
+     * @minimum 3
+     * @maximum 10
+     */
+  recentGames: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  recentWeight: number;
+  /**
+     * @minimum 0
+     * @maximum 50
+     */
+  matchupWeight: number;
+  poolImportId?: string;
+}
+
+export interface EvaluationUploadInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  fileName: string;
+  /**
+     * @minimum 1
+     * @maximum 1048576
+     */
+  size: number;
+}
+
+export type EvaluationVerifyInputKind = typeof EvaluationVerifyInputKind[keyof typeof EvaluationVerifyInputKind];
+
+
+export const EvaluationVerifyInputKind = {
+  pool: 'pool',
+  ownership: 'ownership',
+} as const;
+
+export type EvaluationVerifyInputSport = typeof EvaluationVerifyInputSport[keyof typeof EvaluationVerifyInputSport];
+
+
+export const EvaluationVerifyInputSport = {
+  nfl: 'nfl',
+  nhl: 'nhl',
+  nba: 'nba',
+  wnba: 'wnba',
+  mlb: 'mlb',
+  cfb: 'cfb',
+  nascar: 'nascar',
+} as const;
+
+export type EvaluationVerifyInputSite = typeof EvaluationVerifyInputSite[keyof typeof EvaluationVerifyInputSite];
+
+
+export const EvaluationVerifyInputSite = {
+  draftkings: 'draftkings',
+  fanduel: 'fanduel',
+  yahoo: 'yahoo',
+  ownersbox: 'ownersbox',
+} as const;
+
+export interface EvaluationVerifyInput {
+  uploadId: string;
+  kind: EvaluationVerifyInputKind;
+  sport: EvaluationVerifyInputSport;
+  site: EvaluationVerifyInputSite;
+  slateDate: string;
+  /**
+     * @minLength 1
+     * @maxLength 150
+     */
+  contestId: string;
+  /**
+     * @minLength 10
+     * @maxLength 2000
+     */
+  source: string;
+  asOf: string;
+  verified: boolean;
+  runId?: string;
+}
+
+export type EvaluationRunStatus = typeof EvaluationRunStatus[keyof typeof EvaluationRunStatus];
+
+
+export const EvaluationRunStatus = {
+  running: 'running',
+  ready: 'ready',
+  error: 'error',
+} as const;
+
+export type EvaluationRunReport = { [key: string]: unknown };
+
+export interface EvaluationRun {
+  id: string;
+  sport: string;
+  site: string;
+  fromDate: string;
+  toDate: string;
+  status: EvaluationRunStatus;
+  createdAt: string;
+  report: EvaluationRunReport;
+}
+
+export type EvaluationImportKind = typeof EvaluationImportKind[keyof typeof EvaluationImportKind];
+
+
+export const EvaluationImportKind = {
+  pool: 'pool',
+  ownership: 'ownership',
+} as const;
+
+export interface EvaluationImport {
+  id: string;
+  kind: EvaluationImportKind;
+  sport: string;
+  site: string;
+  slateDate: string;
+  contestId: string;
+  source: string;
+  asOf: string;
+  hash: string;
+  rowCount: number;
+  verifiedAt: string;
+}
+
 export type FeedbackTicketInputCategory = typeof FeedbackTicketInputCategory[keyof typeof FeedbackTicketInputCategory];
 
 
@@ -549,6 +704,16 @@ export interface DfsDashboard {
   salaryCoverage: DfsSalaryCoverage;
   sourceNotes: string[];
 }
+
+export type ListEvaluations200 = {
+  runs: EvaluationRun[];
+  imports: EvaluationImport[];
+};
+
+export type RequestEvaluationUpload200 = {
+  id: string;
+  uploadURL: string;
+};
 
 export type ListFeedbackTicketsParams = {
 scope?: ListFeedbackTicketsScope;

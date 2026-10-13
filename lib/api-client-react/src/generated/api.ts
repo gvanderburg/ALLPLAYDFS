@@ -22,6 +22,11 @@ import type {
 import type {
   CreateMembershipCheckout200,
   DfsDashboard,
+  EvaluationImport,
+  EvaluationRun,
+  EvaluationStartInput,
+  EvaluationUploadInput,
+  EvaluationVerifyInput,
   FeedbackTicket,
   FeedbackTicketInput,
   FeedbackTicketPage,
@@ -31,11 +36,13 @@ import type {
   GetDfsDashboardParams,
   GetModelProjectionsParams,
   HealthStatus,
+  ListEvaluations200,
   ListFeedbackTicketsParams,
   ListGameTakes200,
   MembershipStatus,
   ModelProjectionSheet,
   PublishTakeInput,
+  RequestEvaluationUpload200,
   RequestTakeUpload200,
   TakeUploadInput
 } from './api.schemas';
@@ -66,6 +73,347 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListEvaluationsUrl = () => {
+
+
+
+
+  return `/api/evaluations`
+}
+
+/**
+ * @summary Owner-only saved historical evaluations and verified imports
+ */
+export const listEvaluations = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListEvaluations200> => {
+
+  return customFetch<ListEvaluations200>(getListEvaluationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEvaluationsQueryKey = () => {
+    return [
+    `/api/evaluations`
+    ] as const;
+    }
+
+
+export const getListEvaluationsQueryOptions = <TData = Awaited<ReturnType<typeof listEvaluations>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEvaluations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEvaluationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEvaluations>>> = ({ signal }) => listEvaluations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEvaluations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEvaluationsQueryResult = NonNullable<Awaited<ReturnType<typeof listEvaluations>>>
+export type ListEvaluationsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Owner-only saved historical evaluations and verified imports
+ */
+
+export function useListEvaluations<TData = Awaited<ReturnType<typeof listEvaluations>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEvaluations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEvaluationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartEvaluationUrl = () => {
+
+
+
+
+  return `/api/evaluations`
+}
+
+/**
+ * @summary Owner starts a bounded historical replay
+ */
+export const startEvaluation = async (evaluationStartInput: EvaluationStartInput, options?: Parameters<typeof customFetch>[1]): Promise<EvaluationRun> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EvaluationRun>(getStartEvaluationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(evaluationStartInput)
+  }
+);}
+
+
+
+
+
+export const getStartEvaluationMutationKey = () => ['startEvaluation'] as const;
+
+export const getStartEvaluationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startEvaluation>>, TError,StartEvaluationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startEvaluation>>, TError,StartEvaluationMutationVariables, TContext> => {
+
+const mutationKey = getStartEvaluationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startEvaluation>>, StartEvaluationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  startEvaluation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartEvaluationMutationResult = NonNullable<Awaited<ReturnType<typeof startEvaluation>>>
+    export type StartEvaluationMutationBody = BodyType<EvaluationStartInput>
+    export type StartEvaluationMutationError = ErrorType<void>
+    export type StartEvaluationMutationVariables = {data: BodyType<EvaluationStartInput>}
+
+    /**
+ * @summary Owner starts a bounded historical replay
+ */
+export const useStartEvaluation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startEvaluation>>, TError,StartEvaluationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startEvaluation>>,
+        TError,
+        StartEvaluationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStartEvaluationMutationOptions(options));
+    }
+
+export const getRequestEvaluationUploadUrl = () => {
+
+
+
+
+  return `/api/evaluations/uploads`
+}
+
+/**
+ * @summary Owner requests a private CSV direct upload
+ */
+export const requestEvaluationUpload = async (evaluationUploadInput: EvaluationUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<RequestEvaluationUpload200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RequestEvaluationUpload200>(getRequestEvaluationUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(evaluationUploadInput)
+  }
+);}
+
+
+
+
+
+export const getRequestEvaluationUploadMutationKey = () => ['requestEvaluationUpload'] as const;
+
+export const getRequestEvaluationUploadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestEvaluationUpload>>, TError,RequestEvaluationUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestEvaluationUpload>>, TError,RequestEvaluationUploadMutationVariables, TContext> => {
+
+const mutationKey = getRequestEvaluationUploadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestEvaluationUpload>>, RequestEvaluationUploadMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestEvaluationUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestEvaluationUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestEvaluationUpload>>>
+    export type RequestEvaluationUploadMutationBody = BodyType<EvaluationUploadInput>
+    export type RequestEvaluationUploadMutationError = ErrorType<void>
+    export type RequestEvaluationUploadMutationVariables = {data: BodyType<EvaluationUploadInput>}
+
+    /**
+ * @summary Owner requests a private CSV direct upload
+ */
+export const useRequestEvaluationUpload = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestEvaluationUpload>>, TError,RequestEvaluationUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestEvaluationUpload>>,
+        TError,
+        RequestEvaluationUploadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestEvaluationUploadMutationOptions(options));
+    }
+
+export const getVerifyEvaluationImportUrl = () => {
+
+
+
+
+  return `/api/evaluations/imports`
+}
+
+/**
+ * @summary Owner attests and validates a contest ownership or historical pool CSV
+ */
+export const verifyEvaluationImport = async (evaluationVerifyInput: EvaluationVerifyInput, options?: Parameters<typeof customFetch>[1]): Promise<EvaluationImport> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EvaluationImport>(getVerifyEvaluationImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(evaluationVerifyInput)
+  }
+);}
+
+
+
+
+
+export const getVerifyEvaluationImportMutationKey = () => ['verifyEvaluationImport'] as const;
+
+export const getVerifyEvaluationImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyEvaluationImport>>, TError,VerifyEvaluationImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyEvaluationImport>>, TError,VerifyEvaluationImportMutationVariables, TContext> => {
+
+const mutationKey = getVerifyEvaluationImportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyEvaluationImport>>, VerifyEvaluationImportMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyEvaluationImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyEvaluationImportMutationResult = NonNullable<Awaited<ReturnType<typeof verifyEvaluationImport>>>
+    export type VerifyEvaluationImportMutationBody = BodyType<EvaluationVerifyInput>
+    export type VerifyEvaluationImportMutationError = ErrorType<void>
+    export type VerifyEvaluationImportMutationVariables = {data: BodyType<EvaluationVerifyInput>}
+
+    /**
+ * @summary Owner attests and validates a contest ownership or historical pool CSV
+ */
+export const useVerifyEvaluationImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyEvaluationImport>>, TError,VerifyEvaluationImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyEvaluationImport>>,
+        TError,
+        VerifyEvaluationImportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVerifyEvaluationImportMutationOptions(options));
+    }
 
 export const getListFeedbackTicketsUrl = (params?: ListFeedbackTicketsParams,) => {
   const normalizedParams = new URLSearchParams();

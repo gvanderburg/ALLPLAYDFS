@@ -1,5 +1,6 @@
 import type { DfsDashboard, DfsSalaryPlatform, ModelFantasyForecast, ModelProjectionSheet } from '@workspace/api-client-react';
 import { findUniqueSelectedSlateSalary } from './model-salary-match';
+import { researchScores, researchRole as role, researchPercentile as percentile, ownershipShares as shares, allocateOwnership } from '@workspace/api-client-react';
 
 export type LineupStyle = 'balanced' | 'tournament';
 export interface LineupInsight {
@@ -32,43 +33,6 @@ type Site = ModelFantasyForecast['site'];
 const round = (n: number) => Math.round(n * 10) / 10;
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 const method = 'Uncalibrated classic-slate selection-share heuristic: 70% position-relative projected points, 30% salary value; assumed roster-role shares. Conditional on the covered player pool, not actual contest ownership. No salary-cap lineup optimization or ownership backtest.';
-// Research assumptions for supported CLASSIC formats, not optimizer constraints.
-const shares: Record<string, Record<string, number>> = {
-  'nfl:draftkings': { QB: 1, RB: 2.5, WR: 3.3, TE: 1.2 },
-  'nfl:fanduel': { QB: 1, RB: 2.5, WR: 3.3, TE: 1.2 },
-  'nhl:draftkings': { C: 2.3, W: 3.5, D: 2.2, G: 1 },
-  'nhl:fanduel': { C: 2.6, W: 2.8, D: 2.6, G: 1 },
-  'nba:draftkings': { PG: 1.75, SG: 1.75, SF: 1.75, PF: 1.75, C: 1 },
-  'nba:fanduel': { PG: 2, SG: 2, SF: 2, PF: 2, C: 1 },
-};
-function role(position: string, sport: string) {
-  const p = position.toUpperCase().split(/[\/,]/)[0];
-  if (sport === 'nhl' && ['LW', 'RW', 'F'].includes(p)) return 'W';
-  if (sport === 'nfl' && p === 'FB') return 'RB';
-  return p;
-}
-function percentile(value: number, population: number[]) {
-  if (population.length < 2) return .5;
-  return population.reduce((n, v) => n + (v < value ? 1 : v === value ? .5 : 0), 0) / population.length;
-}
-function allocate(group: LineupInsight[], expectedSlots: number) {
-  const weights = group.map(p => Math.exp(3 * (.7 * percentile(p.points, group.map(r => r.points)) +
-    .3 * percentile(p.value!, group.map(r => r.value!)))));
-  const assigned = new Map<string, number>();
-  let remaining = expectedSlots * 100, active = [...group];
-  while (active.length && remaining > .001) {
-    const total = active.reduce((n, row) => n + weights[group.indexOf(row)], 0);
-    const capped = active.filter(row => remaining * weights[group.indexOf(row)] / total >= 100);
-    if (!capped.length) {
-      for (const row of active) assigned.set(row.playerId, round(remaining * weights[group.indexOf(row)] / total));
-      break;
-    }
-    for (const row of capped) { assigned.set(row.playerId, 100); remaining -= 100; }
-    active = active.filter(row => !capped.includes(row));
-  }
-  return assigned;
-}
-
 /** Uses ALLPLAY's own forecasts and observed history. Never reads provider fantasy projections/ownership. */
 export function deriveLineupInsights(
   sheet: ModelProjectionSheet, dashboard: DfsDashboard | undefined, platform: DfsSalaryPlatform,
@@ -129,7 +93,7 @@ export function deriveLineupInsights(
     // Missing positions make even a conditional selection-share estimate misleading.
     if (groups.every(g => g.group.length > g.slots)) {
       for (const { group, slots } of groups) {
-        const ownership = allocate(group, slots);
+        const ownership = allocateOwnership(group.map(row => ({ ...row, historicalGames: 0 })), slots);
         for (const row of group) { row.estimatedOwnership = ownership.get(row.playerId) ?? null; row.ownershipMethod = method; }
       }
       notes.push(method);
@@ -139,18 +103,9 @@ export function deriveLineupInsights(
   const ownershipCoverage = rows.filter(r => r.estimatedOwnership !== null).length;
   if (!ownershipCoverage) notes.push('Ownership unavailable: requires a supported classic NFL/NHL/NBA format, complete position groups, and same-site/date/slate salaries for at least 80% of the scored pool. Single-game/showdown and unsupported templates remain blank.');
   if (priced.length < rows.length) notes.push(`${rows.length - priced.length} scored players lack an unambiguous matching salary. Their value and ownership stay blank; recommendations still use own points and matchup history.`);
-  const scores = new Map(rows.map(row => {
-    const peers = rows.filter(r => role(r.position, sheet.sport) === role(row.position, sheet.sport));
-    const p = percentile(row.points, peers.map(r => r.points));
-    const v = row.value !== null ? percentile(row.value, peers.flatMap(r => r.value !== null ? [r.value] : [])) : p;
-    const upside = row.ceiling !== null ? percentile(row.ceiling, peers.flatMap(r => r.ceiling !== null ? [r.ceiling] : [])) : p;
-    const floor = row.floor !== null ? percentile(row.floor, peers.flatMap(r => r.floor !== null ? [r.floor] : [])) : p;
-    const leverage = row.estimatedOwnership !== null ? 1 - row.estimatedOwnership / 100 : 0;
-    const sample = Math.min(1, (sheet.players.find(r => r.id === row.playerId)?.historicalGames ?? 0) / 5);
-    return [row.playerId, style === 'tournament'
-      ? .4 * p + .2 * v + .25 * upside + .1 * leverage + .05 * sample
-      : .45 * p + .25 * v + .2 * floor + .1 * sample] as const;
-  }));
+  const scores = researchScores(rows.map(row => ({ ...row,
+    historicalGames: sheet.players.find(r => r.id === row.playerId)?.historicalGames ?? 0,
+  })), sheet.sport, style);
   rows.sort((a, b) => scores.get(b.playerId)! - scores.get(a.playerId)! || b.points - a.points || a.playerId.localeCompare(b.playerId));
   rows.forEach((row, i) => {
     row.rank = i + 1;

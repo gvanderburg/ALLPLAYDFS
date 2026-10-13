@@ -9,6 +9,131 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Owner-only saved historical evaluations and verified imports
+ */
+export const ListEvaluationsResponse = zod.object({
+  "runs": zod.array(zod.object({
+  "id": zod.string(),
+  "sport": zod.string(),
+  "site": zod.string(),
+  "fromDate": zod.string(),
+  "toDate": zod.string(),
+  "status": zod.enum(['running', 'ready', 'error']),
+  "createdAt": zod.coerce.date(),
+  "report": zod.record(zod.string(), zod.unknown())
+})),
+  "imports": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['pool', 'ownership']),
+  "sport": zod.string(),
+  "site": zod.string(),
+  "slateDate": zod.string(),
+  "contestId": zod.string(),
+  "source": zod.string(),
+  "asOf": zod.string(),
+  "hash": zod.string(),
+  "rowCount": zod.number().int(),
+  "verifiedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Owner starts a bounded historical replay
+ */
+export const startEvaluationBodyRecentGamesMin = 3;
+export const startEvaluationBodyRecentGamesMax = 10;
+
+export const startEvaluationBodyRecentWeightMin = 0;
+export const startEvaluationBodyRecentWeightMax = 100;
+
+export const startEvaluationBodyMatchupWeightMin = 0;
+export const startEvaluationBodyMatchupWeightMax = 50;
+
+
+
+export const StartEvaluationBody = zod.object({
+  "sport": zod.enum(['nfl', 'nhl', 'nba', 'wnba', 'mlb', 'cfb', 'nascar']),
+  "site": zod.enum(['draftkings', 'fanduel', 'yahoo', 'ownersbox']),
+  "fromDate": zod.string(),
+  "toDate": zod.string(),
+  "recentGames": zod.number().int().min(startEvaluationBodyRecentGamesMin).max(startEvaluationBodyRecentGamesMax),
+  "recentWeight": zod.number().int().min(startEvaluationBodyRecentWeightMin).max(startEvaluationBodyRecentWeightMax),
+  "matchupWeight": zod.number().int().min(startEvaluationBodyMatchupWeightMin).max(startEvaluationBodyMatchupWeightMax),
+  "poolImportId": zod.string().optional()
+})
+
+export const StartEvaluationResponse = zod.object({
+  "id": zod.string(),
+  "sport": zod.string(),
+  "site": zod.string(),
+  "fromDate": zod.string(),
+  "toDate": zod.string(),
+  "status": zod.enum(['running', 'ready', 'error']),
+  "createdAt": zod.coerce.date(),
+  "report": zod.record(zod.string(), zod.unknown())
+})
+
+
+/**
+ * @summary Owner requests a private CSV direct upload
+ */
+export const requestEvaluationUploadBodyFileNameMax = 200;
+
+export const requestEvaluationUploadBodySizeMax = 1048576;
+
+
+
+export const RequestEvaluationUploadBody = zod.object({
+  "fileName": zod.string().min(1).max(requestEvaluationUploadBodyFileNameMax),
+  "size": zod.number().int().min(1).max(requestEvaluationUploadBodySizeMax)
+})
+
+export const RequestEvaluationUploadResponse = zod.object({
+  "id": zod.string(),
+  "uploadURL": zod.string()
+})
+
+
+/**
+ * @summary Owner attests and validates a contest ownership or historical pool CSV
+ */
+export const verifyEvaluationImportBodyContestIdMax = 150;
+
+export const verifyEvaluationImportBodySourceMin = 10;
+export const verifyEvaluationImportBodySourceMax = 2000;
+
+
+
+export const VerifyEvaluationImportBody = zod.object({
+  "uploadId": zod.string(),
+  "kind": zod.enum(['pool', 'ownership']),
+  "sport": zod.enum(['nfl', 'nhl', 'nba', 'wnba', 'mlb', 'cfb', 'nascar']),
+  "site": zod.enum(['draftkings', 'fanduel', 'yahoo', 'ownersbox']),
+  "slateDate": zod.string(),
+  "contestId": zod.string().min(1).max(verifyEvaluationImportBodyContestIdMax),
+  "source": zod.string().min(verifyEvaluationImportBodySourceMin).max(verifyEvaluationImportBodySourceMax),
+  "asOf": zod.coerce.date(),
+  "verified": zod.boolean(),
+  "runId": zod.string().optional()
+})
+
+export const VerifyEvaluationImportResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['pool', 'ownership']),
+  "sport": zod.string(),
+  "site": zod.string(),
+  "slateDate": zod.string(),
+  "contestId": zod.string(),
+  "source": zod.string(),
+  "asOf": zod.string(),
+  "hash": zod.string(),
+  "rowCount": zod.number().int(),
+  "verifiedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Signed-in users see their tickets; owners may review all tickets
  */
 export const listFeedbackTicketsQueryScopeDefault = `mine`;

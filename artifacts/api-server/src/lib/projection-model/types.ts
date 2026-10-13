@@ -18,6 +18,10 @@ export interface HistoricalGame {
   venue: string;
   teams: Array<{ id: string; name: string; abbreviation: string }>;
   players: HistoricalPlayer[];
+  /** Verified final-play wall clock, not the scheduled start. */
+  completedAt?: string;
+  /** Server receipt of a verified final result; a safe upper bound on completion. */
+  recordedAt?: string;
 }
 export interface SlatePlayer {
   id: string;
