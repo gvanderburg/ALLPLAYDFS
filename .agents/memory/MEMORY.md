@@ -5,3 +5,4 @@
 - [Membership scope](membership-policy.md) — $1.99/month for projections only; news and slates remain free.
 - [Whop membership bridge](whop-membership-bridge.md) — bind purchases to verified app identity; verify checkout ownership, provider access and period-end cancellation.
 - [Auth UI runtime](auth-ui-runtime.md) — build checks can miss stale development dependencies; use supported Clerk appearance styling and check phone layouts.
+- [Slate selection](slate-selection.md) — empty today advances per sport to a published slate; provider calendars differ and UTC game dates can shift the slate day.

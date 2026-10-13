@@ -166,6 +166,18 @@ h1 { font: 600 clamp(28px, 3vw, 39px)/1.05 'Space Grotesk', sans-serif; letter-s
 .team-chip { min-width: 32px; height: 25px; display: inline-grid; place-items: center; border-radius: 5px; color: #a9b9c1; background: #222b36; font: 500 10px var(--app-font-mono); }
 .versus { color: #667483; font: 10px var(--app-font-mono); }
 .event-right { min-width: 100px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; }
+.event-right { gap:8px; }
+.event-lines { display:grid; gap:6px; font:10px var(--app-font-mono); }
+.event-lines > div { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.event-lines span { color:var(--slate-muted); }
+.event-lines strong { color:var(--slate-text); font-weight:500; }
+.event-odds-source { color:var(--slate-muted); font-size:9px; }
+.slate-notice { display:flex; align-items:center; gap:9px; margin:15px 0 0; padding:12px 14px; border:1px solid var(--slate-divider); border-radius:7px; color:var(--slate-text); background:var(--slate-panel); font-size:12px; }
+@media (max-width:620px) {
+  #slate-section .event-row { grid-template-columns:minmax(0,1fr); }
+  #slate-section .event-right { align-items:flex-start; text-align:left; }
+  .event-lines > div { justify-content:flex-start; }
+}
 .event-time { color: #aab5bd; font: 11px var(--app-font-mono); }
 .total-pill { color: #4dd7a2; font: 500 11px var(--app-font-mono); }
 .total-pill.missing { color: #6c7885; }

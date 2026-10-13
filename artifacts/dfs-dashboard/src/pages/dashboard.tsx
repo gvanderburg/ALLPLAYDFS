@@ -68,25 +68,36 @@ function EventSlate({ events, loading }: { events: DfsEvent[]; loading: boolean 
   if (!events.length) return <EmptyState icon={<CalendarDays size={17} />} title="No events on this slate" copy="There are no events returned for this date and sport selection." />;
   return <div className="slate-list">{events.map((event) => {
     const [away, home] = [...event.competitors].sort((a, b) => (a.homeAway === 'away' ? -1 : b.homeAway === 'away' ? 1 : 0));
+    const teamGame = away?.homeAway === 'away' && home?.homeAway === 'home';
     const live = /live|in progress|in-progress/i.test(event.status);
     return <article className="event-row" key={event.id} data-testid={`event-${event.id}`}>
       <div>
         <div className="event-league">{event.league} <span style={{ color: 'var(--slate-muted)' }}>·</span> {formatDate(event.startTime, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</div>
         <div className="event-name">{event.shortName || event.name}</div>
-        <div className="competitors" style={{ marginTop: 9 }}>
+        {teamGame && <div className="competitors" style={{ marginTop: 9 }}>
           <span className="team-chip">{away?.abbreviation ?? '—'}</span><span>{away?.name ?? 'TBD'}</span>
           {away?.score != null && <b>{away.score}</b>}
           <span className="versus">vs</span>
           <span className="team-chip">{home?.abbreviation ?? '—'}</span><span>{home?.name ?? 'TBD'}</span>
           {home?.score != null && <b>{home.score}</b>}
-        </div>
+        </div>}
       </div>
       <div className="event-right">
         <span className={`event-time ${live ? 'status-live' : ''}`}>{live ? event.status : formatDate(event.startTime, { hour: 'numeric', minute: '2-digit' })}</span>
-        <span className={`total-pill ${event.totalPoints == null ? 'missing' : ''}`}>{event.totalPoints == null ? 'Total —' : `O/U ${event.totalPoints}`}</span>
+        <span className={`total-pill ${event.totalPoints == null ? 'missing' : ''}`}>{event.sport === 'nascar' ? 'Race odds unavailable' : event.totalPoints == null ? 'Total —' : `O/U ${event.totalPoints}`}</span>
+        {teamGame && <div className="event-lines">
+          <div><span>Spread</span><strong>{away?.abbreviation ?? 'Away'} {signedLine(away?.spread, true)} · {home?.abbreviation ?? 'Home'} {signedLine(home?.spread, true)}</strong></div>
+          <div><span>Moneyline</span><strong>{away?.abbreviation ?? 'Away'} {signedLine(away?.moneyline)} · {home?.abbreviation ?? 'Home'} {signedLine(home?.moneyline)}</strong></div>
+        </div>}
+        {event.oddsSource && <span className="event-odds-source">{event.oddsSource} · American odds</span>}
       </div>
     </article>;
   })}</div>;
+}
+function signedLine(value?: number | null, pick = false) {
+  if (value == null) return '—';
+  if (pick && value === 0) return 'PK';
+  return value > 0 ? `+${value}` : String(value);
 }
 function NewsFeed({ news, loading }: { news: DfsNewsItem[]; loading: boolean }) {
   if (loading) return <div style={{ display: 'grid', gap: 13 }}>{[1, 2, 3].map((n) => <div key={n} style={{ display: 'flex', gap: 12 }}><div className="skeleton" style={{ width: 57, height: 57 }} /><div style={{ flex: 1 }}><div className="skeleton" style={{ height: 12, marginBottom: 8 }} /><div className="skeleton" style={{ height: 10, width: '70%' }} /></div></div>)}</div>;
@@ -128,6 +139,8 @@ export default function Dashboard() {
   const signedIn = authLoaded && isSignedIn === true;
   const membership = useMembership(signedIn);
   const [date, setDate] = useState(localDateString);
+  const [automaticDate, setAutomaticDate] = useState(true);
+  const [advanceNotice, setAdvanceNotice] = useState<string | null>(null);
   const [sport, setSport] = useState<DfsSport>('nfl');
   const [salaryPlatform, setSalaryPlatform] = useState<DfsSalaryPlatform>('draftkings');
   const [salarySelection, setSalarySelection] = useState<{ context: string; id: string }>();
@@ -138,7 +151,8 @@ export default function Dashboard() {
   const [installed, setInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true);
   const [installing, setInstalling] = useState(false);
   const [installError, setInstallError] = useState<string | null>(null);
-  const params = useMemo(() => ({ date, sport, salaryPlatform, slateId }), [date, sport, salaryPlatform, slateId]);
+  const nextSlateIfEmpty = automaticDate && date === localDateString();
+  const params = useMemo(() => ({ date, sport, salaryPlatform, slateId, nextSlateIfEmpty }), [date, sport, salaryPlatform, slateId, nextSlateIfEmpty]);
   const dashboardKey = useMemo(() => [...getGetDfsDashboardQueryKey(params), { clerkUserId: signedIn ? userId ?? 'signed-in' : 'signed-out' }] as const, [params, signedIn, userId]);
   const query = useGetDfsDashboard(params, { query: { queryKey: dashboardKey, refetchOnWindowFocus: false, refetchInterval: 5 * 60 * 1000 } });
   const data = query.data;
@@ -156,6 +170,21 @@ export default function Dashboard() {
   const currentSportCoverage = data?.sportCoverage?.find((item) => item.sport === sport);
   const coverageList = currentSportCoverage ? [currentSportCoverage] : [];
   const sportName = SPORTS.find((item) => item.id === sport)?.name ?? sport.toUpperCase();
+
+  useEffect(() => {
+    const resolvedDate = data?.date.slice(0, 10);
+    if (automaticDate && data?.autoAdvanced && resolvedDate && resolvedDate !== date) {
+      setAdvanceNotice(`No ${sport.toUpperCase()} games on ${date}. Showing the next published slate: ${resolvedDate}.`);
+      setSalarySelection(undefined);
+      setDate(resolvedDate);
+    }
+  }, [data, automaticDate, date, sport]);
+  const selectSport = (nextSport: DfsSport) => {
+    setSport(nextSport);
+    setAdvanceNotice(null);
+    setSalarySelection(undefined);
+    if (automaticDate) setDate(localDateString());
+  };
 
   useEffect(() => {
     const handlePrompt = (event: Event) => { event.preventDefault(); setInstallPrompt(event); };
@@ -216,7 +245,7 @@ export default function Dashboard() {
       <div className="control-bar">
         <div className="filter-group">
           <label className="micro-label" htmlFor="slate-date">Slate</label>
-          <input id="slate-date" className="date-field" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Select slate date" data-testid="input-slate-date" />
+          <input id="slate-date" className="date-field" type="date" value={date} onChange={(e) => { setAutomaticDate(e.target.value === localDateString()); setAdvanceNotice(null); setSalarySelection(undefined); setDate(e.target.value); }} aria-label="Select slate date" data-testid="input-slate-date" />
         </div>
         <div className="action-group">
           <button className="btn btn-quiet" onClick={() => downloadCsv(`${sport}-events-${date}.csv`, eventExportRows(events))} disabled={!events.length} aria-label="Export event slate as CSV" data-testid="button-export-events"><Download size={15} /> Events</button>
@@ -237,7 +266,7 @@ export default function Dashboard() {
           aria-controls="sport-panel"
           tabIndex={sport === item.id ? 0 : -1}
           data-testid={`tab-${item.id}`}
-          onClick={() => setSport(item.id)}
+          onClick={() => selectSport(item.id)}
           onKeyDown={(event) => {
             let next: number;
             if (event.key === 'ArrowRight') next = (index + 1) % SPORTS.length;
@@ -247,7 +276,7 @@ export default function Dashboard() {
             else return;
             event.preventDefault();
             const nextSport = SPORTS[next].id;
-            setSport(nextSport);
+            selectSport(nextSport);
             const tab = document.getElementById(`sport-tab-${nextSport}`);
             tab?.focus({ preventScroll: true });
             tab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -257,6 +286,7 @@ export default function Dashboard() {
 
       <div id="sport-panel" role="tabpanel" aria-labelledby={`sport-tab-${sport}`}>
       {query.isError && <div className="error-box" role="alert" data-testid="status-dashboard-error"><span><AlertCircle size={15} style={{ verticalAlign: 'middle', marginRight: 8 }} />Couldn’t load this slate. Check your connection and try again.</span><button className="btn" onClick={refresh}><RefreshCw size={14} /> Retry</button></div>}
+      {(advanceNotice || data?.slateNotice) && <div className="slate-notice" role="status" data-testid="slate-advance-notice"><CalendarDays size={15} /><span>{advanceNotice || data?.slateNotice}</span></div>}
       <div style={{ height: 17 }} />
 
       {coverageList.length > 0 && <section className="coverage-strip" aria-label="Sport data coverage" data-testid="coverage-sports">

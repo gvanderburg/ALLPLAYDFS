@@ -7,6 +7,10 @@
  */
 
 export interface DfsCompetitor {
+  /** @nullable */
+  spread?: number | null;
+  /** @nullable */
+  moneyline?: number | null;
   id: string;
   name: string;
   abbreviation: string;

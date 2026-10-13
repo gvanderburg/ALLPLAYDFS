@@ -65,6 +65,7 @@ export const HealthCheckResponse = zod.object({
  * Returns a date's event slate, available betting totals, sourced fantasy projections, and recent sports news.
  * @summary Get multi-sport DFS dashboard data
  */
+export const getDfsDashboardQueryNextSlateIfEmptyDefault = false;
 export const getDfsDashboardQuerySlateIdRegExp = new RegExp('^[0-9]{1,12}$');
 
 
@@ -72,11 +73,15 @@ export const GetDfsDashboardQueryParams = zod.object({
   "date": zod.date().optional().describe('Local calendar date in YYYY-MM-DD format; defaults to today.'),
   "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']).optional(),
   "salaryPlatform": zod.enum(['draftkings', 'fanduel']).optional(),
+  "nextSlateIfEmpty": zod.coerce.boolean().default(getDfsDashboardQueryNextSlateIfEmptyDefault).describe('For a selected sport, advance to its next published game day if the requested day is empty.'),
   "slateId": zod.coerce.string().regex(getDfsDashboardQuerySlateIdRegExp).optional().describe('Salary slate belonging to the selected sport and Eastern calendar date.')
 })
 
 export const GetDfsDashboardResponse = zod.object({
   "projectionsLocked": zod.boolean(),
+  "requestedDate": zod.coerce.date().optional(),
+  "autoAdvanced": zod.boolean().optional(),
+  "slateNotice": zod.string().nullish(),
   "date": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "events": zod.array(zod.object({
@@ -92,6 +97,8 @@ export const GetDfsDashboardResponse = zod.object({
   "spread": zod.number().nullish(),
   "oddsSource": zod.string().nullish(),
   "competitors": zod.array(zod.object({
+  "spread": zod.number().nullish(),
+  "moneyline": zod.number().nullish(),
   "id": zod.string(),
   "name": zod.string(),
   "abbreviation": zod.string(),

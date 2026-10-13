@@ -48,6 +48,10 @@ export const DfsSalaryPlatform = {
 } as const;
 
 export interface DfsCompetitor {
+  /** @nullable */
+  spread?: number | null;
+  /** @nullable */
+  moneyline?: number | null;
   id: string;
   name: string;
   abbreviation: string;
@@ -172,6 +176,10 @@ export interface DfsSalaryCoverage {
 
 export interface DfsDashboard {
   projectionsLocked: boolean;
+  requestedDate?: string;
+  autoAdvanced?: boolean;
+  /** @nullable */
+  slateNotice?: string | null;
   date: string;
   updatedAt: string;
   events: DfsEvent[];
@@ -193,6 +201,10 @@ export type GetDfsDashboardParams = {
 date?: string;
 sport?: DfsSport;
 salaryPlatform?: DfsSalaryPlatform;
+/**
+ * For a selected sport, advance to its next published game day if the requested day is empty.
+ */
+nextSlateIfEmpty?: boolean;
 /**
  * Salary slate belonging to the selected sport and Eastern calendar date.
  * @pattern ^[0-9]{1,12}$

@@ -4,6 +4,8 @@ import { getSalaryData, InvalidSalarySlate } from "../lib/draftkings-salaries";
 import { getAuth } from "@clerk/express";
 import { hasProjectionAccess } from "../lib/membership";
 import { gateDashboardProjections } from "../lib/projection-access";
+import { competitorLines } from "../lib/event-lines";
+import { findNextSlate } from "../lib/next-slate";
 
 const router: IRouter = Router();
 
@@ -157,7 +159,9 @@ function normalizeEvent(eventValue: unknown, sport: Sport) {
     totalPoints,
     spread,
     oddsSource: text(odds.provider ? object(odds.provider).name : ""),
-    competitors,
+    competitors: competitors.map(competitor => ({
+      ...competitor, ...competitorLines(odds, competitor.homeAway),
+    })),
   };
 }
 
@@ -294,7 +298,8 @@ function isDate(value: string) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
-async function getDashboard(date: string, selectedSport?: Sport) {
+async function getDashboard(date: string, selectedSport?: Sport, nextSlateIfEmpty = false) {
+  let nextSlateUnavailable = false;
   const selectedSports = selectedSport
     ? [selectedSport]
     : (Object.keys(sports) as Sport[]);
@@ -307,8 +312,21 @@ async function getDashboard(date: string, selectedSport?: Sport) {
         fetchJson(`${base}/scoreboard?dates=${dateParam}&limit=200`),
         fetchJson(`${base}/news`),
       ]);
-      const scoreboardData =
+      let scoreboardData =
         scoreboard.status === "fulfilled" ? object(scoreboard.value) : {};
+      if (nextSlateIfEmpty && scoreboard.status === "rejected") nextSlateUnavailable = true;
+      if (nextSlateIfEmpty && selectedSport && scoreboard.status === "fulfilled" && !array(scoreboardData.events).length) {
+        try {
+          const next = await findNextSlate(base, date, scoreboardData, fetchJson);
+          if (next) {
+            date = next.date;
+            scoreboardData = object(next.scoreboard);
+          }
+        } catch {
+          // Keep current news/salary browsing usable, but report discovery failure.
+          nextSlateUnavailable = true;
+        }
+      }
       const events =
         scoreboard.status === "fulfilled"
           ? array(scoreboardData.events).map((event) => normalizeEvent(event, sport))
@@ -468,13 +486,14 @@ async function getDashboard(date: string, selectedSport?: Sport) {
 
   return {
     date,
+    nextSlateUnavailable,
     updatedAt: new Date().toISOString(),
     events,
     news,
     projections,
     sportCoverage,
     sourceNotes: [
-      "Schedules and available game totals are from ESPN's public scoreboard feeds; totals are shown only when a line is included in the feed.",
+      "Schedules, totals, team spreads and American moneylines are from ESPN's public scoreboard feeds. Unpublished betting lines remain blank.",
       "Player projections use ESPN's default fantasy scoring, not DraftKings or FanDuel rules. Scoring-period forecasts are shown where available; season forecasts are labeled separately. Missing projections are not estimated or filled with sample values.",
       "Recent news is from ESPN. NASCAR event totals are not applicable; use race odds rather than an over/under.",
       "Sports data is cached for up to 5 minutes.",
@@ -505,8 +524,17 @@ router.get("/dfs/dashboard", async (req, res): Promise<void> => {
 
   // Query dates arrive as strings; the generated query validator expects Date.
   // Validate the calendar day first so Date's rollover cannot accept February 30.
+  const nextSlateValue = req.query.nextSlateIfEmpty;
+  if (nextSlateValue !== undefined && nextSlateValue !== "true" && nextSlateValue !== "false") {
+    res.status(400).json({ error: "nextSlateIfEmpty must be true or false" });
+    return;
+  }
+  if (nextSlateValue === "true" && !sportValue) {
+    res.status(400).json({ error: "Select a sport to find its next slate" });
+    return;
+  }
   const parsed = GetDfsDashboardQueryParams.safeParse({
-    ...req.query, date: new Date(`${date}T00:00:00.000Z`),
+    ...req.query, date: new Date(`${date}T00:00:00.000Z`), nextSlateIfEmpty: nextSlateValue === "true",
   });
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid dashboard filters" });
@@ -515,7 +543,8 @@ router.get("/dfs/dashboard", async (req, res): Promise<void> => {
   const sport = sportValue as Sport | undefined;
   const platform = parsed.data.salaryPlatform ?? "draftkings";
   const slateId = parsed.data.slateId;
-  const cacheKey = `${date}:${sport ?? "all"}:${platform}:${slateId ?? "default"}`;
+  const nextSlateIfEmpty = parsed.data.nextSlateIfEmpty && !slateId;
+  const cacheKey = `${date}:${sport ?? "all"}:${platform}:${slateId ?? "default"}:${nextSlateIfEmpty ? "next" : "exact"}`;
   res.set("Cache-Control", "private, no-store");
   res.vary("Cookie");
   res.vary("Authorization");
@@ -527,13 +556,19 @@ router.get("/dfs/dashboard", async (req, res): Promise<void> => {
   }
 
   try {
-    const dashboard = await getDashboard(date, sport);
+    const dashboard = await getDashboard(date, sport, nextSlateIfEmpty);
     const salaryData = await getSalaryData(
-      sport, date, platform, slateId, dashboard.projections, dashboard.events,
+      sport, dashboard.date, platform, slateId, dashboard.projections, dashboard.events,
       (error) => req.log.warn({ err: error, sport }, "Salary source unavailable"),
     );
     const data = GetDfsDashboardResponse.parse({
       projectionsLocked: false,
+      requestedDate: date,
+      autoAdvanced: dashboard.date !== date,
+      slateNotice: nextSlateIfEmpty && !dashboard.events.length
+        ? dashboard.nextSlateUnavailable
+          ? "Upcoming slates could not be checked right now. Please refresh to try again."
+          : "No upcoming published slate was found. Future schedules may not be released yet." : null,
       ...dashboard, projections: salaryData.players, salaryCoverage: salaryData.coverage,
       sourceNotes: [
         ...dashboard.sourceNotes,
@@ -545,6 +580,12 @@ router.get("/dfs/dashboard", async (req, res): Promise<void> => {
       data,
       expiresAt: Date.now() + CACHE_TTL_MS,
     });
+    if (dashboard.date !== date) {
+      cache.set(`${dashboard.date}:${sport ?? "all"}:${platform}:default:exact`, {
+        data: { ...data, requestedDate: data.date, autoAdvanced: false, slateNotice: null },
+        expiresAt: Date.now() + CACHE_TTL_MS,
+      });
+    }
     res.json(gateDashboardProjections(data, hasAccess));
   } catch (error) {
     if (error instanceof InvalidSalarySlate) {

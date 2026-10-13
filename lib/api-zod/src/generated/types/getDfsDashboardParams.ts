@@ -16,6 +16,10 @@ date?: Date;
 sport?: DfsSport;
 salaryPlatform?: DfsSalaryPlatform;
 /**
+ * For a selected sport, advance to its next published game day if the requested day is empty.
+ */
+nextSlateIfEmpty?: boolean;
+/**
  * Salary slate belonging to the selected sport and Eastern calendar date.
  * @pattern ^[0-9]{1,12}$
  */

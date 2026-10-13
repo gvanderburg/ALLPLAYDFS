@@ -95,6 +95,13 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/DfsSalaryPlatform"
+        - name: nextSlateIfEmpty
+          in: query
+          required: false
+          description: For a selected sport, advance to its next published game day if the requested day is empty.
+          schema:
+            type: boolean
+            default: false
         - name: slateId
           in: query
           required: false
@@ -146,6 +153,9 @@ components:
       required: [date, updatedAt, events, news, projections, projectionsLocked, sportCoverage, sourceNotes, salaryCoverage]
       properties:
         projectionsLocked: { type: boolean }
+        requestedDate: { type: string, format: date }
+        autoAdvanced: { type: boolean }
+        slateNotice: { type: ["string", "null"] }
         date:
           type: string
           format: date
@@ -197,6 +207,8 @@ components:
       type: object
       required: [id, name, abbreviation, homeAway]
       properties:
+        spread: { type: ["number", "null"] }
+        moneyline: { type: ["number", "null"] }
         id: { type: string }
         name: { type: string }
         abbreviation: { type: string }

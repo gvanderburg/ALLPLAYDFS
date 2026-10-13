@@ -13,6 +13,10 @@ import type { DfsSportCoverage } from './dfsSportCoverage';
 
 export interface DfsDashboard {
   projectionsLocked: boolean;
+  requestedDate?: Date;
+  autoAdvanced?: boolean;
+  /** @nullable */
+  slateNotice?: string | null;
   date: Date;
   updatedAt: Date;
   events: DfsEvent[];
