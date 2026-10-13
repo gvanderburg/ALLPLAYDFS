@@ -25,6 +25,9 @@ timeoutMs = 20000
 WHOP_COMPANY_ID = "biz_i4uqOMr87e7yhT"
 WHOP_PLAN_ID = "plan_hvHZmZq8hKAgk"
 WHOP_PRODUCT_ID = "prod_sPtv4SCgBpgKb"
+ALLPLAY_OWNER_USER_IDS = "user_3KdGcIPxyrneQVhCcsPK09BfyBD"
+
+[userenv.development]
 
 [nix]
 channel = "stable-25_05"

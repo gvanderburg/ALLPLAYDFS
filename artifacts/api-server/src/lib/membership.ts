@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db, membershipBindings, membershipCheckouts } from "@workspace/db";
 import type { MembershipStatus } from "@workspace/api-zod";
 import { getWhopClient } from "./whopClient";
+import { isOwnerAccount } from "./owner-access";
 
 export const membershipConfig = () => ({
   companyId: process.env.WHOP_COMPANY_ID,
@@ -22,7 +23,7 @@ export function clearMembershipCache(userId: string) {
 export function freeMembership(signedIn: boolean): MembershipStatus {
   const config = membershipConfig();
   return {
-    signedIn, hasAccess: false,
+    signedIn, hasAccess: false, isOwner: false,
     ready: Boolean(config.companyId && config.planId && config.productId),
     status: "free", price: 1.99, currency: "usd", interval: "month",
     cancelAtPeriodEnd: false, renewsAt: null, manageUrl: null, error: null,
@@ -46,7 +47,16 @@ function whopUrl(url: string | null | undefined): string | null {
   } catch { return null; }
 }
 
-export async function getVerifiedMembership(userId: string, refresh = false): Promise<VerifiedMembership> {
+export async function getVerifiedMembership(userId: string, refresh = false, paidOnly = false): Promise<VerifiedMembership> {
+  // Check every time, before both provider configuration and the paid cache.
+  // Owner grants aren't cached, so removing an ID revokes the bypass immediately.
+  if (!paidOnly && isOwnerAccount(userId)) {
+    return {
+      membershipId: null,
+      status: { ...freeMembership(true), isOwner: true, hasAccess: true,
+        ready: true, status: "owner", price: 0 },
+    };
+  }
   const cached = accessCache.get(userId);
   if (!refresh && cached && cached.expiresAt > Date.now()) return cached.value;
   const config = membershipConfig();

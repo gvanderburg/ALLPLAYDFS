@@ -125,6 +125,7 @@ components:
       required: [signedIn, hasAccess, ready, status, price, currency, interval, cancelAtPeriodEnd, renewsAt, manageUrl, error]
       properties:
         signedIn: { type: boolean }
+        isOwner: { type: boolean, description: Server-assigned owner access; never granted by the browser. }
         hasAccess: { type: boolean }
         ready: { type: boolean }
         status: { type: string }

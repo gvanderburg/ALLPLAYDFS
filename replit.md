@@ -12,6 +12,16 @@ A personal, dark multi-sport dashboard with daily slates, available game totals,
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - The DFS dashboard uses public ESPN feeds and does not require a Yahoo connection or API key.
 
+### Owner setup
+
+1. Create an ALLPLAY account and open **Account** to copy its account ID.
+2. Privately configure the server-only `ALLPLAY_OWNER_USER_IDS` environment variable with the exact Clerk account ID. Multiple IDs are comma-separated. Do not use a `VITE_` variable or commit account IDs.
+3. Restart the API workflow after configuration changes. Existing signed-in users should reload Account to refresh their access status.
+4. Clerk preview and published accounts are separate. Add each intended environment's account ID, or configure separate development and production values. Never automatically grant the first signup ownership.
+5. Removing an ID removes its owner bypass. Owner access does not automatically cancel existing Whop subscriptions; owners can separately stop an existing paid renewal from Account.
+
+Owner access is checked from the verified server session before every projection response, including cached dashboard data. An unset allowlist grants nobody owner access.
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9

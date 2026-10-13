@@ -13,6 +13,7 @@ import * as zod from 'zod';
  */
 export const GetMembershipStatusResponse = zod.object({
   "signedIn": zod.boolean(),
+  "isOwner": zod.boolean().optional().describe('Server-assigned owner access; never granted by the browser.'),
   "hasAccess": zod.boolean(),
   "ready": zod.boolean(),
   "status": zod.string(),
@@ -39,6 +40,7 @@ export const CreateMembershipCheckoutResponse = zod.object({
  */
 export const CancelMembershipResponse = zod.object({
   "signedIn": zod.boolean(),
+  "isOwner": zod.boolean().optional().describe('Server-assigned owner access; never granted by the browser.'),
   "hasAccess": zod.boolean(),
   "ready": zod.boolean(),
   "status": zod.string(),

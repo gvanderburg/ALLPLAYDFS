@@ -96,7 +96,9 @@ router.post("/membership/cancel", async (req, res) => {
   const auth = authenticatedOrigin(req, res);
   if (!auth) return;
   try {
-    const current = await getVerifiedMembership(auth.userId, true);
+    // A pre-existing paid subscription remains separately cancellable even if
+    // the account subsequently receives owner access.
+    const current = await getVerifiedMembership(auth.userId, true, true);
     if (!current.membershipId) { res.status(404).json({ error: "No linked membership was found." }); return; }
     const whop = await getWhopClient();
     // Include the canonical flag and the SDK's legacy equivalent. Both API

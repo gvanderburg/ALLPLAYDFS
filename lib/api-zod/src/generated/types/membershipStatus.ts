@@ -8,6 +8,8 @@
 
 export interface MembershipStatus {
   signedIn: boolean;
+  /** Server-assigned owner access; never granted by the browser. */
+  isOwner?: boolean;
   hasAccess: boolean;
   ready: boolean;
   status: string;

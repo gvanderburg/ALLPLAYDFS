@@ -175,3 +175,30 @@ test("SDK cancellation wire payload preserves both period-end flags, without cal
   assert.equal(sent.cancellation_mode, "at_period_end");
   assert.equal(sent.cancel_at_period_end, true);
 });
+test("only the exact server-configured owner ID bypasses payment verification", async () => {
+  fixture({ checkouts: false });
+  process.env.ALLPLAY_OWNER_USER_IDS = " user_ownerFixture, user_otherFixture ";
+  try {
+    globalThis.__whopFixture.payments.list = async () => { throw new Error("Must not call Whop for owner access"); };
+    const result = await member.getVerifiedMembership("user_ownerFixture", true);
+    assert.equal(result.status.isOwner, true);
+    assert.equal(result.status.hasAccess, true);
+    assert.equal(result.status.ready, true);
+    assert.equal(result.status.price, 0);
+    assert.equal(result.membershipId, null);
+    assert.equal(await member.hasProjectionAccess("user_ownerFixture"), true);
+    assert.equal(await member.hasProjectionAccess("user_ownerFixtureExtra"), false);
+    assert.equal(await member.hasProjectionAccess(null), false);
+    assert.equal((await member.getVerifiedMembership("user_ownerFixture", true, true)).status.hasAccess, false);
+  } finally { delete process.env.ALLPLAY_OWNER_USER_IDS; }
+});
+test("owner removal immediately revokes the bypass and wildcard grants are rejected", async () => {
+  fixture({ checkouts: false });
+  process.env.ALLPLAY_OWNER_USER_IDS = "user_ownerFixture";
+  assert.equal(await member.hasProjectionAccess("user_ownerFixture"), true);
+  delete process.env.ALLPLAY_OWNER_USER_IDS;
+  assert.equal(await member.hasProjectionAccess("user_ownerFixture"), false);
+  process.env.ALLPLAY_OWNER_USER_IDS = "*";
+  try { assert.equal(await member.hasProjectionAccess("user_ownerFixture"), false); }
+  finally { delete process.env.ALLPLAY_OWNER_USER_IDS; }
+});
