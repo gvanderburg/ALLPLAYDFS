@@ -25,9 +25,11 @@ import type {
   GameTake,
   GameTakeInput,
   GetDfsDashboardParams,
+  GetModelProjectionsParams,
   HealthStatus,
   ListGameTakes200,
   MembershipStatus,
+  ModelProjectionSheet,
   PublishTakeInput,
   RequestTakeUpload200,
   TakeUploadInput
@@ -844,6 +846,90 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetModelProjectionsUrl = (params: GetModelProjectionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/dfs/model-projections?${stringifiedParams}` : `/api/dfs/model-projections`
+}
+
+/**
+ * @summary ALLPLAY historical-performance matchup stat projections
+ */
+export const getModelProjections = async (params: GetModelProjectionsParams, options?: Parameters<typeof customFetch>[1]): Promise<ModelProjectionSheet> => {
+
+  return customFetch<ModelProjectionSheet>(getGetModelProjectionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetModelProjectionsQueryKey = (params?: GetModelProjectionsParams,) => {
+    return [
+    `/api/dfs/model-projections`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetModelProjectionsQueryOptions = <TData = Awaited<ReturnType<typeof getModelProjections>>, TError = ErrorType<void>>(params: GetModelProjectionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModelProjections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetModelProjectionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getModelProjections>>> = ({ signal }) => getModelProjections(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getModelProjections>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetModelProjectionsQueryResult = NonNullable<Awaited<ReturnType<typeof getModelProjections>>>
+export type GetModelProjectionsQueryError = ErrorType<void>
+
+
+/**
+ * @summary ALLPLAY historical-performance matchup stat projections
+ */
+
+export function useGetModelProjections<TData = Awaited<ReturnType<typeof getModelProjections>>, TError = ErrorType<void>>(
+ params: GetModelProjectionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getModelProjections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetModelProjectionsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

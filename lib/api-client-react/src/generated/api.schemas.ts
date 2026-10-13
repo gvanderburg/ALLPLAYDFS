@@ -5,6 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type ModelProjectionSheetStatus = typeof ModelProjectionSheetStatus[keyof typeof ModelProjectionSheetStatus];
+
+
+export const ModelProjectionSheetStatus = {
+  locked: 'locked',
+  warming: 'warming',
+  ready: 'ready',
+  unavailable: 'unavailable',
+  error: 'error',
+} as const;
+
 export type DfsSport = typeof DfsSport[keyof typeof DfsSport];
 
 
@@ -17,6 +28,83 @@ export const DfsSport = {
   nascar: 'nascar',
   cfb: 'cfb',
 } as const;
+
+export interface ModelStatEstimate {
+  id: string;
+  /** @nullable */
+  projected: number | null;
+  /** @nullable */
+  recentAverage: number | null;
+  /** @nullable */
+  baselineAverage: number | null;
+  matchupMultiplier: number;
+  /** @nullable */
+  opponentRank: number | null;
+  rankedTeams: number;
+  defenseGames: number;
+  /** @nullable */
+  opponentMean: number | null;
+  /** @nullable */
+  leagueMean: number | null;
+  sampleSize: number;
+  recentSampleSize: number;
+}
+
+export type ModelHistoryAppearanceStats = {[key: string]: number};
+
+export interface ModelHistoryAppearance {
+  eventId: string;
+  date: string;
+  opponent: string;
+  stats: ModelHistoryAppearanceStats;
+}
+
+export interface ModelPlayerProjection {
+  id: string;
+  name: string;
+  team: string;
+  teamId: string;
+  opponent: string;
+  opponentId: string;
+  position: string;
+  availability: string;
+  participation: string;
+  historicalGames: number;
+  /** @nullable */
+  reason: string | null;
+  stats: ModelStatEstimate[];
+  history: ModelHistoryAppearance[];
+}
+
+export interface ModelMetric {
+  id: string;
+  label: string;
+  unit: string;
+  group: string;
+  higherIsBetter: boolean;
+}
+
+export interface ModelProjectionSheet {
+  status: ModelProjectionSheetStatus;
+  sport: DfsSport;
+  requestedDate: string;
+  slateDate: string;
+  generatedAt: string;
+  /** @nullable */
+  effectiveAsOf: string | null;
+  recentGames: number;
+  recentWeight: number;
+  matchupWeight: number;
+  gameCount: number;
+  processedGames: number;
+  totalGames: number;
+  failedGames: number;
+  observedTeams: number;
+  players: ModelPlayerProjection[];
+  metrics: ModelMetric[];
+  modelFormula: string;
+  notes: string[];
+}
 
 export interface GameTakeInput {
   /**
@@ -255,6 +343,26 @@ export type RequestTakeUpload200 = {
 
 export type CreateMembershipCheckout200 = {
   purchaseUrl: string;
+};
+
+export type GetModelProjectionsParams = {
+sport: DfsSport;
+date?: string;
+/**
+ * @minimum 3
+ * @maximum 10
+ */
+recentGames?: number;
+/**
+ * @minimum 0
+ * @maximum 100
+ */
+recentWeight?: number;
+/**
+ * @minimum 0
+ * @maximum 50
+ */
+matchupWeight?: number;
 };
 
 export type GetDfsDashboardParams = {

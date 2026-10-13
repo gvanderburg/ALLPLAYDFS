@@ -399,8 +399,8 @@ async function getDashboard(date: string, selectedSport?: Sport, nextSlateIfEmpt
         }
         const payload = await fetchJson(
           `${ESPN_FANTASY}/${config.fantasyGame}/seasons/${result.seasonYear}/segments/0/leaguedefaults/3?${query}`,
-          // ESPN's public default league exposes its published fantasy-point
-          // totals in appliedTotal, unlike the raw player-stat feed.
+          // This provider payload is used only for sports-news outlooks.
+          // ALLPLAY's independent model never reads its forecast point totals.
           {
             "x-fantasy-filter": JSON.stringify({
               players: {
@@ -415,14 +415,7 @@ async function getDashboard(date: string, selectedSport?: Sport, nextSlateIfEmpt
         );
         return {
           sport: result.sport,
-          projections: readFantasyProjections(
-            payload,
-            result.sport,
-            result.teamIds,
-            result.teamLabels,
-            result.opponents,
-            result.scoringPeriodId,
-          ),
+          projections: [],
           fantasyNews: readFantasyNews(
             payload,
             result.sport,
@@ -494,7 +487,7 @@ async function getDashboard(date: string, selectedSport?: Sport, nextSlateIfEmpt
     sportCoverage,
     sourceNotes: [
       "Schedules, totals, team spreads and American moneylines are from ESPN's public scoreboard feeds. Unpublished betting lines remain blank.",
-      "Player projections use ESPN's default fantasy scoring, not DraftKings or FanDuel rules. Scoring-period forecasts are shown where available; season forecasts are labeled separately. Missing projections are not estimated or filled with sample values.",
+      "Player stat estimates are computed by ALLPLAY's independent historical-performance matchup model on the Projections page. External fantasy-point forecasts are not used. Salary rows are salary metadata only, not predictions.",
       "Recent news is from ESPN. NASCAR event totals are not applicable; use race odds rather than an over/under.",
       "Sports data is cached for up to 5 minutes.",
     ],

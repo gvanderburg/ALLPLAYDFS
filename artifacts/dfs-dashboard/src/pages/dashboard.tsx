@@ -2,14 +2,14 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { useAuth } from '@clerk/react';
 import { useGetDfsDashboard, getGetDfsDashboardQueryKey } from '@workspace/api-client-react';
-import type { DfsEvent, DfsNewsItem, DfsPlayerProjection, DfsSport, DfsSalaryPlatform } from '@workspace/api-client-react';
-import ProjectionTable from '@/components/projection-table';
+import type { DfsEvent, DfsNewsItem, DfsSport, DfsSalaryPlatform } from '@workspace/api-client-react';
 import SalaryControls from '@/components/salary-controls';
+import { ModelPreview } from '@/components/model-projections';
 import MembershipCheckoutButton from '@/components/membership-checkout-button';
 import useMembership from '@/hooks/use-membership';
 import {
   Activity, AlertCircle, ArrowDownToLine, CalendarDays,
-  Download, ExternalLink, Info, Newspaper, RefreshCw, ShieldCheck,
+  Download, ExternalLink, Newspaper, RefreshCw, ShieldCheck,
   Smartphone, TrendingUp, X, Film,
 } from 'lucide-react';
 
@@ -46,16 +46,9 @@ function eventExportRows(events: DfsEvent[]) {
     spread: event.spread ?? '', oddsSource: event.oddsSource ?? '',
   }));
 }
-function projectionExportRows(players: DfsPlayerProjection[]) {
-  return players.map((player) => ({
-    player: player.name, sport: player.sport, team: player.team ?? '', opponent: player.opponent ?? '',
-    position: player.position ?? '', projection: player.projection, projectionType: player.projectionType,
-    source: player.source, updatedAt: player.updatedAt ?? '',
-    salary: player.salary ?? '', salaryPlatform: player.salaryPlatform ?? '',
-    salarySource: player.salarySource ?? '', salarySlateId: player.salarySlateId ?? '',
-    salaryPlayerId: player.salaryPlayerId ?? '', rosterPositions: player.rosterPositions ?? '',
-    gameInfo: player.gameInfo ?? '',
-  }));
+function SalaryOnlyRows({ rows }: { rows: { id: string; name: string; team?: string | null; opponent?: string | null; position?: string | null; rosterPositions?: string | null; salary?: number | null; salarySource?: string | null }[] }) {
+  if (!rows.length) return <div className="salary-only-empty">No salary entries for this sport and slate. Salary data is kept separate from the ALLPLAY model sheet.</div>;
+  return <div className="salary-only-scroll" role="region" aria-label="Salary-only player list" tabIndex={0}><table className="salary-only-table"><thead><tr><th>PLAYER</th><th>POS</th><th>TEAM</th><th>OPP</th><th>SALARY</th></tr></thead><tbody>{rows.map((player) => <tr key={player.id}><td>{player.name}</td><td>{player.rosterPositions || player.position || '—'}</td><td>{player.team || '—'}</td><td>{player.opponent || '—'}</td><td title={player.salarySource ?? 'Salary source not provided'}>{player.salary == null ? '—' : `$${player.salary.toLocaleString('en-US')}`}</td></tr>)}</tbody></table></div>;
 }
 function SportLabel({ sport }: { sport: string }) {
   return <span className="type-tag">{sport.toUpperCase()}</span>;
@@ -141,7 +134,7 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
   useEffect(() => {
     document.title = projectionsOnly ? 'Player Projections | ALLPLAY' : 'DFS Dashboard | ALLPLAY';
     document.querySelector('meta[name="description"]')?.setAttribute('content', projectionsOnly
-      ? 'ALLPLAY player projections and salary values across seven sports. Membership required.'
+        ? 'ALLPLAY independent raw-stat matchup model sheets across seven sports. Membership required.'
       : 'ALLPLAY daily fantasy sports news, game slates, betting lines and member-only player data.');
   }, [projectionsOnly]);
   const membership = useMembership(signedIn);
@@ -171,7 +164,7 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
   const canSeeForecasts = signedIn && memberStatus?.hasAccess === true && memberStatus.ready && !memberStatus.error && memberStatus.status.toLowerCase() !== 'unavailable' && memberStatus.signedIn === true && data?.projectionsLocked === false;
   const projections = canSeeForecasts ? sourceProjections : [];
   const salaryCoverage = data?.salaryCoverage?.platform === salaryPlatform ? data.salaryCoverage : undefined;
-  const forecastCount = canSeeForecasts ? projections.filter((player) => player.projection !== null).length : 0;
+   const salaryRows = projections.filter((player) => player.salary != null);
   const news = (data?.news ?? []).filter((item) => item.sport === sport);
   const currentSportCoverage = data?.sportCoverage?.find((item) => item.sport === sport);
   const coverageList = currentSportCoverage ? [currentSportCoverage] : [];
@@ -232,7 +225,7 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
   return <div className="app-shell">
     <header className="topbar">
       <Link href="/" className="brand" aria-label="ALLPLAY home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">ALLPLAY</span></Link>
-      <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><Link href="/takes" className="btn btn-quiet account-header-link" aria-label="Game takes" data-testid="link-takes-mobile"><Film size={14} />Takes</Link>{signedIn ? <Link href="/account" className="btn btn-quiet account-header-link" data-testid="link-account">Account</Link> : <Link href="/sign-in" className="btn btn-quiet account-header-link" data-testid="link-sign-in">Sign in</Link>}<button className="btn btn-primary header-install-btn" onClick={quickInstall} disabled={installed || installing} data-testid="button-install-top"><ArrowDownToLine size={15} />{installed ? 'Installed' : installing ? 'Installing…' : 'Install app'}</button><span className="user-dot" aria-label={signedIn ? 'Signed-in personal dashboard' : 'Personal dashboard'}>{signedIn ? 'ME' : 'FREE'}</span></div>
+      <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><Link href="/projections" className="btn btn-quiet account-header-link" aria-label="ALLPLAY model sheet" data-testid="link-model-mobile"><TrendingUp size={14} />Model</Link><Link href="/takes" className="btn btn-quiet account-header-link" aria-label="Game takes" data-testid="link-takes-mobile"><Film size={14} />Takes</Link>{signedIn ? <Link href="/account" className="btn btn-quiet account-header-link" data-testid="link-account">Account</Link> : <Link href="/sign-in" className="btn btn-quiet account-header-link" data-testid="link-sign-in">Sign in</Link>}<button className="btn btn-primary header-install-btn" onClick={quickInstall} disabled={installed || installing} data-testid="button-install-top"><ArrowDownToLine size={15} />{installed ? 'Installed' : installing ? 'Installing…' : 'Install app'}</button><span className="user-dot" aria-label={signedIn ? 'Signed-in personal dashboard' : 'Personal dashboard'}>{signedIn ? 'ME' : 'FREE'}</span></div>
     </header>
     <aside className="side-rail" aria-label="Dashboard navigation">
       <div className="rail-caption">YOUR WORKSPACE</div>
@@ -246,7 +239,7 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
     </aside>
     <main className={`main-wrap ${projectionsOnly ? 'projections-main' : ''}`} id="overview">
       <div className="page-heading">
-        <div><div className="eyebrow">{projectionsOnly ? 'Your player research' : 'Your daily edge'} <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>{projectionsOnly ? 'Player projections' : 'Slate, in focus.'}</h1><p className="subhead">{projectionsOnly ? 'Player forecasts and salary values, one sport at a time.' : 'Every matchup, number and note for the decisions ahead.'}</p></div>
+         <div><div className="eyebrow">{projectionsOnly ? 'Your player research' : 'Your daily edge'} <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>{projectionsOnly ? 'Player projections' : 'Slate, in focus.'}</h1><p className="subhead">{projectionsOnly ? 'ALLPLAY custom raw-stat estimates, with the calculation trail in view.' : 'Every matchup, number and note for the decisions ahead.'}</p></div>
         <div className="date-stamp"><div>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div><div style={{ marginTop: 5, color: 'var(--slate-muted)' }}>{formatUpdatedAt ? `DATA UPDATED ${formatUpdatedAt.toUpperCase()}` : 'AWAITING DATA'}</div></div>
       </div>
       <div className="control-bar">
@@ -257,7 +250,7 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
         <div className="action-group">
           {projectionsOnly && <Link href={overviewPath} className="btn btn-quiet">Overview</Link>}
           {!projectionsOnly && <button className="btn btn-quiet" onClick={() => downloadCsv(`${sport}-events-${date}.csv`, eventExportRows(events))} disabled={!events.length} aria-label="Export event slate as CSV" data-testid="button-export-events"><Download size={15} /> Events</button>}
-          <button className="btn btn-quiet" onClick={() => downloadCsv(`${sport}-projections-${date}.csv`, projectionExportRows(projections))} disabled={!canSeeForecasts || !projections.length} aria-label={canSeeForecasts ? 'Export projections as CSV' : 'Player projections CSV requires Player Projections membership'} data-testid="button-export-projections"><Download size={15} /> Projections</button>
+          <Link className="btn btn-quiet" href="/projections" aria-label="Open ALLPLAY custom model sheet" data-testid="link-model-sheet"><TrendingUp size={15} /> Own model</Link>
           <button className="btn btn-primary" onClick={refresh} disabled={query.isFetching} data-testid="button-refresh"><RefreshCw size={15} className={query.isFetching ? 'spin' : ''} /> Refresh</button>
           <button className="btn btn-quiet icon-btn" onClick={() => setInstallOpen(true)} aria-label="Installation help" title="Install dashboard" data-testid="button-install-help"><Smartphone size={16} /></button>
         </div>
@@ -312,8 +305,8 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
         <div className="summary-intro"><span className="summary-kicker">AT A GLANCE</span><span className="summary-sport">{sportName}</span></div>
         <div className="summary-metric"><strong>{events.length}</strong><span>EVENTS</span></div>
         <div className="summary-metric"><strong>{events.filter((event) => event.totalPoints != null).length}</strong><span>TOTALS</span></div>
-        <div className="summary-metric"><strong>{canSeeForecasts ? projections.filter((player) => player.salary != null).length : 'Locked'}</strong><span>PLAYER SALARIES</span></div>
-        <div className="summary-metric"><strong>{canSeeForecasts ? forecastCount : 'Locked'}</strong><span>SOURCED FORECASTS</span></div>
+        <div className="summary-metric"><strong>{canSeeForecasts ? salaryRows.length : 'Locked'}</strong><span>PLAYER SALARIES</span></div>
+        <Link className="summary-metric summary-model-link" href="/projections" aria-label="Open own model sheet"><strong>OPEN</strong><span>OWN MODEL SHEET</span></Link>
       </section>}
 
       <div className={`content-grid ${projectionsOnly ? 'projections-page-grid' : ''}`}>
@@ -323,19 +316,22 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
             <div className="panel-body"><EventSlate events={events} loading={loading && !data} /></div>
           </section>}
           <section className="panel" id="projections-section" aria-labelledby="projections-heading">
-            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : canSeeForecasts ? `${forecastCount} / ${projections.length} FORECASTS` : 'MEMBERSHIP ONLY'}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-${salaryPlatform}-${salaryCoverage?.selectedSlateId ?? 'no-slate'}-${date}.csv`, projectionExportRows(projections))} disabled={!canSeeForecasts || !projections.length} aria-label={canSeeForecasts ? 'Export player projections and salaries' : 'Player projections CSV requires membership'} data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
-            <div className="panel-body" style={{ paddingTop: 16, paddingBottom: 16 }}>
-              {!projectionsOnly && <Link href="/projections" className="btn btn-quiet" style={{ marginBottom: 14 }} data-testid="link-full-projections">Open full projections page</Link>}
-              {canSeeForecasts && <SalaryControls platform={salaryPlatform} coverage={salaryCoverage} loading={loading} onPlatformChange={setSalaryPlatform} onSlateChange={(id) => setSalarySelection({ context: salaryContext, id })} />}
+            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> ALLPLAY custom model</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">RAW MATCHUP STATS</span><Link href="/projections" className="btn btn-quiet" style={{ height: 29, fontSize: 10 }} data-testid="link-full-projections">Full model sheet</Link></div></div>
+            <div className="panel-body" style={{ paddingTop: 12, paddingBottom: 15 }}>
+              {!projectionsOnly && <ModelPreview sport={sport} date={date} />}
+              {projectionsOnly && <ModelPreview sport={sport} date={date} />}
+              <details className="salary-only-disclosure">
+                <summary>Salary-only view <span>Platform salary rows are not model projections</span></summary>
+                {!canSeeForecasts ? <div className="salary-locked-note"><ShieldCheck size={14} /> Salary browsing stays behind verified member access. No forecast values appear here.</div>
+                  : <><SalaryControls platform={salaryPlatform} coverage={salaryCoverage} loading={loading} onPlatformChange={setSalaryPlatform} onSlateChange={(id) => setSalarySelection({ context: salaryContext, id })} /><p className="salary-only-note">Salary metadata only. No third-party projections, predicted points, or projection-derived value are shown.</p><SalaryOnlyRows rows={salaryRows} /></>}
+              </details>
               {!canSeeForecasts && <div className="member-cta">
                 <div className="member-cta-copy">
-                  <h3 className="member-cta-title"><ShieldCheck size={15} /> {membershipUnavailable ? 'Forecast access could not be verified' : membership.isLoading && signedIn ? 'Checking Player Projections access' : data?.projectionsLocked === false && memberStatus?.hasAccess ? 'Forecast feed is currently locked' : 'Player Projections, for $1.99 USD / month'}</h3>
-                  <p>{membershipUnavailable ? (memberStatus?.error || 'Player stats, salary values and forecasts stay locked until access is verified. Retry your status in account settings.') : membership.isLoading && signedIn ? 'Player data stays locked while your account status loads.' : data?.projectionsLocked === false && memberStatus?.hasAccess ? 'Your membership is active, but player data is still locked. Refresh the slate to check access again.' : 'Unlock the full player table, including available stats, DraftKings salary values, sourced forecasts and exports. News and daily game slates stay free.'}</p>
+                  <h3 className="member-cta-title"><ShieldCheck size={15} /> {membershipUnavailable ? 'Member access could not be verified' : membership.isLoading && signedIn ? 'Checking model access' : 'ALLPLAY model sheet is member-only'}</h3>
+                  <p>{membershipUnavailable ? (memberStatus?.error || 'Player model data stays sealed until access is verified. Retry from account settings.') : membership.isLoading && signedIn ? 'Player data stays locked while your account status loads.' : 'Join to inspect ALLPLAY estimates, matchup adjustments and raw historical appearances. No provider forecast data is included.'}</p>
                 </div>
-                <div className="member-cta-action">{signedIn ? membershipUnavailable || membership.isLoading || memberStatus?.hasAccess ? <Link href="/account" className="btn btn-quiet">Membership status</Link> : <MembershipCheckoutButton signedIn={signedIn} label="Join Player Projections" /> : <Link href="/sign-in" className="btn btn-primary">Sign in to continue</Link>}</div>
+                <div className="member-cta-action">{signedIn ? membershipUnavailable || membership.isLoading || memberStatus?.hasAccess ? <Link href="/account" className="btn btn-quiet">Membership status</Link> : <MembershipCheckoutButton signedIn={signedIn} label="Join ALLPLAY" /> : <Link href="/sign-in" className="btn btn-primary">Sign in to continue</Link>}</div>
               </div>}
-              {currentSportCoverage && !currentSportCoverage.projectionsAvailable && <div className="coverage-detail" style={{ margin: '0 0 14px', padding: '0 0 12px', borderTop: 0, borderBottom: '1px solid var(--slate-divider)' }}><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6, color: '#eab66f' }} />Projection coverage is unavailable for {currentSportCoverage.label}. {currentSportCoverage.message}</div>}
-              {canSeeForecasts && <ProjectionTable key={`${salaryContext}:${salaryCoverage?.selectedSlateId ?? 'none'}`} players={projections} events={events} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} hasAccess={canSeeForecasts} />}
             </div>
           </section>
         </div>

@@ -19,3 +19,4 @@
 
 export * from "./membership";
 export * from "./game-takes";
+export * from "./projection-history";

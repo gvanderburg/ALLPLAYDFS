@@ -7,3 +7,4 @@
 - [Auth UI runtime](auth-ui-runtime.md) — build checks can miss stale development dependencies; use supported Clerk appearance styling and check phone layouts.
 - [Slate selection](slate-selection.md) — empty today advances per sport to a published slate; provider calendars differ and UTC game dates can shift the slate day.
 - [Independent projection model](projection-model-policy.md) — ALLPLAY calculates player stat forecasts from history and matchups, not relabeled provider forecasts.
+- [Owner-gated browser tests](owner-test-identities.md) — approve the actual synthetic Clerk subject; preserve recovery identity temporarily and restore owner configuration.

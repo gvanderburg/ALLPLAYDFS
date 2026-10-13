@@ -220,6 +220,91 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary ALLPLAY historical-performance matchup stat projections
+ */
+export const getModelProjectionsQueryRecentGamesDefault = 5;
+export const getModelProjectionsQueryRecentGamesMin = 3;
+export const getModelProjectionsQueryRecentGamesMax = 10;
+
+export const getModelProjectionsQueryRecentWeightDefault = 70;
+export const getModelProjectionsQueryRecentWeightMin = 0;
+export const getModelProjectionsQueryRecentWeightMax = 100;
+
+export const getModelProjectionsQueryMatchupWeightDefault = 25;
+export const getModelProjectionsQueryMatchupWeightMin = 0;
+export const getModelProjectionsQueryMatchupWeightMax = 50;
+
+
+
+export const GetModelProjectionsQueryParams = zod.object({
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
+  "date": zod.date().optional(),
+  "recentGames": zod.coerce.number().int().min(getModelProjectionsQueryRecentGamesMin).max(getModelProjectionsQueryRecentGamesMax).default(getModelProjectionsQueryRecentGamesDefault),
+  "recentWeight": zod.coerce.number().int().min(getModelProjectionsQueryRecentWeightMin).max(getModelProjectionsQueryRecentWeightMax).default(getModelProjectionsQueryRecentWeightDefault),
+  "matchupWeight": zod.coerce.number().int().min(getModelProjectionsQueryMatchupWeightMin).max(getModelProjectionsQueryMatchupWeightMax).default(getModelProjectionsQueryMatchupWeightDefault)
+})
+
+export const GetModelProjectionsResponse = zod.object({
+  "status": zod.enum(['locked', 'warming', 'ready', 'unavailable', 'error']),
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
+  "requestedDate": zod.coerce.date(),
+  "slateDate": zod.coerce.date(),
+  "generatedAt": zod.coerce.date(),
+  "effectiveAsOf": zod.coerce.date().nullable(),
+  "recentGames": zod.number().int(),
+  "recentWeight": zod.number().int(),
+  "matchupWeight": zod.number().int(),
+  "gameCount": zod.number().int(),
+  "processedGames": zod.number().int(),
+  "totalGames": zod.number().int(),
+  "failedGames": zod.number().int(),
+  "observedTeams": zod.number().int(),
+  "players": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "team": zod.string(),
+  "teamId": zod.string(),
+  "opponent": zod.string(),
+  "opponentId": zod.string(),
+  "position": zod.string(),
+  "availability": zod.string(),
+  "participation": zod.string(),
+  "historicalGames": zod.number().int(),
+  "reason": zod.string().nullable(),
+  "stats": zod.array(zod.object({
+  "id": zod.string(),
+  "projected": zod.number().nullable(),
+  "recentAverage": zod.number().nullable(),
+  "baselineAverage": zod.number().nullable(),
+  "matchupMultiplier": zod.number(),
+  "opponentRank": zod.number().int().nullable(),
+  "rankedTeams": zod.number().int(),
+  "defenseGames": zod.number().int(),
+  "opponentMean": zod.number().nullable(),
+  "leagueMean": zod.number().nullable(),
+  "sampleSize": zod.number().int(),
+  "recentSampleSize": zod.number().int()
+})),
+  "history": zod.array(zod.object({
+  "eventId": zod.string(),
+  "date": zod.coerce.date(),
+  "opponent": zod.string(),
+  "stats": zod.record(zod.string(), zod.number())
+}))
+})),
+  "metrics": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "unit": zod.string(),
+  "group": zod.string(),
+  "higherIsBetter": zod.boolean()
+})),
+  "modelFormula": zod.string(),
+  "notes": zod.array(zod.string())
+})
+
+
+/**
  * Returns a date's event slate, available betting totals, sourced fantasy projections, and recent sports news.
  * @summary Get multi-sport DFS dashboard data
  */

@@ -1,5 +1,5 @@
-import Dashboard from '@/pages/dashboard';
+import ModelProjectionsPage from '@/components/model-projections';
 
 export default function ProjectionsPage() {
-  return <Dashboard projectionsOnly />;
+  return <ModelProjectionsPage />;
 }

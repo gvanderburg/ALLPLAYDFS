@@ -178,6 +178,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /dfs/model-projections:
+    get:
+      operationId: getModelProjections
+      tags: [dfs]
+      summary: ALLPLAY historical-performance matchup stat projections
+      parameters:
+        - name: sport
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/DfsSport" }
+        - name: date
+          in: query
+          schema: { type: string, format: date }
+        - name: recentGames
+          in: query
+          schema: { type: integer, minimum: 3, maximum: 10, default: 5 }
+        - name: recentWeight
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 100, default: 70 }
+        - name: matchupWeight
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 50, default: 25 }
+      responses:
+        "200":
+          description: Protected model sheet, explicit warming progress or missing coverage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModelProjectionSheet" }
+        "400":
+          description: Invalid model filters
   /dfs/dashboard:
     get:
       operationId: getDfsDashboard
@@ -227,6 +257,90 @@ paths:
           description: Invalid date or sport
 components:
   schemas:
+    ModelProjectionSheet:
+      type: object
+      required: [status, sport, requestedDate, slateDate, generatedAt, effectiveAsOf, recentGames, recentWeight, matchupWeight, gameCount, processedGames, totalGames, failedGames, observedTeams, players, metrics, modelFormula, notes]
+      properties:
+        status: { type: string, enum: [locked, warming, ready, unavailable, error] }
+        sport: { $ref: "#/components/schemas/DfsSport" }
+        requestedDate: { type: string, format: date }
+        slateDate: { type: string, format: date }
+        generatedAt: { type: string, format: date-time }
+        effectiveAsOf: { type: ["string", "null"], format: date-time }
+        recentGames: { type: integer }
+        recentWeight: { type: integer }
+        matchupWeight: { type: integer }
+        gameCount: { type: integer }
+        processedGames: { type: integer }
+        totalGames: { type: integer }
+        failedGames: { type: integer }
+        observedTeams: { type: integer }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/ModelPlayerProjection" }
+        metrics:
+          type: array
+          items: { $ref: "#/components/schemas/ModelMetric" }
+        modelFormula: { type: string }
+        notes:
+          type: array
+          items: { type: string }
+    ModelMetric:
+      type: object
+      required: [id, label, unit, group, higherIsBetter]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        unit: { type: string }
+        group: { type: string }
+        higherIsBetter: { type: boolean }
+    ModelPlayerProjection:
+      type: object
+      required: [id, name, team, teamId, opponent, opponentId, position, availability, participation, historicalGames, reason, stats, history]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        team: { type: string }
+        teamId: { type: string }
+        opponent: { type: string }
+        opponentId: { type: string }
+        position: { type: string }
+        availability: { type: string }
+        participation: { type: string }
+        historicalGames: { type: integer }
+        reason: { type: ["string", "null"] }
+        stats:
+          type: array
+          items: { $ref: "#/components/schemas/ModelStatEstimate" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/ModelHistoryAppearance" }
+    ModelStatEstimate:
+      type: object
+      required: [id, projected, recentAverage, baselineAverage, matchupMultiplier, opponentRank, rankedTeams, defenseGames, opponentMean, leagueMean, sampleSize, recentSampleSize]
+      properties:
+        id: { type: string }
+        projected: { type: ["number", "null"] }
+        recentAverage: { type: ["number", "null"] }
+        baselineAverage: { type: ["number", "null"] }
+        matchupMultiplier: { type: number }
+        opponentRank: { type: ["integer", "null"] }
+        rankedTeams: { type: integer }
+        defenseGames: { type: integer }
+        opponentMean: { type: ["number", "null"] }
+        leagueMean: { type: ["number", "null"] }
+        sampleSize: { type: integer }
+        recentSampleSize: { type: integer }
+    ModelHistoryAppearance:
+      type: object
+      required: [eventId, date, opponent, stats]
+      properties:
+        eventId: { type: string }
+        date: { type: string, format: date-time }
+        opponent: { type: string }
+        stats:
+          type: object
+          additionalProperties: { type: number }
     PublishTakeInput:
       allOf:
         - { $ref: "#/components/schemas/GameTakeInput" }
