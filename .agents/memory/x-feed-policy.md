@@ -20,3 +20,9 @@ For NASCAR, use Underdog's main account even though it contains posts about mult
 **Why:** The user explicitly requested the main Underdog account for the NASCAR tab. This is an exception to the usual sport-specific source rule.
 
 **How to apply:** Disclose that the NASCAR X source is a mixed-sport main account. Do not extend this exception to other sports without asking.
+
+Keep NHL's official, hockey-only account rather than using Underdog's mixed-sport main account.
+
+**Why:** The user explicitly selected the hockey-only NHL feed when offered those alternatives.
+
+**How to apply:** Preserve that source choice unless the user asks to change it; do not extend the NASCAR exception to NHL.
