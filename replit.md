@@ -1,4 +1,4 @@
-# Slatemetry — DFS Dashboard
+# DFSift — DFS Dashboard
 
 A personal, dark multi-sport dashboard with daily slates, available game totals, news, and sourced fantasy projections. The web app can be installed on desktop, laptop, and mobile devices.
 
@@ -33,6 +33,7 @@ A personal, dark multi-sport dashboard with daily slates, available game totals,
 
 - A PWA was chosen to meet the user's desktop, laptop, and phone installation request with one app. This is browser installation, not a native `.exe` or App Store package.
 - Fantasy forecasts must remain explicit about scoring and horizon. ESPN default fantasy scoring is not DraftKings/FanDuel scoring, and season forecasts must not be presented as single-game projections.
+- Projection colors compare only players sharing a sport, forecast basis, and source. They are relative-point ranks, not confidence or value ratings, to avoid misleading season-vs-daily comparisons.
 - Source gaps are intentional empty states, not placeholders: never invent projections, totals, or salaries when the feed does not supply them.
 
 ## Product
@@ -48,6 +49,7 @@ A personal, dark multi-sport dashboard with daily slates, available game totals,
 - The app name should be short and clearly DFS-related.
 - The user wants the dashboard available on their desktop, laptop, and mobile phone.
 - Sports must stay separate in individual tabs, not an all-sports feed. The news section must scroll independently.
+- Player projections should be a compact, color-coded grid like the user's reference.
 
 ## Gotchas
 

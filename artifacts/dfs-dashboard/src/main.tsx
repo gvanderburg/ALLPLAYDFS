@@ -8,7 +8,7 @@ import './index.css';
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((error: unknown) => {
-      console.warn('Slatemetry offline shell registration failed.', error);
+      console.warn('DFSift offline shell registration failed.', error);
     });
   });
 }

@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useGetDfsDashboard, getGetDfsDashboardQueryKey } from '@workspace/api-client-react';
 import type { DfsEvent, DfsNewsItem, DfsPlayerProjection, DfsSport } from '@workspace/api-client-react';
+import ProjectionTable from '@/components/projection-table';
 import {
   Activity, AlertCircle, ArrowDownToLine, CalendarDays, CircleHelp,
   Clock3, Download, ExternalLink, Info, Newspaper, RefreshCw, ShieldCheck,
@@ -78,20 +79,6 @@ function EventSlate({ events, loading }: { events: DfsEvent[]; loading: boolean 
     </article>;
   })}</div>;
 }
-function ProjectionTable({ players, loading, hasCoverage }: { players: DfsPlayerProjection[]; loading: boolean; hasCoverage: boolean }) {
-  if (loading) return <div style={{ display: 'grid', gap: 10 }}>{[1, 2, 3, 4].map((n) => <div className="skeleton" key={n} style={{ height: 35 }} />)}</div>;
-  if (!players.length) return <EmptyState icon={<TrendingUp size={17} />} title="No projections available" copy={hasCoverage ? 'No player projection rows were returned for this filter.' : 'Projection coverage is not available for the selected slate. Events and news may still be available.'} />;
-  return <div className="projection-table-wrap"><table className="projection-table">
-    <thead><tr><th>Player</th><th>Matchup</th><th>Role</th><th>Projection</th><th>Source</th></tr></thead>
-    <tbody>{players.map((player) => <tr key={player.id} data-testid={`projection-${player.id}`}>
-      <td><div className="player-name">{player.name}</div><div className="player-team">{player.team || 'Team unavailable'}</div></td>
-      <td>{player.opponent ? `vs ${player.opponent}` : '—'}</td>
-      <td><SportLabel sport={player.position || player.sport} /></td>
-      <td><div className="projection-number">{player.projection.toFixed(1)}</div><div className="player-team">{player.projectionType}</div></td>
-      <td>{player.source}</td>
-    </tr>)}</tbody>
-  </table></div>;
-}
 function NewsFeed({ news, loading }: { news: DfsNewsItem[]; loading: boolean }) {
   if (loading) return <div style={{ display: 'grid', gap: 13 }}>{[1, 2, 3].map((n) => <div key={n} style={{ display: 'flex', gap: 12 }}><div className="skeleton" style={{ width: 57, height: 57 }} /><div style={{ flex: 1 }}><div className="skeleton" style={{ height: 12, marginBottom: 8 }} /><div className="skeleton" style={{ height: 10, width: '70%' }} /></div></div>)}</div>;
   if (!news.length) return <EmptyState icon={<Newspaper size={17} />} title="No recent news" copy="No news items were returned for this date and sport selection." />;
@@ -163,7 +150,7 @@ export default function Dashboard() {
 
   return <div className="app-shell">
     <header className="topbar">
-      <a href="/" className="brand" aria-label="Slatemetry home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">slatemetry</span></a>
+      <a href="/" className="brand" aria-label="DFSift home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">DFSift</span></a>
       <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><span className="user-dot" aria-label="Personal dashboard">ME</span></div>
     </header>
     <main className="main-wrap">
@@ -238,7 +225,7 @@ export default function Dashboard() {
             <div className="panel-head"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : `${projections.length} PLAYERS`}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-projections-${date}.csv`, projectionExportRows(projections))} disabled={!projections.length} aria-label="Export player projections" data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
             <div className="panel-body" style={{ paddingTop: 16, paddingBottom: 16 }}>
               {currentSportCoverage && !currentSportCoverage.projectionsAvailable && <div className="coverage-detail" style={{ margin: '0 0 14px', padding: '0 0 12px', borderTop: 0, borderBottom: '1px solid #252e39' }}><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6, color: '#eab66f' }} />Projection coverage is unavailable for {currentSportCoverage.label}. {currentSportCoverage.message}</div>}
-              <ProjectionTable players={projections} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} />
+              <ProjectionTable key={sport} players={projections} events={events} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} />
             </div>
           </section>
         </div>

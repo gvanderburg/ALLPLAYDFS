@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Slatemetry — Daily fantasy dashboard",
-  "short_name": "Slatemetry",
+  "name": "DFSift — Daily fantasy dashboard",
+  "short_name": "DFSift",
   "description": "A multi-sport DFS dashboard for daily slates, sourced projections, game totals, and news.",
   "start_url": "/",
   "scope": "/",
