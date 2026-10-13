@@ -1,2 +1,4 @@
 - [Transport validation](transport-validation.md) — generated validators need real HTTP smoke checks; passing typechecks can hide rejected URL filters.
 - [Workflow handoff state](workflow-handoff-state.md) — fresh workflow-state updates can invalidate an earlier successful preview check.
+- [Free X feed policy](x-feed-policy.md) — use free website embeds; do not restore paid X API reads without explicit approval.
+- [Dashboard reference scope](reference-design.md) — EdgeFinder is a visual reference, not a source for invented betting metrics.

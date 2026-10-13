@@ -6,7 +6,7 @@ import SalaryControls from '@/components/salary-controls';
 import {
   Activity, AlertCircle, ArrowDownToLine, CalendarDays, CircleHelp,
   Clock3, Download, ExternalLink, Info, Newspaper, RefreshCw, ShieldCheck,
-  Smartphone, TrendingUp, X,
+  Smartphone, TrendingUp, X, MessageCircle,
 } from 'lucide-react';
 
 const SPORTS: { id: DfsSport; name: string; short: string }[] = [
@@ -164,7 +164,17 @@ export default function Dashboard() {
       <a href="/" className="brand" aria-label="ALLPLAY home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">ALLPLAY</span></a>
       <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><span className="user-dot" aria-label="Personal dashboard">ME</span></div>
     </header>
-    <main className="main-wrap">
+    <aside className="side-rail" aria-label="Dashboard navigation">
+      <div className="rail-caption">YOUR WORKSPACE</div>
+      <a className="rail-link selected" href="#overview"><Activity size={15} />Overview</a>
+      <a className="rail-link" href="#slate-section"><CalendarDays size={15} />Live slate</a>
+      <a className="rail-link" href="#projections-section"><TrendingUp size={15} />Projections</a>
+      <a className="rail-link" href="#news-section"><Newspaper size={15} />News desk</a>
+      <a className="rail-link" href="#x-section"><MessageCircle size={15} />Sports on X</a>
+      <div className="rail-note"><span className="rail-live-dot" />Slate data refreshes every 5 minutes</div>
+      <div className="rail-bottom"><span className="rail-caption">BUILT FOR EVERY LEAGUE</span><div className="rail-sports">NFL · NHL · WNBA<br />NBA · MLB · NASCAR · CFB</div></div>
+    </aside>
+    <main className="main-wrap" id="overview">
       <div className="page-heading">
         <div><div className="eyebrow">Your daily edge <span style={{ color: '#46545f' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>Slate, in focus.</h1><p className="subhead">Every matchup, number and note for the decisions ahead.</p></div>
         <div className="date-stamp"><div>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div><div style={{ marginTop: 5, color: '#596774' }}>{formatUpdatedAt ? `DATA UPDATED ${formatUpdatedAt.toUpperCase()}` : 'AWAITING DATA'}</div></div>
@@ -226,14 +236,22 @@ export default function Dashboard() {
       </section>}
       {coverageList.length > 0 && <div className="coverage-legend"><span><i className="coverage-dot" /> Events</span><span><i className="coverage-dot" /> Projections</span><span><i className="coverage-dot" /> News</span><span className="coverage-legend-note">Dimmed indicator means this feed is not available for that sport.</span></div>}
 
+      <section className="summary-strip" aria-label={`${sportName} slate summary`} data-testid="summary-slate">
+        <div className="summary-intro"><span className="summary-kicker">AT A GLANCE</span><span className="summary-sport">{sportName}</span></div>
+        <div className="summary-metric"><strong>{events.length}</strong><span>EVENTS</span></div>
+        <div className="summary-metric"><strong>{events.filter((event) => event.totalPoints != null).length}</strong><span>TOTALS</span></div>
+        <div className="summary-metric"><strong>{projections.filter((player) => player.salary != null).length}</strong><span>PLAYER SALARIES</span></div>
+        <div className="summary-metric"><strong>{forecastCount}</strong><span>SOURCED FORECASTS</span></div>
+      </section>
+
       <div className="content-grid">
         <div className="left-stack">
-          <section className="panel" aria-labelledby="slate-heading">
-            <div className="panel-head"><h2 className="panel-title" id="slate-heading"><CalendarDays size={16} /> {sportName} slate</h2><span className="panel-meta">{loading ? 'UPDATING' : `${events.length} ${events.length === 1 ? 'EVENT' : 'EVENTS'}`}</span></div>
+          <section className="panel" id="slate-section" aria-labelledby="slate-heading">
+            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="slate-heading"><CalendarDays size={16} /> {sportName} slate</h2><span className="panel-meta">{loading ? 'UPDATING' : `${events.length} ${events.length === 1 ? 'EVENT' : 'EVENTS'}`}</span></div>
             <div className="panel-body"><EventSlate events={events} loading={loading && !data} /></div>
           </section>
-          <section className="panel" aria-labelledby="projections-heading">
-            <div className="panel-head"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : `${forecastCount} / ${projections.length} FORECASTS`}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-${salaryPlatform}-${salaryCoverage?.selectedSlateId ?? 'no-slate'}-${date}.csv`, projectionExportRows(projections))} disabled={!projections.length} aria-label="Export player projections and salaries" data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
+          <section className="panel" id="projections-section" aria-labelledby="projections-heading">
+            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : `${forecastCount} / ${projections.length} FORECASTS`}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-${salaryPlatform}-${salaryCoverage?.selectedSlateId ?? 'no-slate'}-${date}.csv`, projectionExportRows(projections))} disabled={!projections.length} aria-label="Export player projections and salaries" data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
             <div className="panel-body" style={{ paddingTop: 16, paddingBottom: 16 }}>
               <SalaryControls platform={salaryPlatform} coverage={salaryCoverage} loading={loading} onPlatformChange={setSalaryPlatform} onSlateChange={(id) => setSalarySelection({ context: salaryContext, id })} />
               {currentSportCoverage && !currentSportCoverage.projectionsAvailable && <div className="coverage-detail" style={{ margin: '0 0 14px', padding: '0 0 12px', borderTop: 0, borderBottom: '1px solid #252e39' }}><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6, color: '#eab66f' }} />Projection coverage is unavailable for {currentSportCoverage.label}. {currentSportCoverage.message}</div>}
@@ -242,16 +260,22 @@ export default function Dashboard() {
           </section>
         </div>
         <div className="right-stack">
-          <section className="panel" aria-labelledby="news-heading">
-            <div className="panel-head"><h2 className="panel-title" id="news-heading"><Newspaper size={16} /> {sportName} news</h2><span className="panel-meta">{loading ? 'UPDATING' : `${news.length} STORIES`}</span></div>
+          <section className="panel" id="news-section" aria-labelledby="news-heading">
+            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="news-heading"><Newspaper size={16} /> {sportName} news</h2><span className="panel-meta">{loading ? 'UPDATING' : `${news.length} STORIES`}</span></div>
             <div key={sport} className="panel-body news-scroll" role="region" aria-labelledby="news-heading" tabIndex={0} data-testid="news-scroll"><NewsFeed news={news} loading={loading && !data} /></div>
+          </section>
+          <section className="panel x-panel" id="x-section" aria-labelledby="x-heading">
+            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="x-heading"><span className="x-mark">𝕏</span> {sportName} on X</h2><span className="panel-meta">FREE HTML EMBED</span></div>
+            <div className="panel-body x-scroll" role="region" aria-labelledby="x-heading" tabIndex={0} data-testid="x-feed-scroll">
+              <div className="x-feed-state"><div className="state-icon"><MessageCircle size={17} /></div><strong>A public feed URL is needed</strong><p>The supplied x.com/home link is X’s Home page. It cannot embed your personal timeline. Choose a public profile or list for the free widget.</p><a className="text-link" href="https://x.com/home?ref_src=twsrc%5Etfw" target="_blank" rel="noopener noreferrer">Open your supplied X link <ExternalLink size={12} /></a><p>The paid X API feed has been removed.</p></div>
+            </div>
           </section>
           <section className="panel" aria-labelledby="coverage-heading">
             <div className="panel-head"><h2 className="panel-title" id="coverage-heading"><ShieldCheck size={16} /> Coverage & sources</h2><CircleHelp size={15} color="#71808c" /></div>
             <div className="panel-body">
               {currentSportCoverage ? <><div className="micro-label">{currentSportCoverage.label} · SELECTED SLATE</div><div className="coverage-detail" style={{ borderTop: 0, paddingTop: 0, marginTop: 8 }}>{currentSportCoverage.message}</div></> : <p className="coverage-detail" style={{ borderTop: 0, paddingTop: 0, marginTop: 0 }}>Coverage is reported by the data source. Availability may vary by sport and date.</p>}
               {data?.sourceNotes?.length ? <><div className="micro-label" style={{ margin: '18px 0 8px' }}>Source notes</div><ul className="notes-list">{data.sourceNotes.map((note, index) => <li key={`${index}-${note}`}>{note}</li>)}</ul></> : <div className="coverage-detail"><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />No source notes were supplied for this response.</div>}
-              <div className="coverage-detail"><Clock3 size={12} style={{ verticalAlign: 'middle', marginRight: 6 }} />Manual refresh only. Data is not auto-refreshed.</div>
+              <div className="coverage-detail"><Clock3 size={12} style={{ verticalAlign: 'middle', marginRight: 6 }} />Slate data checks for updates every 5 minutes. Forecast and salary source timestamps are shown separately when supplied.</div>
             </div>
           </section>
           <section className="panel">
