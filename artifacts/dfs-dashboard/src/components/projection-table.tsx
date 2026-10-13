@@ -76,6 +76,7 @@ export default function ProjectionTable({ players, events, loading, hasCoverage,
     });
   }, [players, q, sort, hasAccess]);
 
+  if (!hasAccess) return <div className="state-box"><strong>Player data is members only</strong><p>Stats, salary values and forecasts require verified membership or owner access.</p></div>;
   if (loading) return <div style={{ display: 'grid', gap: 4 }}>{Array.from({ length: 8 }, (_, n) => <div className="skeleton" key={n} style={{ height: 30 }} />)}</div>;
   if (!players.length) return <div className="state-box"><div className="state-icon"><TrendingUp size={17} /></div><strong>No projections available</strong><p>{hasCoverage ? 'No player projection rows were returned for this filter.' : 'Projection coverage is not available for the selected slate. Events and news may still be available.'}</p></div>;
 
@@ -101,7 +102,7 @@ export default function ProjectionTable({ players, events, loading, hasCoverage,
     </div>
     {hasAccess
       ? <p className="pt-note">Colors compare sourced forecasts with the same sport, basis and source ({groupCount} {groupCount === 1 ? 'group' : 'groups'}), not confidence or DFS value. Forecast groups stay separate when sorting. Salary-only players appear below forecasts and remain neutral; “—” means unavailable, not zero. ESPN forecasts are not DraftKings or FanDuel scoring, and historical averages are not used as projections.</p>
-      : <p className="pt-note">Salary browsing is free. “—” means a salary or player field was not supplied; unavailable values are not zero. Projection columns and projection exports require verified Player Projections access.</p>}
+      : <p className="pt-note">Player data requires verified membership.</p>}
     <div className="pt-scroll" role="region" aria-label={hasAccess ? 'Player projections table' : 'Player salary browsing table'} tabIndex={0}>
       <table className={`pt-table ${hasAccess ? '' : 'pt-table-salary-only'}`}>
         <thead><tr>

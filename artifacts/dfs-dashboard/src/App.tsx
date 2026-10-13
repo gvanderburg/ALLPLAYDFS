@@ -6,6 +6,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import Dashboard from '@/pages/dashboard';
+import ProjectionsPage from '@/pages/projections';
 import Account from '@/pages/account';
 import { Route, Switch, useLocation, Redirect, Router as WouterRouter } from 'wouter';
 import { type ReactNode, useEffect, useRef } from 'react';
@@ -136,6 +137,7 @@ function Router() {
       <Switch>
         <Route path="/" component={HomeRedirect} />
         <Route path="/user-portal" component={UserPortal} />
+        <Route path="/projections" component={ProjectionsPage} />
         <Route path="/account" component={AccountRoute} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />

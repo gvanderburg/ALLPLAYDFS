@@ -134,9 +134,16 @@ function InstallDialog({ onClose, onInstall, canInstall, isInstalled, installing
   </div>;
 }
 
-export default function Dashboard() {
+export default function Dashboard({ projectionsOnly = false }: { projectionsOnly?: boolean }) {
   const { isLoaded: authLoaded, isSignedIn, userId } = useAuth();
   const signedIn = authLoaded && isSignedIn === true;
+  const overviewPath = signedIn ? '/user-portal' : '/';
+  useEffect(() => {
+    document.title = projectionsOnly ? 'Player Projections | ALLPLAY' : 'DFS Dashboard | ALLPLAY';
+    document.querySelector('meta[name="description"]')?.setAttribute('content', projectionsOnly
+      ? 'ALLPLAY player projections and salary values across seven sports. Membership required.'
+      : 'ALLPLAY daily fantasy sports news, game slates, betting lines and member-only player data.');
+  }, [projectionsOnly]);
   const membership = useMembership(signedIn);
   const [date, setDate] = useState(localDateString);
   const [automaticDate, setAutomaticDate] = useState(true);
@@ -162,8 +169,7 @@ export default function Dashboard() {
   const memberStatus = membership.data;
   const membershipUnavailable = membership.isError || (!!memberStatus && (!memberStatus.ready || !!memberStatus.error || memberStatus.status.toLowerCase() === 'unavailable' || memberStatus.signedIn !== true));
   const canSeeForecasts = signedIn && memberStatus?.hasAccess === true && memberStatus.ready && !memberStatus.error && memberStatus.status.toLowerCase() !== 'unavailable' && memberStatus.signedIn === true && data?.projectionsLocked === false;
-  const browseableSalaryRows = sourceProjections.filter((player) => player.salary != null && (!player.salaryPlatform || player.salaryPlatform === salaryPlatform));
-  const projections = (canSeeForecasts ? sourceProjections : browseableSalaryRows).map((player) => canSeeForecasts ? player : { ...player, projection: null });
+  const projections = canSeeForecasts ? sourceProjections : [];
   const salaryCoverage = data?.salaryCoverage?.platform === salaryPlatform ? data.salaryCoverage : undefined;
   const forecastCount = canSeeForecasts ? projections.filter((player) => player.projection !== null).length : 0;
   const news = (data?.news ?? []).filter((item) => item.sport === sport);
@@ -230,16 +236,16 @@ export default function Dashboard() {
     </header>
     <aside className="side-rail" aria-label="Dashboard navigation">
       <div className="rail-caption">YOUR WORKSPACE</div>
-      <a className="rail-link selected" href="#overview"><Activity size={15} />Overview</a>
-      <a className="rail-link" href="#slate-section"><CalendarDays size={15} />Live slate</a>
-      <a className="rail-link" href="#projections-section"><TrendingUp size={15} />Projections</a>
-      <a className="rail-link" href="#news-section"><Newspaper size={15} />News desk</a>
+      <Link className={`rail-link ${projectionsOnly ? '' : 'selected'}`} href={overviewPath} aria-current={projectionsOnly ? undefined : 'page'}><Activity size={15} />Overview</Link>
+      <Link className="rail-link" href={projectionsOnly ? `${overviewPath}#slate-section` : '#slate-section'}><CalendarDays size={15} />Live slate</Link>
+      <Link className={`rail-link ${projectionsOnly ? 'selected' : ''}`} href="/projections" aria-current={projectionsOnly ? 'page' : undefined} data-testid="link-projections"><TrendingUp size={15} />Projections</Link>
+      <Link className="rail-link" href={projectionsOnly ? `${overviewPath}#news-section` : '#news-section'}><Newspaper size={15} />News desk</Link>
       <div className="rail-note"><span className="rail-live-dot" />Slate data refreshes every 5 minutes</div>
       <div className="rail-bottom"><span className="rail-caption">BUILT FOR EVERY LEAGUE</span><div className="rail-sports">NFL · NHL · WNBA<br />NBA · MLB · NASCAR · CFB</div></div>
     </aside>
-    <main className="main-wrap" id="overview">
+    <main className={`main-wrap ${projectionsOnly ? 'projections-main' : ''}`} id="overview">
       <div className="page-heading">
-        <div><div className="eyebrow">Your daily edge <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>Slate, in focus.</h1><p className="subhead">Every matchup, number and note for the decisions ahead.</p></div>
+        <div><div className="eyebrow">{projectionsOnly ? 'Your player research' : 'Your daily edge'} <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>{projectionsOnly ? 'Player projections' : 'Slate, in focus.'}</h1><p className="subhead">{projectionsOnly ? 'Player forecasts and salary values, one sport at a time.' : 'Every matchup, number and note for the decisions ahead.'}</p></div>
         <div className="date-stamp"><div>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div><div style={{ marginTop: 5, color: 'var(--slate-muted)' }}>{formatUpdatedAt ? `DATA UPDATED ${formatUpdatedAt.toUpperCase()}` : 'AWAITING DATA'}</div></div>
       </div>
       <div className="control-bar">
@@ -248,7 +254,8 @@ export default function Dashboard() {
           <input id="slate-date" className="date-field" type="date" value={date} onChange={(e) => { setAutomaticDate(e.target.value === localDateString()); setAdvanceNotice(null); setSalarySelection(undefined); setDate(e.target.value); }} aria-label="Select slate date" data-testid="input-slate-date" />
         </div>
         <div className="action-group">
-          <button className="btn btn-quiet" onClick={() => downloadCsv(`${sport}-events-${date}.csv`, eventExportRows(events))} disabled={!events.length} aria-label="Export event slate as CSV" data-testid="button-export-events"><Download size={15} /> Events</button>
+          {projectionsOnly && <Link href={overviewPath} className="btn btn-quiet">Overview</Link>}
+          {!projectionsOnly && <button className="btn btn-quiet" onClick={() => downloadCsv(`${sport}-events-${date}.csv`, eventExportRows(events))} disabled={!events.length} aria-label="Export event slate as CSV" data-testid="button-export-events"><Download size={15} /> Events</button>}
           <button className="btn btn-quiet" onClick={() => downloadCsv(`${sport}-projections-${date}.csv`, projectionExportRows(projections))} disabled={!canSeeForecasts || !projections.length} aria-label={canSeeForecasts ? 'Export projections as CSV' : 'Player projections CSV requires Player Projections membership'} data-testid="button-export-projections"><Download size={15} /> Projections</button>
           <button className="btn btn-primary" onClick={refresh} disabled={query.isFetching} data-testid="button-refresh"><RefreshCw size={15} className={query.isFetching ? 'spin' : ''} /> Refresh</button>
           <button className="btn btn-quiet icon-btn" onClick={() => setInstallOpen(true)} aria-label="Installation help" title="Install dashboard" data-testid="button-install-help"><Smartphone size={16} /></button>
@@ -300,37 +307,38 @@ export default function Dashboard() {
       </section>}
       {coverageList.length > 0 && <div className="coverage-legend"><span><i className="coverage-dot" /> Events</span><span><i className="coverage-dot" /> Projections</span><span><i className="coverage-dot" /> News</span><span className="coverage-legend-note">Dimmed indicator means this feed is not available for that sport.</span></div>}
 
-      <section className="summary-strip" aria-label={`${sportName} slate summary`} data-testid="summary-slate">
+      {!projectionsOnly && <section className="summary-strip" aria-label={`${sportName} slate summary`} data-testid="summary-slate">
         <div className="summary-intro"><span className="summary-kicker">AT A GLANCE</span><span className="summary-sport">{sportName}</span></div>
         <div className="summary-metric"><strong>{events.length}</strong><span>EVENTS</span></div>
         <div className="summary-metric"><strong>{events.filter((event) => event.totalPoints != null).length}</strong><span>TOTALS</span></div>
-        <div className="summary-metric"><strong>{projections.filter((player) => player.salary != null).length}</strong><span>PLAYER SALARIES</span></div>
-        <div className="summary-metric"><strong>{forecastCount}</strong><span>SOURCED FORECASTS</span></div>
-      </section>
+        <div className="summary-metric"><strong>{canSeeForecasts ? projections.filter((player) => player.salary != null).length : 'Locked'}</strong><span>PLAYER SALARIES</span></div>
+        <div className="summary-metric"><strong>{canSeeForecasts ? forecastCount : 'Locked'}</strong><span>SOURCED FORECASTS</span></div>
+      </section>}
 
-      <div className="content-grid">
+      <div className={`content-grid ${projectionsOnly ? 'projections-page-grid' : ''}`}>
         <div className="left-stack">
-          <section className="panel" id="slate-section" aria-labelledby="slate-heading">
+          {!projectionsOnly && <section className="panel" id="slate-section" aria-labelledby="slate-heading">
             <div className="panel-head panel-head-accent"><h2 className="panel-title" id="slate-heading"><CalendarDays size={16} /> {sportName} slate</h2><span className="panel-meta">{loading ? 'UPDATING' : `${events.length} ${events.length === 1 ? 'EVENT' : 'EVENTS'}`}</span></div>
             <div className="panel-body"><EventSlate events={events} loading={loading && !data} /></div>
-          </section>
+          </section>}
           <section className="panel" id="projections-section" aria-labelledby="projections-heading">
             <div className="panel-head panel-head-accent"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : canSeeForecasts ? `${forecastCount} / ${projections.length} FORECASTS` : 'MEMBERSHIP ONLY'}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-${salaryPlatform}-${salaryCoverage?.selectedSlateId ?? 'no-slate'}-${date}.csv`, projectionExportRows(projections))} disabled={!canSeeForecasts || !projections.length} aria-label={canSeeForecasts ? 'Export player projections and salaries' : 'Player projections CSV requires membership'} data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
             <div className="panel-body" style={{ paddingTop: 16, paddingBottom: 16 }}>
-              <SalaryControls platform={salaryPlatform} coverage={salaryCoverage} loading={loading} onPlatformChange={setSalaryPlatform} onSlateChange={(id) => setSalarySelection({ context: salaryContext, id })} />
+              {!projectionsOnly && <Link href="/projections" className="btn btn-quiet" style={{ marginBottom: 14 }} data-testid="link-full-projections">Open full projections page</Link>}
+              {canSeeForecasts && <SalaryControls platform={salaryPlatform} coverage={salaryCoverage} loading={loading} onPlatformChange={setSalaryPlatform} onSlateChange={(id) => setSalarySelection({ context: salaryContext, id })} />}
               {!canSeeForecasts && <div className="member-cta">
                 <div className="member-cta-copy">
                   <h3 className="member-cta-title"><ShieldCheck size={15} /> {membershipUnavailable ? 'Forecast access could not be verified' : membership.isLoading && signedIn ? 'Checking Player Projections access' : data?.projectionsLocked === false && memberStatus?.hasAccess ? 'Forecast feed is currently locked' : 'Player Projections, for $1.99 USD / month'}</h3>
-                  <p>{membershipUnavailable ? (memberStatus?.error || 'Forecast values stay hidden until membership can be verified. Retry your status in account settings.') : membership.isLoading && signedIn ? 'Salary browsing remains available while your account status loads.' : data?.projectionsLocked === false && memberStatus?.hasAccess ? 'Your verified membership is active, but this response is still marked locked. Refresh the slate; ALLPLAY will not reveal forecasts until the data response unlocks.' : 'Unlock sourced forecast columns and projection exports. News, daily slates and salary browsing stay free.'}</p>
+                  <p>{membershipUnavailable ? (memberStatus?.error || 'Player stats, salary values and forecasts stay locked until access is verified. Retry your status in account settings.') : membership.isLoading && signedIn ? 'Player data stays locked while your account status loads.' : data?.projectionsLocked === false && memberStatus?.hasAccess ? 'Your membership is active, but player data is still locked. Refresh the slate to check access again.' : 'Unlock the full player table, including available stats, DraftKings salary values, sourced forecasts and exports. News and daily game slates stay free.'}</p>
                 </div>
                 <div className="member-cta-action">{signedIn ? membershipUnavailable || membership.isLoading || memberStatus?.hasAccess ? <Link href="/account" className="btn btn-quiet">Membership status</Link> : <MembershipCheckoutButton signedIn={signedIn} label="Join Player Projections" /> : <Link href="/sign-in" className="btn btn-primary">Sign in to continue</Link>}</div>
               </div>}
               {currentSportCoverage && !currentSportCoverage.projectionsAvailable && <div className="coverage-detail" style={{ margin: '0 0 14px', padding: '0 0 12px', borderTop: 0, borderBottom: '1px solid var(--slate-divider)' }}><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6, color: '#eab66f' }} />Projection coverage is unavailable for {currentSportCoverage.label}. {currentSportCoverage.message}</div>}
-              <ProjectionTable key={`${salaryContext}:${salaryCoverage?.selectedSlateId ?? 'none'}`} players={projections} events={events} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} hasAccess={canSeeForecasts} />
+              {canSeeForecasts && <ProjectionTable key={`${salaryContext}:${salaryCoverage?.selectedSlateId ?? 'none'}`} players={projections} events={events} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} hasAccess={canSeeForecasts} />}
             </div>
           </section>
         </div>
-        <div className="right-stack">
+        {!projectionsOnly && <div className="right-stack">
           <section className="panel" id="news-section" aria-labelledby="news-heading">
             <div className="panel-head panel-head-accent"><h2 className="panel-title" id="news-heading"><Newspaper size={16} /> {sportName} news</h2><span className="panel-meta">{loading ? 'UPDATING' : `${news.length} STORIES`}</span></div>
             <div key={sport} className="panel-body news-scroll" role="region" aria-labelledby="news-heading" tabIndex={0} data-testid="news-scroll"><NewsFeed news={news} loading={loading && !data} /></div>
@@ -342,7 +350,7 @@ export default function Dashboard() {
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setInstallOpen(true)} data-testid="button-install"><ArrowDownToLine size={15} /> Install / setup help</button>
             </div>
           </section>
-        </div>
+        </div>}
       </div>
       </div>
       <div className="footer-line">BUILT FOR THE MOMENT BEFORE LOCK · YOUR SLATE, YOUR CALL</div>

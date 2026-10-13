@@ -91,18 +91,22 @@ function fixture({ receipt = paidReceipt, membership = validMembership, access =
   member.clearMembershipCache("account-b");
 }
 
-test("public API removes forecasts and unknown premium fields without mutating the member cache", () => {
+test("unpaid API removes all player stats, salary values and forecasts without mutating the member cache", () => {
   const raw = { projections: [
-    { id: "a", name: "A", sport: "nfl", salary: 2000, projection: 99, projectionType: "daily", source: "ESPN", secretForecast: 88 },
+    { id: "a", name: "A", sport: "nfl", salary: 2000, projection: 99, projectionType: "daily", source: "ESPN", secretForecast: 88, stats: { points: 25 }, value: 4.2 },
     { id: "b", name: "B", sport: "nfl", salary: 9000, projection: 11, projectionType: "daily", source: "ESPN" },
   ], events: [{ id: "game" }], news: [{ id: "headline" }] };
   const free = gateDashboardProjections(raw, false);
   assert.equal(free.projectionsLocked, true);
-  assert.deepEqual(free.projections.map(p => p.projection), [null, null]);
-  assert.deepEqual(free.projections.map(p => p.id), ["b", "a"]);
-  assert.equal("secretForecast" in free.projections[1], false);
+  assert.deepEqual(free.projections, []);
+  assert.equal(JSON.stringify(free).includes("secretForecast"), false);
+  assert.equal(JSON.stringify(free).includes('"salary"'), false);
+  assert.equal(JSON.stringify(free).includes('"stats"'), false);
+  assert.equal(JSON.stringify(free).includes('"value"'), false);
   assert.equal(raw.projections[0].projection, 99);
   assert.equal(gateDashboardProjections(raw, true).projections[0].projection, 99);
+  assert.deepEqual(gateDashboardProjections(raw, true).projections, raw.projections);
+  assert.deepEqual(gateDashboardProjections(raw, false).projections, []);
   assert.deepEqual(free.events, raw.events);
   assert.deepEqual(free.news, raw.news);
 });

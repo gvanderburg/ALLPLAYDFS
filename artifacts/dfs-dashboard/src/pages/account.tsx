@@ -91,7 +91,7 @@ export default function Account() {
       <section className="account-hero">
         <div className="account-kicker">Your account / membership</div>
         <h1>Player Projections</h1>
-        <p>One focused membership for sourced player forecasts. The slate, salary browsing and sports news remain free for every ALLPLAY account.</p>
+        <p>One focused membership for the full player table: available stats, salary values, sourced forecasts and exports. Daily game slates and sports news remain free.</p>
       </section>
       <section className="account-panel" aria-labelledby="account-id-title" style={{ marginBottom: 18 }}>
         <h2 id="account-id-title">Your account ID</h2>

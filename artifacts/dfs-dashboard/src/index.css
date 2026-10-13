@@ -546,3 +546,6 @@ h1 { color: #f0f2ec; font-size: clamp(28px, 2.7vw, 37px); }
   .auth-brand-note { top:14px; left:16px; }
 }
 .pt-table-salary-only { min-width: 560px; }
+.content-grid.projections-page-grid { grid-template-columns: minmax(0, 1fr); }
+.main-wrap.projections-main { width: 100%; }
+.projections-page-grid .pt-scroll { max-height: none; }

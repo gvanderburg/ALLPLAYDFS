@@ -2,7 +2,7 @@
 - [Workflow handoff state](workflow-handoff-state.md) — fresh workflow-state updates can invalidate an earlier successful preview check.
 - [X feed policy](x-feed-policy.md) — feed removed by user request; any explicitly requested return must use free embeds, not paid API reads.
 - [Dashboard reference scope](reference-design.md) — EdgeFinder is a visual reference, not a source for invented betting metrics.
-- [Membership scope](membership-policy.md) — $1.99/month for projections only; news and slates remain free.
+- [Membership scope](membership-policy.md) — $1.99/month locks all player data, including stats and salary values; news and game slates remain free.
 - [Whop membership bridge](whop-membership-bridge.md) — bind purchases to verified app identity; verify checkout ownership, provider access and period-end cancellation.
 - [Auth UI runtime](auth-ui-runtime.md) — build checks can miss stale development dependencies; use supported Clerk appearance styling and check phone layouts.
 - [Slate selection](slate-selection.md) — empty today advances per sport to a published slate; provider calendars differ and UTC game dates can shift the slate day.
