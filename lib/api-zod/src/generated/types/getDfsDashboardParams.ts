@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DfsSalaryPlatform } from './dfsSalaryPlatform';
 import type { DfsSport } from './dfsSport';
 
 export type GetDfsDashboardParams = {
@@ -13,4 +14,10 @@ export type GetDfsDashboardParams = {
  */
 date?: Date;
 sport?: DfsSport;
+salaryPlatform?: DfsSalaryPlatform;
+/**
+ * Salary slate belonging to the selected sport and Eastern calendar date.
+ * @pattern ^[0-9]{1,12}$
+ */
+slateId?: string;
 };

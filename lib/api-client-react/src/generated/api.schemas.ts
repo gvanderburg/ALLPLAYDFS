@@ -22,6 +22,14 @@ export const DfsSport = {
   cfb: 'cfb',
 } as const;
 
+export type DfsSalaryPlatform = typeof DfsSalaryPlatform[keyof typeof DfsSalaryPlatform];
+
+
+export const DfsSalaryPlatform = {
+  draftkings: 'draftkings',
+  fanduel: 'fanduel',
+} as const;
+
 export interface DfsCompetitor {
   id: string;
   name: string;
@@ -77,11 +85,29 @@ export interface DfsPlayerProjection {
   opponent?: string | null;
   /** @nullable */
   position?: string | null;
-  projection: number;
+  /** @nullable */
+  projection: number | null;
   projectionType: string;
   source: string;
   /** @nullable */
   updatedAt?: string | null;
+  /** @nullable */
+  salary?: number | null;
+  salaryPlatform?: DfsSalaryPlatform;
+  /** @nullable */
+  salarySource?: string | null;
+  /** @nullable */
+  salaryPlayerId?: string | null;
+  /** @nullable */
+  salarySlateId?: string | null;
+  /** @nullable */
+  rosterPositions?: string | null;
+  /** @nullable */
+  gameInfo?: string | null;
+  /** @nullable */
+  teamLogo?: string | null;
+  /** @nullable */
+  homeAway?: string | null;
 }
 
 export interface DfsSportCoverage {
@@ -93,6 +119,40 @@ export interface DfsSportCoverage {
   message: string;
 }
 
+export type DfsSalaryCoverageStatus = typeof DfsSalaryCoverageStatus[keyof typeof DfsSalaryCoverageStatus];
+
+
+export const DfsSalaryCoverageStatus = {
+  available: 'available',
+  no_slates: 'no_slates',
+  unavailable: 'unavailable',
+  error: 'error',
+  select_sport: 'select_sport',
+} as const;
+
+export interface DfsSalarySlate {
+  id: string;
+  name: string;
+  sport: DfsSport;
+  startTime: string;
+  /** @nullable */
+  gameCount: number | null;
+  format: string;
+}
+
+export interface DfsSalaryCoverage {
+  platform: DfsSalaryPlatform;
+  available: boolean;
+  status: DfsSalaryCoverageStatus;
+  source: string;
+  message: string;
+  slates: DfsSalarySlate[];
+  /** @nullable */
+  selectedSlateId: string | null;
+  /** @nullable */
+  fetchedAt: string | null;
+}
+
 export interface DfsDashboard {
   date: string;
   updatedAt: string;
@@ -100,6 +160,7 @@ export interface DfsDashboard {
   news: DfsNewsItem[];
   projections: DfsPlayerProjection[];
   sportCoverage: DfsSportCoverage[];
+  salaryCoverage: DfsSalaryCoverage;
   sourceNotes: string[];
 }
 
@@ -109,5 +170,11 @@ export type GetDfsDashboardParams = {
  */
 date?: string;
 sport?: DfsSport;
+salaryPlatform?: DfsSalaryPlatform;
+/**
+ * Salary slate belonging to the selected sport and Eastern calendar date.
+ * @pattern ^[0-9]{1,12}$
+ */
+slateId?: string;
 };
 

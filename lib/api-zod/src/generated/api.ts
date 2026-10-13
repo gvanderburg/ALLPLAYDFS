@@ -21,9 +21,14 @@ export const HealthCheckResponse = zod.object({
  * Returns a date's event slate, available betting totals, sourced fantasy projections, and recent sports news.
  * @summary Get multi-sport DFS dashboard data
  */
+export const getDfsDashboardQuerySlateIdRegExp = new RegExp('^[0-9]{1,12}$');
+
+
 export const GetDfsDashboardQueryParams = zod.object({
   "date": zod.date().optional().describe('Local calendar date in YYYY-MM-DD format; defaults to today.'),
-  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']).optional()
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']).optional(),
+  "salaryPlatform": zod.enum(['draftkings', 'fanduel']).optional(),
+  "slateId": zod.coerce.string().regex(getDfsDashboardQuerySlateIdRegExp).optional().describe('Salary slate belonging to the selected sport and Eastern calendar date.')
 })
 
 export const GetDfsDashboardResponse = zod.object({
@@ -67,10 +72,19 @@ export const GetDfsDashboardResponse = zod.object({
   "team": zod.string().nullish(),
   "opponent": zod.string().nullish(),
   "position": zod.string().nullish(),
-  "projection": zod.number(),
+  "projection": zod.number().nullable(),
   "projectionType": zod.string(),
   "source": zod.string(),
-  "updatedAt": zod.coerce.date().nullish()
+  "updatedAt": zod.coerce.date().nullish(),
+  "salary": zod.number().int().nullish(),
+  "salaryPlatform": zod.enum(['draftkings', 'fanduel']).optional(),
+  "salarySource": zod.string().nullish(),
+  "salaryPlayerId": zod.string().nullish(),
+  "salarySlateId": zod.string().nullish(),
+  "rosterPositions": zod.string().nullish(),
+  "gameInfo": zod.string().nullish(),
+  "teamLogo": zod.string().url().nullish(),
+  "homeAway": zod.string().nullish()
 })),
   "sportCoverage": zod.array(zod.object({
   "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
@@ -80,6 +94,23 @@ export const GetDfsDashboardResponse = zod.object({
   "newsAvailable": zod.boolean(),
   "message": zod.string()
 })),
+  "salaryCoverage": zod.object({
+  "platform": zod.enum(['draftkings', 'fanduel']),
+  "available": zod.boolean(),
+  "status": zod.enum(['available', 'no_slates', 'unavailable', 'error', 'select_sport']),
+  "source": zod.string(),
+  "message": zod.string(),
+  "slates": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
+  "startTime": zod.coerce.date(),
+  "gameCount": zod.number().int().nullable(),
+  "format": zod.string()
+})),
+  "selectedSlateId": zod.string().nullable(),
+  "fetchedAt": zod.coerce.date().nullable()
+}),
   "sourceNotes": zod.array(zod.string())
 })
 

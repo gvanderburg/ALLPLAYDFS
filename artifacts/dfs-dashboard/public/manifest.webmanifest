@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "DFSift — Daily fantasy dashboard",
-  "short_name": "DFSift",
+  "name": "ALLPLAY",
+  "short_name": "ALLPLAY",
   "description": "A multi-sport DFS dashboard for daily slates, sourced projections, game totals, and news.",
   "start_url": "/",
   "scope": "/",

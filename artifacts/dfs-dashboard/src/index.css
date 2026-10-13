@@ -286,3 +286,13 @@ a.news-item:hover .news-title { color: #63dcae; }
 .pt-table tr td.proj { color: var(--tc); background: var(--tb); border-left-color: var(--tc); }
 .pt-empty { text-align: center; color: #8996a1; padding: 24px !important; }
 @media (max-width: 620px) { .pt-scroll { max-height: 70vh; } }
+.salary-section { margin-bottom: 15px; padding-bottom: 12px; border-bottom: 1px solid #252e39; }
+.salary-controls { display: grid; grid-template-columns: minmax(140px, .7fr) minmax(180px, 1.3fr); gap: 12px; }
+.salary-controls label { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.salary-controls select { width: 100%; min-width: 0; background: #171f29; border: 1px solid #33404e; border-radius: 5px; color: #d8e3eb; padding: 9px 8px; font: inherit; font-size: 12px; }
+.salary-controls select:focus-visible { outline: 2px solid #70c8aa; outline-offset: 2px; }
+.salary-controls select:disabled { color: #75828f; opacity: .8; }
+.salary-status { color: #d7b478; font-size: 11px; line-height: 1.6; margin: 10px 0 0; }
+.salary-status.available { color: #a7bcb6; }
+.salary-updated { color: #73868e; }
+@media (max-width: 620px) { .salary-controls { grid-template-columns: minmax(0, 1fr); gap: 10px; } }

@@ -1,0 +1,2 @@
+- [Transport validation](transport-validation.md) — generated validators need real HTTP smoke checks; passing typechecks can hide rejected URL filters.
+- [Workflow handoff state](workflow-handoff-state.md) — fresh workflow-state updates can invalidate an earlier successful preview check.

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DfsSalaryPlatform } from './dfsSalaryPlatform';
 import type { DfsSport } from './dfsSport';
 
 export interface DfsPlayerProjection {
@@ -17,9 +18,27 @@ export interface DfsPlayerProjection {
   opponent?: string | null;
   /** @nullable */
   position?: string | null;
-  projection: number;
+  /** @nullable */
+  projection: number | null;
   projectionType: string;
   source: string;
   /** @nullable */
   updatedAt?: Date | null;
+  /** @nullable */
+  salary?: number | null;
+  salaryPlatform?: DfsSalaryPlatform;
+  /** @nullable */
+  salarySource?: string | null;
+  /** @nullable */
+  salaryPlayerId?: string | null;
+  /** @nullable */
+  salarySlateId?: string | null;
+  /** @nullable */
+  rosterPositions?: string | null;
+  /** @nullable */
+  gameInfo?: string | null;
+  /** @nullable */
+  teamLogo?: string | null;
+  /** @nullable */
+  homeAway?: string | null;
 }

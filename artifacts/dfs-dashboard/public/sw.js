@@ -1,5 +1,5 @@
-const CACHE_NAME = 'dfsift-shell-v1';
-const OWN_CACHE_PREFIXES = ['slate-one-', 'slatemetry-', 'dfsift-'];
+const CACHE_NAME = 'allplay-shell-v1';
+const OWN_CACHE_PREFIXES = ['slate-one-', 'slatemetry-', 'dfsift-', 'allplay-'];
 const APP_SHELL = ['/', '/manifest.webmanifest', '/slate-icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {

@@ -1,7 +1,8 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useGetDfsDashboard, getGetDfsDashboardQueryKey } from '@workspace/api-client-react';
-import type { DfsEvent, DfsNewsItem, DfsPlayerProjection, DfsSport } from '@workspace/api-client-react';
+import type { DfsEvent, DfsNewsItem, DfsPlayerProjection, DfsSport, DfsSalaryPlatform } from '@workspace/api-client-react';
 import ProjectionTable from '@/components/projection-table';
+import SalaryControls from '@/components/salary-controls';
 import {
   Activity, AlertCircle, ArrowDownToLine, CalendarDays, CircleHelp,
   Clock3, Download, ExternalLink, Info, Newspaper, RefreshCw, ShieldCheck,
@@ -46,6 +47,10 @@ function projectionExportRows(players: DfsPlayerProjection[]) {
     player: player.name, sport: player.sport, team: player.team ?? '', opponent: player.opponent ?? '',
     position: player.position ?? '', projection: player.projection, projectionType: player.projectionType,
     source: player.source, updatedAt: player.updatedAt ?? '',
+    salary: player.salary ?? '', salaryPlatform: player.salaryPlatform ?? '',
+    salarySource: player.salarySource ?? '', salarySlateId: player.salarySlateId ?? '',
+    salaryPlayerId: player.salaryPlayerId ?? '', rosterPositions: player.rosterPositions ?? '',
+    gameInfo: player.gameInfo ?? '',
   }));
 }
 function SportLabel({ sport }: { sport: string }) {
@@ -116,15 +121,21 @@ function InstallDialog({ onClose, onInstall, canInstall, isInstalled }: { onClos
 export default function Dashboard() {
   const [date, setDate] = useState(localDateString);
   const [sport, setSport] = useState<DfsSport>('nfl');
+  const [salaryPlatform, setSalaryPlatform] = useState<DfsSalaryPlatform>('draftkings');
+  const [salarySelection, setSalarySelection] = useState<{ context: string; id: string }>();
+  const salaryContext = `${sport}:${date}:${salaryPlatform}`;
+  const slateId = salarySelection?.context === salaryContext ? salarySelection.id : undefined;
   const [installOpen, setInstallOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [installed, setInstalled] = useState(false);
-  const params = useMemo(() => ({ date, sport }), [date, sport]);
-  const query = useGetDfsDashboard(params, { query: { queryKey: getGetDfsDashboardQueryKey(params), refetchOnWindowFocus: false } });
+  const params = useMemo(() => ({ date, sport, salaryPlatform, slateId }), [date, sport, salaryPlatform, slateId]);
+  const query = useGetDfsDashboard(params, { query: { queryKey: getGetDfsDashboardQueryKey(params), refetchOnWindowFocus: false, refetchInterval: 5 * 60 * 1000 } });
   const data = query.data;
   const loading = query.isLoading || query.isFetching;
   const events = (data?.events ?? []).filter((event) => event.sport === sport);
   const projections = (data?.projections ?? []).filter((player) => player.sport === sport);
+  const salaryCoverage = data?.salaryCoverage?.platform === salaryPlatform ? data.salaryCoverage : undefined;
+  const forecastCount = projections.filter((player) => player.projection !== null).length;
   const news = (data?.news ?? []).filter((item) => item.sport === sport);
   const currentSportCoverage = data?.sportCoverage?.find((item) => item.sport === sport);
   const coverageList = currentSportCoverage ? [currentSportCoverage] : [];
@@ -150,7 +161,7 @@ export default function Dashboard() {
 
   return <div className="app-shell">
     <header className="topbar">
-      <a href="/" className="brand" aria-label="DFSift home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">DFSift</span></a>
+      <a href="/" className="brand" aria-label="ALLPLAY home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">ALLPLAY</span></a>
       <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><span className="user-dot" aria-label="Personal dashboard">ME</span></div>
     </header>
     <main className="main-wrap">
@@ -222,10 +233,11 @@ export default function Dashboard() {
             <div className="panel-body"><EventSlate events={events} loading={loading && !data} /></div>
           </section>
           <section className="panel" aria-labelledby="projections-heading">
-            <div className="panel-head"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : `${projections.length} PLAYERS`}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-projections-${date}.csv`, projectionExportRows(projections))} disabled={!projections.length} aria-label="Export player projections" data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
+            <div className="panel-head"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : `${forecastCount} / ${projections.length} FORECASTS`}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-${salaryPlatform}-${salaryCoverage?.selectedSlateId ?? 'no-slate'}-${date}.csv`, projectionExportRows(projections))} disabled={!projections.length} aria-label="Export player projections and salaries" data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
             <div className="panel-body" style={{ paddingTop: 16, paddingBottom: 16 }}>
+              <SalaryControls platform={salaryPlatform} coverage={salaryCoverage} loading={loading} onPlatformChange={setSalaryPlatform} onSlateChange={(id) => setSalarySelection({ context: salaryContext, id })} />
               {currentSportCoverage && !currentSportCoverage.projectionsAvailable && <div className="coverage-detail" style={{ margin: '0 0 14px', padding: '0 0 12px', borderTop: 0, borderBottom: '1px solid #252e39' }}><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6, color: '#eab66f' }} />Projection coverage is unavailable for {currentSportCoverage.label}. {currentSportCoverage.message}</div>}
-              <ProjectionTable key={sport} players={projections} events={events} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} />
+              <ProjectionTable key={`${salaryContext}:${salaryCoverage?.selectedSlateId ?? 'none'}`} players={projections} events={events} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} />
             </div>
           </section>
         </div>

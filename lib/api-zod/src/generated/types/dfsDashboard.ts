@@ -8,6 +8,7 @@
 import type { DfsEvent } from './dfsEvent';
 import type { DfsNewsItem } from './dfsNewsItem';
 import type { DfsPlayerProjection } from './dfsPlayerProjection';
+import type { DfsSalaryCoverage } from './dfsSalaryCoverage';
 import type { DfsSportCoverage } from './dfsSportCoverage';
 
 export interface DfsDashboard {
@@ -17,5 +18,6 @@ export interface DfsDashboard {
   news: DfsNewsItem[];
   projections: DfsPlayerProjection[];
   sportCoverage: DfsSportCoverage[];
+  salaryCoverage: DfsSalaryCoverage;
   sourceNotes: string[];
 }

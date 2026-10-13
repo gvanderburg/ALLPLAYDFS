@@ -1,4 +1,4 @@
-# DFSift — DFS Dashboard
+# ALLPLAY — DFS Dashboard
 
 A personal, dark multi-sport dashboard with daily slates, available game totals, news, and sourced fantasy projections. The web app can be installed on desktop, laptop, and mobile devices.
 
@@ -35,6 +35,9 @@ A personal, dark multi-sport dashboard with daily slates, available game totals,
 - Fantasy forecasts must remain explicit about scoring and horizon. ESPN default fantasy scoring is not DraftKings/FanDuel scoring, and season forecasts must not be presented as single-game projections.
 - Projection colors compare only players sharing a sport, forecast basis, and source. They are relative-point ranks, not confidence or value ratings, to avoid misleading season-vs-daily comparisons.
 - Source gaps are intentional empty states, not placeholders: never invent projections, totals, or salaries when the feed does not supply them.
+- Do not present scrambled trial salaries as real DFS data. SportsDataIO's free trial supplies realistic-looking scrambled data, which would make salary comparisons misleading.
+- DraftKings salaries come from its published, per-slate CSV export, pulled automatically without account credentials. Public export access is best-effort; do not bypass a blocked source. FanDuel remains explicitly unconnected.
+- Selecting a salary site does not change projection scoring. Never turn salary-export historical averages into projections; unmatched salary players have null forecasts and neutral colors.
 
 ## Product
 
@@ -50,12 +53,16 @@ A personal, dark multi-sport dashboard with daily slates, available game totals,
 - The user wants the dashboard available on their desktop, laptop, and mobile phone.
 - Sports must stay separate in individual tabs, not an all-sports feed. The news section must scroll independently.
 - Player projections should be a compact, color-coded grid like the user's reference.
+- The user selected automatic salary updates for DraftKings and FanDuel.
 
 ## Gotchas
 
 - PWA registration is production-only. The installation flow is intended for the published HTTPS app opened directly in a browser, not an embedded preview.
 - ESPN public feed coverage can change. Current projection gaps include WNBA, NASCAR, and CFB; NBA coverage is unavailable when no source forecasts are returned.
 - The backend caches feed data for up to five minutes. Do not auto-refresh faster than five minutes.
+- DraftKings lobby/CSV requests are cached for fifteen minutes. Filter every draft group by its source sport and Eastern start date; an out-of-season sport can return the all-sports lobby.
+- DraftKings also places Madden and NBA 2K simulations under NFL/NBA. Exclude simulated game types; their salaries must not be mixed with real-sports schedules or forecasts.
+- Follow each provider's current developer index instead of constructing documentation URLs from app sport codes. Obsolete league-documentation paths can return generic pages and falsely suggest missing coverage.
 
 ## Pointers
 

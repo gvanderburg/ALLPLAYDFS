@@ -45,6 +45,18 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/DfsSport"
+        - name: salaryPlatform
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/DfsSalaryPlatform"
+        - name: slateId
+          in: query
+          required: false
+          description: Salary slate belonging to the selected sport and Eastern calendar date.
+          schema:
+            type: string
+            pattern: '^[0-9]{1,12}$'
       responses:
         "200":
           description: Dashboard data with explicit coverage and source notes
@@ -66,9 +78,12 @@ components:
     DfsSport:
       type: string
       enum: [nfl, nhl, wnba, nba, mlb, nascar, cfb]
+    DfsSalaryPlatform:
+      type: string
+      enum: [draftkings, fanduel]
     DfsDashboard:
       type: object
-      required: [date, updatedAt, events, news, projections, sportCoverage, sourceNotes]
+      required: [date, updatedAt, events, news, projections, sportCoverage, sourceNotes, salaryCoverage]
       properties:
         date:
           type: string
@@ -92,6 +107,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DfsSportCoverage"
+        salaryCoverage:
+          $ref: "#/components/schemas/DfsSalaryCoverage"
         sourceNotes:
           type: array
           items:
@@ -147,10 +164,46 @@ components:
         team: { type: ["string", "null"] }
         opponent: { type: ["string", "null"] }
         position: { type: ["string", "null"] }
-        projection: { type: number }
+        projection: { type: ["number", "null"] }
         projectionType: { type: string }
         source: { type: string }
         updatedAt: { type: ["string", "null"], format: date-time }
+        salary: { type: ["integer", "null"] }
+        salaryPlatform: { $ref: "#/components/schemas/DfsSalaryPlatform" }
+        salarySource: { type: ["string", "null"] }
+        salaryPlayerId: { type: ["string", "null"] }
+        salarySlateId: { type: ["string", "null"] }
+        rosterPositions: { type: ["string", "null"] }
+        gameInfo: { type: ["string", "null"] }
+        teamLogo: { type: ["string", "null"], format: uri }
+        homeAway: { type: ["string", "null"] }
+    DfsSalarySlate:
+      type: object
+      required: [id, name, sport, startTime, gameCount, format]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        sport: { $ref: "#/components/schemas/DfsSport" }
+        startTime: { type: string, format: date-time }
+        gameCount: { type: ["integer", "null"] }
+        format: { type: string }
+    DfsSalaryCoverage:
+      type: object
+      required: [platform, available, status, source, message, slates, selectedSlateId, fetchedAt]
+      properties:
+        platform: { $ref: "#/components/schemas/DfsSalaryPlatform" }
+        available: { type: boolean }
+        status:
+          type: string
+          enum: [available, no_slates, unavailable, error, select_sport]
+        source: { type: string }
+        message: { type: string }
+        slates:
+          type: array
+          items:
+            $ref: "#/components/schemas/DfsSalarySlate"
+        selectedSlateId: { type: ["string", "null"] }
+        fetchedAt: { type: ["string", "null"], format: date-time }
     DfsSportCoverage:
       type: object
       required: [sport, label, eventsAvailable, projectionsAvailable, newsAvailable, message]

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
-import { GetDfsDashboardResponse } from "@workspace/api-zod";
+import { GetDfsDashboardQueryParams, GetDfsDashboardResponse } from "@workspace/api-zod";
+import { getSalaryData, InvalidSalarySlate } from "../lib/draftkings-salaries";
 
 const router: IRouter = Router();
 
@@ -478,7 +479,11 @@ async function getDashboard(date: string, selectedSport?: Sport) {
   };
 }
 
-router.get("/dfs/dashboard", async (req, res) => {
+router.get("/dfs/dashboard", async (req, res): Promise<void> => {
+  if (req.query.date !== undefined && typeof req.query.date !== "string") {
+    res.status(400).json({ error: "date must be a valid YYYY-MM-DD date" });
+    return;
+  }
   const date = typeof req.query.date === "string" ? req.query.date : todayInUtc();
   const sportValue =
     typeof req.query.sport === "string" ? req.query.sport : undefined;
@@ -495,8 +500,19 @@ router.get("/dfs/dashboard", async (req, res) => {
     return;
   }
 
+  // Query dates arrive as strings; the generated query validator expects Date.
+  // Validate the calendar day first so Date's rollover cannot accept February 30.
+  const parsed = GetDfsDashboardQueryParams.safeParse({
+    ...req.query, date: new Date(`${date}T00:00:00.000Z`),
+  });
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid dashboard filters" });
+    return;
+  }
   const sport = sportValue as Sport | undefined;
-  const cacheKey = `${date}:${sport ?? "all"}`;
+  const platform = parsed.data.salaryPlatform ?? "draftkings";
+  const slateId = parsed.data.slateId;
+  const cacheKey = `${date}:${sport ?? "all"}:${platform}:${slateId ?? "default"}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     res.json(cached.data);
@@ -505,13 +521,28 @@ router.get("/dfs/dashboard", async (req, res) => {
 
   try {
     const dashboard = await getDashboard(date, sport);
-    const data = GetDfsDashboardResponse.parse(dashboard);
+    const salaryData = await getSalaryData(
+      sport, date, platform, slateId, dashboard.projections, dashboard.events,
+      (error) => req.log.warn({ err: error, sport }, "Salary source unavailable"),
+    );
+    const data = GetDfsDashboardResponse.parse({
+      ...dashboard, projections: salaryData.players, salaryCoverage: salaryData.coverage,
+      sourceNotes: [
+        ...dashboard.sourceNotes,
+        "DraftKings prices are pulled automatically from its published slate CSV exports, cached for 15 minutes. Public export access is best-effort and can change. FanDuel is not connected.",
+        "A salary row without a sourced forecast shows a dash, not zero. Historical average fantasy points in salary exports are never presented as projections.",
+      ],
+    });
     cache.set(cacheKey, {
       data,
       expiresAt: Date.now() + CACHE_TTL_MS,
     });
     res.json(data);
   } catch (error) {
+    if (error instanceof InvalidSalarySlate) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
     req.log.error({ err: error }, "Unable to build DFS dashboard");
     res.status(502).json({ error: "Sports feeds are temporarily unavailable" });
   }
