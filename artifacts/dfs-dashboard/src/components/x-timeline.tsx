@@ -1,16 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DfsSport } from '@workspace/api-client-react';
 import { ExternalLink } from 'lucide-react';
-
-const FEEDS: Record<DfsSport, { username: string; label: string; note?: string }> = {
-  nfl: { username: 'UnderdogNFL', label: 'NFL' },
-  nhl: { username: 'NHL', label: 'NHL', note: 'A dedicated Underdog NHL account has not been verified. This is the official NHL feed.' },
-  wnba: { username: 'UnderdogWNBA', label: 'WNBA' },
-  nba: { username: 'UnderdogNBA', label: 'NBA' },
-  mlb: { username: 'UnderdogMLB', label: 'MLB' },
-  nascar: { username: 'Underdog', label: 'NASCAR', note: 'Using Underdog’s main account for this tab, as requested. It includes other sports and is not NASCAR-only.' },
-  cfb: { username: 'UnderdogCFB', label: 'College football' },
-};
+import XSourcePicker from './x-source-picker';
+import { DEFAULT_X_FEEDS, defaultXSource, readXSource } from '@/lib/x-sources';
 
 type WidgetApi = { widgets: { load: (root: HTMLElement) => void } };
 type WidgetWindow = Window & {
@@ -69,7 +61,15 @@ function loadWidgets(): Promise<WidgetApi> {
 }
 
 export default function XTimeline({ sport }: { sport: DfsSport }) {
-  const account = FEEDS[sport];
+  const account = DEFAULT_X_FEEDS[sport];
+  const [initial] = useState(() => {
+    try { return { source: readXSource(sport, window.localStorage), warning: '' }; }
+    catch { return { source: defaultXSource(sport), warning: 'Saved source could not be read. Using the default; browser storage may be unavailable or the saved URL invalid.' }; }
+  });
+  const [source, setSource] = useState(initial.source);
+  const isDefault = source.url === defaultXSource(sport).url;
+  const note = isDefault ? account.note : source.username?.toLowerCase() === 'underdog'
+    ? 'Underdog’s main account includes multiple sports; this feed is not sport-specific.' : undefined;
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'embedded' | 'unavailable'>('loading');
   useEffect(() => {
@@ -77,13 +77,13 @@ export default function XTimeline({ sport }: { sport: DfsSport }) {
     if (!host) return;
     let cancelled = false;
     host.replaceChildren();
-    // The widget owns this subtree, not React. Each sport gets a new target so
-    // a late render from the previous sport cannot enter the current timeline.
+    // Each sport/source gets a new widget-owned target so late renders cannot
+    // enter the current timeline.
     const target = document.createElement('div');
     const anchor = document.createElement('a');
     anchor.className = 'twitter-timeline';
-    anchor.href = `https://x.com/${account.username}?ref_src=twsrc%5Etfw`;
-    anchor.textContent = `Posts by ${account.username}`;
+    anchor.href = source.url;
+    anchor.textContent = `Posts from ${source.label}`;
     anchor.dataset.theme = 'dark';
     anchor.dataset.height = '360';
     anchor.dataset.chrome = 'noheader nofooter noborders transparent';
@@ -117,23 +117,24 @@ export default function XTimeline({ sport }: { sport: DfsSport }) {
       window.clearTimeout(timeout);
       host.replaceChildren();
     };
-  }, [account.username, account.label]);
+  }, [source.url, source.label, account.label]);
 
   return <section className="panel x-panel" id="x-section" aria-labelledby="x-heading">
     <div className="panel-head panel-head-accent">
       <h2 className="panel-title" id="x-heading"><span className="x-mark">𝕏</span> {account.label} on X</h2>
       <span className="panel-meta">FREE HTML EMBED</span>
     </div>
-    <div className="x-feed-meta"><span>@{account.username}</span><span>No paid X API requests</span></div>
+    <div className="x-feed-meta"><span>{source.label} · {isDefault ? 'Default' : 'Custom'}</span><span>No paid X API requests</span></div>
+    <XSourcePicker sport={sport} label={account.label} source={source} onChange={setSource} storageWarning={initial.warning} />
     <div className="panel-body x-scroll x-timeline-scroll" role="region" aria-labelledby="x-heading" tabIndex={0} data-testid="x-feed-scroll">
       {status === 'loading' && <p className="x-embed-status" role="status">Loading X’s public timeline…</p>}
-      {status === 'unavailable' && <div className="x-feed-state" role="status"><strong>X’s embed isn’t available right now</strong><p>X or your browser may limit embedded timelines. Open this sport’s account using the link below.</p></div>}
-      <div ref={hostRef} className="x-timeline-host" data-testid={`x-timeline-${sport}`} data-x-account={account.username} />
+      {status === 'unavailable' && <div className="x-feed-state" role="status"><strong>X’s embed isn’t available right now</strong><p>X or your browser may limit embedded timelines. Open this sport’s source using the link below.</p></div>}
+      <div ref={hostRef} className="x-timeline-host" data-testid={`x-timeline-${sport}`} data-x-account={source.username} data-x-source={source.url} />
     </div>
     <div className="x-embed-footer">
-      <a className="text-link" href={`https://x.com/${account.username}`} target="_blank" rel="noopener noreferrer">Open @{account.username} on X <ExternalLink size={12} /></a>
-      {account.note && <p>{account.note}</p>}
-      <p>X controls which posts appear and may require sign-in. These are recent account posts, not filtered by the DFS slate date.</p>
+      <a className="text-link" href={source.url} target="_blank" rel="noopener noreferrer">Open {source.label} on X <ExternalLink size={12} /></a>
+      {note && <p>{note}</p>}
+      <p>X controls which posts appear and may require sign-in. Custom sources may include multiple sports. These are recent source posts, not filtered by sport or the DFS slate date.</p>
     </div>
   </section>;
 }

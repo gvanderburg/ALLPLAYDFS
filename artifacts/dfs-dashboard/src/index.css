@@ -411,6 +411,16 @@ h1 { color: #f0f2ec; font-size: clamp(28px, 2.7vw, 37px); }
 .x-feed-state strong { display: block; color: #dbe2d6; margin: 9px 0 5px; }
 .x-feed-state p { font-size: 11px; line-height: 1.55; margin-bottom: 12px; }
 .x-timeline-scroll { min-height: 130px; }
+.x-source-picker { display: grid; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #252b25; }
+.x-source-picker label { font-size: 11px; color: #dbe2d6; }
+.x-source-picker input { width: 100%; min-width: 0; padding: 8px; border: 1px solid #485143; border-radius: 4px; background: #0e120f; color: #dbe2d6; font-size: 12px; }
+.x-source-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.x-source-picker p { margin: 0; color: #8a9488; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.x-source-picker .x-source-error { color: #f3a59c; }
+.x-source-error:empty { display: none; }
+.x-feed-meta span { overflow-wrap: anywhere; min-width: 0; }
+.x-embed-footer .text-link { overflow-wrap: anywhere; max-width: 100%; }
+.x-embed-footer .text-link svg { flex-shrink: 0; }
 .x-timeline-host { width: 100%; min-width: 0; }
 .x-timeline-host iframe { max-width: 100% !important; }
 .x-timeline-host .twitter-timeline { color: #a4ed5c; font-size: 12px; }
