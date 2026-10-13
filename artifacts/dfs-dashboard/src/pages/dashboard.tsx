@@ -1,0 +1,272 @@
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useGetDfsDashboard, getGetDfsDashboardQueryKey } from '@workspace/api-client-react';
+import type { DfsEvent, DfsNewsItem, DfsPlayerProjection, DfsSport } from '@workspace/api-client-react';
+import {
+  Activity, AlertCircle, ArrowDownToLine, CalendarDays, CircleHelp,
+  Clock3, Download, ExternalLink, Info, Newspaper, RefreshCw, ShieldCheck,
+  Smartphone, TrendingUp, X,
+} from 'lucide-react';
+
+const SPORTS: { id: DfsSport; name: string; short: string }[] = [
+  { id: 'nfl', name: 'NFL', short: 'NFL' },
+  { id: 'nhl', name: 'NHL', short: 'NHL' }, { id: 'wnba', name: 'WNBA', short: 'WNBA' },
+  { id: 'nba', name: 'NBA', short: 'NBA' }, { id: 'mlb', name: 'MLB', short: 'MLB' },
+  { id: 'nascar', name: 'NASCAR', short: 'NASCAR' }, { id: 'cfb', name: 'College football', short: 'CFB' },
+];
+
+function localDateString() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+function formatDate(value?: string | null, options?: Intl.DateTimeFormatOptions) {
+  if (!value) return 'Time TBD';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, options ?? { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const escape = (v: unknown) => `"${String(v ?? '').replaceAll('"', '""')}"`;
+  const csv = [headers.map(escape).join(','), ...rows.map((row) => headers.map((key) => escape(row[key])).join(','))].join('\r\n');
+  const href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  const link = document.createElement('a');
+  link.href = href; link.download = filename; link.click(); URL.revokeObjectURL(href);
+}
+function eventExportRows(events: DfsEvent[]) {
+  return events.map((event) => ({
+    sport: event.sport, league: event.league, event: event.name, startTime: event.startTime,
+    status: event.status, venue: event.venue ?? '', totalPoints: event.totalPoints ?? '',
+    spread: event.spread ?? '', oddsSource: event.oddsSource ?? '',
+  }));
+}
+function projectionExportRows(players: DfsPlayerProjection[]) {
+  return players.map((player) => ({
+    player: player.name, sport: player.sport, team: player.team ?? '', opponent: player.opponent ?? '',
+    position: player.position ?? '', projection: player.projection, projectionType: player.projectionType,
+    source: player.source, updatedAt: player.updatedAt ?? '',
+  }));
+}
+function SportLabel({ sport }: { sport: string }) {
+  return <span className="type-tag">{sport.toUpperCase()}</span>;
+}
+function EmptyState({ icon, title, copy }: { icon: ReactNode; title: string; copy: string }) {
+  return <div className="state-box"><div className="state-icon">{icon}</div><strong>{title}</strong><p>{copy}</p></div>;
+}
+function EventSlate({ events, loading }: { events: DfsEvent[]; loading: boolean }) {
+  if (loading) return <div className="slate-list">{[1, 2, 3].map((n) => <div className="skeleton" key={n} style={{ height: 76 }} />)}</div>;
+  if (!events.length) return <EmptyState icon={<CalendarDays size={17} />} title="No events on this slate" copy="There are no events returned for this date and sport selection." />;
+  return <div className="slate-list">{events.map((event) => {
+    const [away, home] = [...event.competitors].sort((a, b) => (a.homeAway === 'away' ? -1 : b.homeAway === 'away' ? 1 : 0));
+    const live = /live|in progress|in-progress/i.test(event.status);
+    return <article className="event-row" key={event.id} data-testid={`event-${event.id}`}>
+      <div>
+        <div className="event-league">{event.league} <span style={{ color: '#45515d' }}>·</span> {formatDate(event.startTime, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</div>
+        <div className="event-name">{event.shortName || event.name}</div>
+        <div className="competitors" style={{ marginTop: 9 }}>
+          <span className="team-chip">{away?.abbreviation ?? '—'}</span><span>{away?.name ?? 'TBD'}</span>
+          {away?.score != null && <b>{away.score}</b>}
+          <span className="versus">vs</span>
+          <span className="team-chip">{home?.abbreviation ?? '—'}</span><span>{home?.name ?? 'TBD'}</span>
+          {home?.score != null && <b>{home.score}</b>}
+        </div>
+      </div>
+      <div className="event-right">
+        <span className={`event-time ${live ? 'status-live' : ''}`}>{live ? event.status : formatDate(event.startTime, { hour: 'numeric', minute: '2-digit' })}</span>
+        <span className={`total-pill ${event.totalPoints == null ? 'missing' : ''}`}>{event.totalPoints == null ? 'Total —' : `O/U ${event.totalPoints}`}</span>
+      </div>
+    </article>;
+  })}</div>;
+}
+function ProjectionTable({ players, loading, hasCoverage }: { players: DfsPlayerProjection[]; loading: boolean; hasCoverage: boolean }) {
+  if (loading) return <div style={{ display: 'grid', gap: 10 }}>{[1, 2, 3, 4].map((n) => <div className="skeleton" key={n} style={{ height: 35 }} />)}</div>;
+  if (!players.length) return <EmptyState icon={<TrendingUp size={17} />} title="No projections available" copy={hasCoverage ? 'No player projection rows were returned for this filter.' : 'Projection coverage is not available for the selected slate. Events and news may still be available.'} />;
+  return <div className="projection-table-wrap"><table className="projection-table">
+    <thead><tr><th>Player</th><th>Matchup</th><th>Role</th><th>Projection</th><th>Source</th></tr></thead>
+    <tbody>{players.map((player) => <tr key={player.id} data-testid={`projection-${player.id}`}>
+      <td><div className="player-name">{player.name}</div><div className="player-team">{player.team || 'Team unavailable'}</div></td>
+      <td>{player.opponent ? `vs ${player.opponent}` : '—'}</td>
+      <td><SportLabel sport={player.position || player.sport} /></td>
+      <td><div className="projection-number">{player.projection.toFixed(1)}</div><div className="player-team">{player.projectionType}</div></td>
+      <td>{player.source}</td>
+    </tr>)}</tbody>
+  </table></div>;
+}
+function NewsFeed({ news, loading }: { news: DfsNewsItem[]; loading: boolean }) {
+  if (loading) return <div style={{ display: 'grid', gap: 13 }}>{[1, 2, 3].map((n) => <div key={n} style={{ display: 'flex', gap: 12 }}><div className="skeleton" style={{ width: 57, height: 57 }} /><div style={{ flex: 1 }}><div className="skeleton" style={{ height: 12, marginBottom: 8 }} /><div className="skeleton" style={{ height: 10, width: '70%' }} /></div></div>)}</div>;
+  if (!news.length) return <EmptyState icon={<Newspaper size={17} />} title="No recent news" copy="No news items were returned for this date and sport selection." />;
+  return <div className="news-list">{news.map((item) => {
+    const content = <>
+      {item.image ? <img className="news-thumb" src={item.image} alt="" loading="lazy" /> : <div className="news-thumb news-fallback"><Newspaper size={18} /></div>}
+      <div><div className="news-title">{item.title}</div>{item.description && <p className="news-desc">{item.description}</p>}
+        <div className="news-byline"><SportLabel sport={item.sport} /><span>{item.source}</span><span>·</span><time>{formatDate(item.publishedAt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time>{item.url && <ExternalLink size={11} />}</div>
+      </div>
+    </>;
+    return item.url
+      ? <a className="news-item" key={item.id} href={item.url} target="_blank" rel="noreferrer" aria-label={`${item.title} (opens in new tab)`} data-testid={`news-${item.id}`}>{content}</a>
+      : <article className="news-item" key={item.id} data-testid={`news-${item.id}`}>{content}</article>;
+  })}</div>;
+}
+function InstallDialog({ onClose, onInstall, canInstall, isInstalled }: { onClose: () => void; onInstall: () => void; canInstall: boolean; isInstalled: boolean }) {
+  const isAppleMobile = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="install-modal" role="dialog" aria-modal="true" aria-labelledby="install-title">
+      <div className="modal-top"><div><div className="eyebrow">Ready when you are</div><h2 id="install-title">Keep your slate close</h2></div><button className="btn btn-quiet icon-btn" onClick={onClose} aria-label="Close installation help"><X size={16} /></button></div>
+      <p className="modal-copy">Add the DFS cockpit to your home screen or desktop for a focused, app-like launch. Your date and league filters stay right here in the dashboard.</p>
+      {isInstalled ? <div className="install-note">This dashboard is already installed on this device.</div> :
+        canInstall ? <div className="install-note">Your browser can install this dashboard now. Choose Install to add it to your apps.</div> :
+          <ol className="install-steps">{isAppleMobile ? <>
+            <li>Open this page in Safari.</li><li>Tap the Share button at the bottom of the screen.</li><li>Scroll the share sheet and choose <b>Add to Home Screen</b>, then tap Add.</li>
+          </> : <>
+            <li>Open your browser menu near the address bar.</li><li>Choose <b>Install app</b> or <b>Add to home screen</b>.</li><li>Confirm the prompt to launch it as a standalone app.</li>
+          </>}</ol>}
+      {!isAppleMobile && !canInstall && !isInstalled && <div className="install-note">Install availability depends on the browser and secure app hosting. On desktop, look for the install icon in the address bar.</div>}
+      <div className="modal-actions"><button className="btn btn-quiet" onClick={onClose}>Not now</button>{canInstall && !isInstalled && <button className="btn btn-primary" onClick={onInstall}><ArrowDownToLine size={15} /> Install app</button>}</div>
+    </section>
+  </div>;
+}
+
+export default function Dashboard() {
+  const [date, setDate] = useState(localDateString);
+  const [sport, setSport] = useState<DfsSport>('nfl');
+  const [installOpen, setInstallOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const params = useMemo(() => ({ date, sport }), [date, sport]);
+  const query = useGetDfsDashboard(params, { query: { queryKey: getGetDfsDashboardQueryKey(params), refetchOnWindowFocus: false } });
+  const data = query.data;
+  const loading = query.isLoading || query.isFetching;
+  const events = (data?.events ?? []).filter((event) => event.sport === sport);
+  const projections = (data?.projections ?? []).filter((player) => player.sport === sport);
+  const news = (data?.news ?? []).filter((item) => item.sport === sport);
+  const currentSportCoverage = data?.sportCoverage?.find((item) => item.sport === sport);
+  const coverageList = currentSportCoverage ? [currentSportCoverage] : [];
+  const sportName = SPORTS.find((item) => item.id === sport)?.name ?? sport.toUpperCase();
+
+  useEffect(() => {
+    const handlePrompt = (event: Event) => { event.preventDefault(); setInstallPrompt(event); };
+    const handleInstalled = () => { setInstalled(true); setInstallPrompt(null); };
+    window.addEventListener('beforeinstallprompt', handlePrompt);
+    window.addEventListener('appinstalled', handleInstalled);
+    return () => { window.removeEventListener('beforeinstallprompt', handlePrompt); window.removeEventListener('appinstalled', handleInstalled); };
+  }, []);
+  const doInstall = async () => {
+    if (!installPrompt) return;
+    const prompt = installPrompt as Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
+    if (choice.outcome === 'accepted') setInstalled(true);
+    setInstallPrompt(null);
+  };
+  const refresh = () => query.refetch();
+  const formatUpdatedAt = data?.updatedAt ? formatDate(data.updatedAt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null;
+
+  return <div className="app-shell">
+    <header className="topbar">
+      <a href="/" className="brand" aria-label="Slatemetry home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">slatemetry</span></a>
+      <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><span className="user-dot" aria-label="Personal dashboard">ME</span></div>
+    </header>
+    <main className="main-wrap">
+      <div className="page-heading">
+        <div><div className="eyebrow">Your daily edge <span style={{ color: '#46545f' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>Slate, in focus.</h1><p className="subhead">Every matchup, number and note for the decisions ahead.</p></div>
+        <div className="date-stamp"><div>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div><div style={{ marginTop: 5, color: '#596774' }}>{formatUpdatedAt ? `DATA UPDATED ${formatUpdatedAt.toUpperCase()}` : 'AWAITING DATA'}</div></div>
+      </div>
+      <div className="control-bar">
+        <div className="filter-group">
+          <label className="micro-label" htmlFor="slate-date">Slate</label>
+          <input id="slate-date" className="date-field" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Select slate date" data-testid="input-slate-date" />
+        </div>
+        <div className="action-group">
+          <button className="btn btn-quiet" onClick={() => downloadCsv(`${sport}-events-${date}.csv`, eventExportRows(events))} disabled={!events.length} aria-label="Export event slate as CSV" data-testid="button-export-events"><Download size={15} /> Events</button>
+          <button className="btn btn-quiet" onClick={() => downloadCsv(`${sport}-projections-${date}.csv`, projectionExportRows(projections))} disabled={!projections.length} aria-label="Export projections as CSV" data-testid="button-export-projections"><Download size={15} /> Projections</button>
+          <button className="btn btn-primary" onClick={refresh} disabled={query.isFetching} data-testid="button-refresh"><RefreshCw size={15} className={query.isFetching ? 'spin' : ''} /> Refresh</button>
+          <button className="btn btn-quiet icon-btn" onClick={() => setInstallOpen(true)} aria-label="Installation help" title="Install dashboard" data-testid="button-install-help"><Smartphone size={16} /></button>
+        </div>
+      </div>
+
+      <div className="sport-tabs" role="tablist" aria-label="Sports">
+        {SPORTS.map((item, index) => <button
+          key={item.id}
+          id={`sport-tab-${item.id}`}
+          className={`sport-tab ${sport === item.id ? 'active' : ''}`}
+          role="tab"
+          aria-label={item.name}
+          aria-selected={sport === item.id}
+          aria-controls="sport-panel"
+          tabIndex={sport === item.id ? 0 : -1}
+          data-testid={`tab-${item.id}`}
+          onClick={() => setSport(item.id)}
+          onKeyDown={(event) => {
+            let next: number;
+            if (event.key === 'ArrowRight') next = (index + 1) % SPORTS.length;
+            else if (event.key === 'ArrowLeft') next = (index - 1 + SPORTS.length) % SPORTS.length;
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = SPORTS.length - 1;
+            else return;
+            event.preventDefault();
+            const nextSport = SPORTS[next].id;
+            setSport(nextSport);
+            const tab = document.getElementById(`sport-tab-${nextSport}`);
+            tab?.focus({ preventScroll: true });
+            tab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }}
+        >{item.short}</button>)}
+      </div>
+
+      <div id="sport-panel" role="tabpanel" aria-labelledby={`sport-tab-${sport}`}>
+      {query.isError && <div className="error-box" role="alert" data-testid="status-dashboard-error"><span><AlertCircle size={15} style={{ verticalAlign: 'middle', marginRight: 8 }} />Couldn’t load this slate. Check your connection and try again.</span><button className="btn" onClick={refresh}><RefreshCw size={14} /> Retry</button></div>}
+      <div style={{ height: 17 }} />
+
+      {coverageList.length > 0 && <section className="coverage-strip" aria-label="Sport data coverage" data-testid="coverage-sports">
+        {coverageList.map((coverage) => <div className="coverage-item" key={coverage.sport} title={coverage.message} data-testid={`coverage-${coverage.sport}`}>
+          <div className="coverage-name">{coverage.label}</div>
+          <div className="coverage-dots" aria-label={`${coverage.eventsAvailable ? 'Events' : 'No events'}, ${coverage.projectionsAvailable ? 'projections' : 'no projections'}, ${coverage.newsAvailable ? 'news' : 'no news'}`}>
+            <span className={`coverage-dot ${coverage.eventsAvailable ? '' : 'off'}`} title="Events" /><span className={`coverage-dot ${coverage.projectionsAvailable ? '' : 'off'}`} title="Projections" /><span className={`coverage-dot ${coverage.newsAvailable ? '' : 'off'}`} title="News" />
+          </div>
+          <div className="coverage-caption">E · P · N</div>
+        </div>)}
+      </section>}
+      {coverageList.length > 0 && <div className="coverage-legend"><span><i className="coverage-dot" /> Events</span><span><i className="coverage-dot" /> Projections</span><span><i className="coverage-dot" /> News</span><span className="coverage-legend-note">Dimmed indicator means this feed is not available for that sport.</span></div>}
+
+      <div className="content-grid">
+        <div className="left-stack">
+          <section className="panel" aria-labelledby="slate-heading">
+            <div className="panel-head"><h2 className="panel-title" id="slate-heading"><CalendarDays size={16} /> {sportName} slate</h2><span className="panel-meta">{loading ? 'UPDATING' : `${events.length} ${events.length === 1 ? 'EVENT' : 'EVENTS'}`}</span></div>
+            <div className="panel-body"><EventSlate events={events} loading={loading && !data} /></div>
+          </section>
+          <section className="panel" aria-labelledby="projections-heading">
+            <div className="panel-head"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : `${projections.length} PLAYERS`}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-projections-${date}.csv`, projectionExportRows(projections))} disabled={!projections.length} aria-label="Export player projections" data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
+            <div className="panel-body" style={{ paddingTop: 16, paddingBottom: 16 }}>
+              {currentSportCoverage && !currentSportCoverage.projectionsAvailable && <div className="coverage-detail" style={{ margin: '0 0 14px', padding: '0 0 12px', borderTop: 0, borderBottom: '1px solid #252e39' }}><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6, color: '#eab66f' }} />Projection coverage is unavailable for {currentSportCoverage.label}. {currentSportCoverage.message}</div>}
+              <ProjectionTable players={projections} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} />
+            </div>
+          </section>
+        </div>
+        <div className="right-stack">
+          <section className="panel" aria-labelledby="news-heading">
+            <div className="panel-head"><h2 className="panel-title" id="news-heading"><Newspaper size={16} /> {sportName} news</h2><span className="panel-meta">{loading ? 'UPDATING' : `${news.length} STORIES`}</span></div>
+            <div key={sport} className="panel-body news-scroll" role="region" aria-labelledby="news-heading" tabIndex={0} data-testid="news-scroll"><NewsFeed news={news} loading={loading && !data} /></div>
+          </section>
+          <section className="panel" aria-labelledby="coverage-heading">
+            <div className="panel-head"><h2 className="panel-title" id="coverage-heading"><ShieldCheck size={16} /> Coverage & sources</h2><CircleHelp size={15} color="#71808c" /></div>
+            <div className="panel-body">
+              {currentSportCoverage ? <><div className="micro-label">{currentSportCoverage.label} · SELECTED SLATE</div><div className="coverage-detail" style={{ borderTop: 0, paddingTop: 0, marginTop: 8 }}>{currentSportCoverage.message}</div></> : <p className="coverage-detail" style={{ borderTop: 0, paddingTop: 0, marginTop: 0 }}>Coverage is reported by the data source. Availability may vary by sport and date.</p>}
+              {data?.sourceNotes?.length ? <><div className="micro-label" style={{ margin: '18px 0 8px' }}>Source notes</div><ul className="notes-list">{data.sourceNotes.map((note, index) => <li key={`${index}-${note}`}>{note}</li>)}</ul></> : <div className="coverage-detail"><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />No source notes were supplied for this response.</div>}
+              <div className="coverage-detail"><Clock3 size={12} style={{ verticalAlign: 'middle', marginRight: 6 }} />Manual refresh only. Data is not auto-refreshed.</div>
+            </div>
+          </section>
+          <section className="panel">
+            <div className="panel-head"><h2 className="panel-title"><Smartphone size={16} /> Your slate, one tap away</h2></div>
+            <div className="panel-body">
+              <p className="coverage-detail" style={{ borderTop: 0, paddingTop: 0, marginTop: 0 }}>Install this dashboard for a fast, focused home-screen launch on your devices.</p>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setInstallOpen(true)} data-testid="button-install"><ArrowDownToLine size={15} /> Install / setup help</button>
+            </div>
+          </section>
+        </div>
+      </div>
+      </div>
+      <div className="footer-line">BUILT FOR THE MOMENT BEFORE LOCK · YOUR SLATE, YOUR CALL</div>
+    </main>
+    {installOpen && <InstallDialog onClose={() => setInstallOpen(false)} onInstall={doInstall} canInstall={!!installPrompt} isInstalled={installed} />}
+  </div>;
+}

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: dfs
+    description: Daily fantasy sports dashboard
 paths:
   /healthz:
     get:
@@ -24,6 +26,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /dfs/dashboard:
+    get:
+      operationId: getDfsDashboard
+      tags: [dfs]
+      summary: Get multi-sport DFS dashboard data
+      description: Returns a date's event slate, available betting totals, sourced fantasy projections, and recent sports news.
+      parameters:
+        - name: date
+          in: query
+          required: false
+          description: Local calendar date in YYYY-MM-DD format; defaults to today.
+          schema:
+            type: string
+            format: date
+        - name: sport
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/DfsSport"
+      responses:
+        "200":
+          description: Dashboard data with explicit coverage and source notes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DfsDashboard"
+        "400":
+          description: Invalid date or sport
 components:
   schemas:
     HealthStatus:
@@ -33,4 +63,102 @@ components:
           type: string
       required:
         - status
+    DfsSport:
+      type: string
+      enum: [nfl, nhl, wnba, nba, mlb, nascar, cfb]
+    DfsDashboard:
+      type: object
+      required: [date, updatedAt, events, news, projections, sportCoverage, sourceNotes]
+      properties:
+        date:
+          type: string
+          format: date
+        updatedAt:
+          type: string
+          format: date-time
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/DfsEvent"
+        news:
+          type: array
+          items:
+            $ref: "#/components/schemas/DfsNewsItem"
+        projections:
+          type: array
+          items:
+            $ref: "#/components/schemas/DfsPlayerProjection"
+        sportCoverage:
+          type: array
+          items:
+            $ref: "#/components/schemas/DfsSportCoverage"
+        sourceNotes:
+          type: array
+          items:
+            type: string
+    DfsEvent:
+      type: object
+      required: [id, sport, league, name, shortName, startTime, status, competitors]
+      properties:
+        id: { type: string }
+        sport: { $ref: "#/components/schemas/DfsSport" }
+        league: { type: string }
+        name: { type: string }
+        shortName: { type: string }
+        startTime: { type: string, format: date-time }
+        status: { type: string }
+        venue: { type: ["string", "null"] }
+        totalPoints: { type: ["number", "null"] }
+        spread: { type: ["number", "null"] }
+        oddsSource: { type: ["string", "null"] }
+        competitors:
+          type: array
+          items:
+            $ref: "#/components/schemas/DfsCompetitor"
+    DfsCompetitor:
+      type: object
+      required: [id, name, abbreviation, homeAway]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        abbreviation: { type: string }
+        homeAway: { type: string }
+        logo: { type: ["string", "null"], format: uri }
+        score: { type: ["string", "null"] }
+    DfsNewsItem:
+      type: object
+      required: [id, sport, title, source]
+      properties:
+        id: { type: string }
+        sport: { $ref: "#/components/schemas/DfsSport" }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        source: { type: string }
+        url: { type: ["string", "null"], format: uri }
+        publishedAt: { type: ["string", "null"], format: date-time }
+        image: { type: ["string", "null"], format: uri }
+    DfsPlayerProjection:
+      type: object
+      required: [id, name, sport, projection, projectionType, source]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        sport: { $ref: "#/components/schemas/DfsSport" }
+        team: { type: ["string", "null"] }
+        opponent: { type: ["string", "null"] }
+        position: { type: ["string", "null"] }
+        projection: { type: number }
+        projectionType: { type: string }
+        source: { type: string }
+        updatedAt: { type: ["string", "null"], format: date-time }
+    DfsSportCoverage:
+      type: object
+      required: [sport, label, eventsAvailable, projectionsAvailable, newsAvailable, message]
+      properties:
+        sport: { $ref: "#/components/schemas/DfsSport" }
+        label: { type: string }
+        eventsAvailable: { type: boolean }
+        projectionsAvailable: { type: boolean }
+        newsAvailable: { type: boolean }
+        message: { type: string }
 

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Slatemetry"
+description = "Slatemetry is a cross-platform daily fantasy sports dashboard for NFL, NHL, WNBA, NBA, MLB, NASCAR, and college football, with daily slates, sourced projections, available game totals, and news. Installable on desktop, laptop, and mobile."
+version = "1.0.0"
+id = "artifacts/dfs-dashboard"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23622
+
+[services.development]
+run = "pnpm --filter @workspace/dfs-dashboard run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/dfs-dashboard", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/dfs-dashboard/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23622"
+BASE_PATH = "/"
