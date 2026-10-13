@@ -92,7 +92,7 @@ function signedLine(value?: number | null, pick = false) {
   if (pick && value === 0) return 'PK';
   return value > 0 ? `+${value}` : String(value);
 }
-function NewsFeed({ news, loading }: { news: DfsNewsItem[]; loading: boolean }) {
+export function NewsFeed({ news, loading }: { news: DfsNewsItem[]; loading: boolean }) {
   if (loading) return <div style={{ display: 'grid', gap: 13 }}>{[1, 2, 3].map((n) => <div key={n} style={{ display: 'flex', gap: 12 }}><div className="skeleton" style={{ width: 57, height: 57 }} /><div style={{ flex: 1 }}><div className="skeleton" style={{ height: 12, marginBottom: 8 }} /><div className="skeleton" style={{ height: 10, width: '70%' }} /></div></div>)}</div>;
   if (!news.length) return <EmptyState icon={<Newspaper size={17} />} title="No recent news" copy="No news items were returned for this date and sport selection." />;
   return <div className="news-list">{news.map((item) => {
@@ -233,7 +233,7 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
       <Link className="rail-link" href={projectionsOnly ? `${overviewPath}#slate-section` : '#slate-section'}><CalendarDays size={15} />Live slate</Link>
       <Link className={`rail-link ${projectionsOnly ? 'selected' : ''}`} href="/projections" aria-current={projectionsOnly ? 'page' : undefined} data-testid="link-projections"><TrendingUp size={15} />Projections</Link>
       <Link className="rail-link" href="/takes" data-testid="link-takes-sidebar"><Film size={15} />Game takes</Link>
-      <Link className="rail-link" href={projectionsOnly ? `${overviewPath}#news-section` : '#news-section'}><Newspaper size={15} />News desk</Link>
+      <a className="rail-link" href={`${import.meta.env.BASE_URL}news?sport=${sport}`} target="_blank" rel="noopener noreferrer" aria-label="News desk (opens in a new tab)" data-testid="link-news-desk"><Newspaper size={15} />News desk</a>
       <div className="rail-note"><span className="rail-live-dot" />Slate data refreshes every 5 minutes</div>
       <div className="rail-bottom"><span className="rail-caption">BUILT FOR EVERY LEAGUE</span><div className="rail-sports">NFL · NHL · WNBA<br />NBA · MLB · NASCAR · CFB</div></div>
     </aside>
