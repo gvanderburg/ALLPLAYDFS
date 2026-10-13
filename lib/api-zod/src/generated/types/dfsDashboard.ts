@@ -12,6 +12,7 @@ import type { DfsSalaryCoverage } from './dfsSalaryCoverage';
 import type { DfsSportCoverage } from './dfsSportCoverage';
 
 export interface DfsDashboard {
+  projectionsLocked: boolean;
   date: Date;
   updatedAt: Date;
   events: DfsEvent[];

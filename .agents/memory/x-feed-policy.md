@@ -1,9 +1,15 @@
 ---
 name: Free X feed policy
-description: ALLPLAY's X feed must use free website embeds, not paid API requests.
+description: X is removed from ALLPLAY; any explicitly requested future feed must use free embeds.
 ---
 
-Use X's free website HTML widgets for ALLPLAY's sports feed. Do not use the attached X connector to fetch posts.
+Do not restore an X feed unless the user asks for it.
+
+**Why:** The user explicitly requested removing the X feed from ALLPLAY after previously trying free embeds.
+
+**How to apply:** Leave it out of the dashboard and navigation. The historical source choices below apply only if the user explicitly requests restoring the previous feed.
+
+If a feed is requested again, use X's free website HTML widgets. Do not use the attached X connector to fetch posts.
 
 **Why:** The user explicitly replaced the connected API feed with free HTML embedding after X required API credits. A connected credential is not permission to introduce paid data requests.
 

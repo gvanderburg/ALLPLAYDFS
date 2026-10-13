@@ -1,6 +1,9 @@
 import { Router, type IRouter } from "express";
 import { GetDfsDashboardQueryParams, GetDfsDashboardResponse } from "@workspace/api-zod";
 import { getSalaryData, InvalidSalarySlate } from "../lib/draftkings-salaries";
+import { getAuth } from "@clerk/express";
+import { hasProjectionAccess } from "../lib/membership";
+import { gateDashboardProjections } from "../lib/projection-access";
 
 const router: IRouter = Router();
 
@@ -513,9 +516,13 @@ router.get("/dfs/dashboard", async (req, res): Promise<void> => {
   const platform = parsed.data.salaryPlatform ?? "draftkings";
   const slateId = parsed.data.slateId;
   const cacheKey = `${date}:${sport ?? "all"}:${platform}:${slateId ?? "default"}`;
+  res.set("Cache-Control", "private, no-store");
+  res.vary("Cookie");
+  res.vary("Authorization");
+  const hasAccess = await hasProjectionAccess(getAuth(req).userId);
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    res.json(cached.data);
+    res.json(gateDashboardProjections(cached.data, hasAccess));
     return;
   }
 
@@ -526,6 +533,7 @@ router.get("/dfs/dashboard", async (req, res): Promise<void> => {
       (error) => req.log.warn({ err: error, sport }, "Salary source unavailable"),
     );
     const data = GetDfsDashboardResponse.parse({
+      projectionsLocked: false,
       ...dashboard, projections: salaryData.players, salaryCoverage: salaryData.coverage,
       sourceNotes: [
         ...dashboard.sourceNotes,
@@ -537,7 +545,7 @@ router.get("/dfs/dashboard", async (req, res): Promise<void> => {
       data,
       expiresAt: Date.now() + CACHE_TTL_MS,
     });
-    res.json(data);
+    res.json(gateDashboardProjections(data, hasAccess));
   } catch (error) {
     if (error instanceof InvalidSalarySlate) {
       res.status(400).json({ error: error.message });

@@ -6,19 +6,25 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  CreateMembershipCheckout200,
   DfsDashboard,
   GetDfsDashboardParams,
-  HealthStatus
+  HealthStatus,
+  MembershipStatus
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -47,6 +53,231 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetMembershipStatusUrl = () => {
+
+
+
+
+  return `/api/membership`
+}
+
+/**
+ * @summary Get the signed-in account's verified projection access
+ */
+export const getMembershipStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<MembershipStatus> => {
+
+  return customFetch<MembershipStatus>(getGetMembershipStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMembershipStatusQueryKey = () => {
+    return [
+    `/api/membership`
+    ] as const;
+    }
+
+
+export const getGetMembershipStatusQueryOptions = <TData = Awaited<ReturnType<typeof getMembershipStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMembershipStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMembershipStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMembershipStatus>>> = ({ signal }) => getMembershipStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMembershipStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMembershipStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getMembershipStatus>>>
+export type GetMembershipStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the signed-in account's verified projection access
+ */
+
+export function useGetMembershipStatus<TData = Awaited<ReturnType<typeof getMembershipStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMembershipStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMembershipStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateMembershipCheckoutUrl = () => {
+
+
+
+
+  return `/api/membership/checkout`
+}
+
+/**
+ * @summary Create hosted Whop checkout bound to the authenticated account
+ */
+export const createMembershipCheckout = async ( options?: Parameters<typeof customFetch>[1]): Promise<CreateMembershipCheckout200> => {
+
+  return customFetch<CreateMembershipCheckout200>(getCreateMembershipCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateMembershipCheckoutMutationKey = () => ['createMembershipCheckout'] as const;
+
+export const getCreateMembershipCheckoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMembershipCheckout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMembershipCheckout>>, TError,void, TContext> => {
+
+const mutationKey = getCreateMembershipCheckoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMembershipCheckout>>, void> = () => {
+
+
+          return  createMembershipCheckout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMembershipCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof createMembershipCheckout>>>
+
+    export type CreateMembershipCheckoutMutationError = ErrorType<void>
+
+
+    /**
+ * @summary Create hosted Whop checkout bound to the authenticated account
+ */
+export const useCreateMembershipCheckout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMembershipCheckout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMembershipCheckout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCreateMembershipCheckoutMutationOptions(options));
+    }
+
+export const getCancelMembershipUrl = () => {
+
+
+
+
+  return `/api/membership/cancel`
+}
+
+/**
+ * @summary Stop renewal for this account's verified membership, keeping paid-through access
+ */
+export const cancelMembership = async ( options?: Parameters<typeof customFetch>[1]): Promise<MembershipStatus> => {
+
+  return customFetch<MembershipStatus>(getCancelMembershipUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelMembershipMutationKey = () => ['cancelMembership'] as const;
+
+export const getCancelMembershipMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelMembership>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelMembership>>, TError,void, TContext> => {
+
+const mutationKey = getCancelMembershipMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelMembership>>, void> = () => {
+
+
+          return  cancelMembership(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelMembershipMutationResult = NonNullable<Awaited<ReturnType<typeof cancelMembership>>>
+
+    export type CancelMembershipMutationError = ErrorType<void>
+
+
+    /**
+ * @summary Stop renewal for this account's verified membership, keeping paid-through access
+ */
+export const useCancelMembership = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelMembership>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelMembership>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCancelMembershipMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

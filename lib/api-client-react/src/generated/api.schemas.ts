@@ -5,6 +5,23 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface MembershipStatus {
+  signedIn: boolean;
+  hasAccess: boolean;
+  ready: boolean;
+  status: string;
+  price: number;
+  currency: string;
+  interval: string;
+  cancelAtPeriodEnd: boolean;
+  /** @nullable */
+  renewsAt: string | null;
+  /** @nullable */
+  manageUrl: string | null;
+  /** @nullable */
+  error: string | null;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -154,6 +171,7 @@ export interface DfsSalaryCoverage {
 }
 
 export interface DfsDashboard {
+  projectionsLocked: boolean;
   date: string;
   updatedAt: string;
   events: DfsEvent[];
@@ -163,6 +181,10 @@ export interface DfsDashboard {
   salaryCoverage: DfsSalaryCoverage;
   sourceNotes: string[];
 }
+
+export type CreateMembershipCheckout200 = {
+  purchaseUrl: string;
+};
 
 export type GetDfsDashboardParams = {
 /**

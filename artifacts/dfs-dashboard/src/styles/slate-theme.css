@@ -54,6 +54,7 @@ html, body, .app-shell { background: var(--slate-background); color: var(--slate
 .pt-legend em, .salary-updated, .x-feed-meta, .x-feed-state,
 .x-embed-status, .x-embed-footer p, .footer-line { color: var(--slate-muted); }
 .user-dot, .rail-note, .rail-bottom { border-color: var(--slate-divider); color: var(--slate-muted); }
+.account-header-link { height: 32px; padding: 0 10px; color: #c8d2d8; font-size: 11px; }
 .rail-link { color: var(--slate-muted); }
 .rail-link svg { color: #a5afbf; }
 .rail-link:hover { background: var(--slate-raised); color: var(--slate-text); }

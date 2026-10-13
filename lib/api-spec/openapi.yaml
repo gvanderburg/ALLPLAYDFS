@@ -13,6 +13,51 @@ tags:
   - name: dfs
     description: Daily fantasy sports dashboard
 paths:
+  /membership:
+    get:
+      operationId: getMembershipStatus
+      tags: [membership]
+      summary: Get the signed-in account's verified projection access
+      responses:
+        "200":
+          description: Membership status verified against Whop
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MembershipStatus" }
+  /membership/checkout:
+    post:
+      operationId: createMembershipCheckout
+      tags: [membership]
+      summary: Create hosted Whop checkout bound to the authenticated account
+      responses:
+        "200":
+          description: Checkout URL; a redirect does not grant access
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [purchaseUrl]
+                properties:
+                  purchaseUrl: { type: string, format: uri }
+        "401": { description: Sign in required }
+        "403": { description: Invalid request origin }
+        "409": { description: Account already has paid access }
+        "503": { description: Checkout temporarily unavailable }
+  /membership/cancel:
+    post:
+      operationId: cancelMembership
+      tags: [membership]
+      summary: Stop renewal for this account's verified membership, keeping paid-through access
+      responses:
+        "200":
+          description: Updated membership status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MembershipStatus" }
+        "401": { description: Sign in required }
+        "403": { description: Invalid request origin }
+        "404": { description: No linked membership }
+        "503": { description: Billing temporarily unavailable }
   /healthz:
     get:
       operationId: healthCheck
@@ -68,6 +113,21 @@ paths:
           description: Invalid date or sport
 components:
   schemas:
+    MembershipStatus:
+      type: object
+      required: [signedIn, hasAccess, ready, status, price, currency, interval, cancelAtPeriodEnd, renewsAt, manageUrl, error]
+      properties:
+        signedIn: { type: boolean }
+        hasAccess: { type: boolean }
+        ready: { type: boolean }
+        status: { type: string }
+        price: { type: number }
+        currency: { type: string }
+        interval: { type: string }
+        cancelAtPeriodEnd: { type: boolean }
+        renewsAt: { type: ["string", "null"] }
+        manageUrl: { type: ["string", "null"], format: uri }
+        error: { type: ["string", "null"] }
     HealthStatus:
       type: object
       properties:
@@ -83,8 +143,9 @@ components:
       enum: [draftkings, fanduel]
     DfsDashboard:
       type: object
-      required: [date, updatedAt, events, news, projections, sportCoverage, sourceNotes, salaryCoverage]
+      required: [date, updatedAt, events, news, projections, projectionsLocked, sportCoverage, sourceNotes, salaryCoverage]
       properties:
+        projectionsLocked: { type: boolean }
         date:
           type: string
           format: date

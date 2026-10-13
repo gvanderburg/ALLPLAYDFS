@@ -9,6 +9,50 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Get the signed-in account's verified projection access
+ */
+export const GetMembershipStatusResponse = zod.object({
+  "signedIn": zod.boolean(),
+  "hasAccess": zod.boolean(),
+  "ready": zod.boolean(),
+  "status": zod.string(),
+  "price": zod.number(),
+  "currency": zod.string(),
+  "interval": zod.string(),
+  "cancelAtPeriodEnd": zod.boolean(),
+  "renewsAt": zod.string().nullable(),
+  "manageUrl": zod.string().url().nullable(),
+  "error": zod.string().nullable()
+})
+
+
+/**
+ * @summary Create hosted Whop checkout bound to the authenticated account
+ */
+export const CreateMembershipCheckoutResponse = zod.object({
+  "purchaseUrl": zod.string().url()
+})
+
+
+/**
+ * @summary Stop renewal for this account's verified membership, keeping paid-through access
+ */
+export const CancelMembershipResponse = zod.object({
+  "signedIn": zod.boolean(),
+  "hasAccess": zod.boolean(),
+  "ready": zod.boolean(),
+  "status": zod.string(),
+  "price": zod.number(),
+  "currency": zod.string(),
+  "interval": zod.string(),
+  "cancelAtPeriodEnd": zod.boolean(),
+  "renewsAt": zod.string().nullable(),
+  "manageUrl": zod.string().url().nullable(),
+  "error": zod.string().nullable()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
@@ -32,6 +76,7 @@ export const GetDfsDashboardQueryParams = zod.object({
 })
 
 export const GetDfsDashboardResponse = zod.object({
+  "projectionsLocked": zod.boolean(),
   "date": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "events": zod.array(zod.object({

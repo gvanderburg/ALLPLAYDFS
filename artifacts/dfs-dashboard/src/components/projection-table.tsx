@@ -12,7 +12,7 @@ const TIERS: (Tier & { desc: string })[] = [
 ];
 const groupKey = (p: DfsPlayerProjection) => `${p.sport}|${p.projectionType}|${p.source}`;
 
-export default function ProjectionTable({ players, events, loading, hasCoverage }: { players: DfsPlayerProjection[]; events: DfsEvent[]; loading: boolean; hasCoverage: boolean }) {
+export default function ProjectionTable({ players, events, loading, hasCoverage, hasAccess }: { players: DfsPlayerProjection[]; events: DfsEvent[]; loading: boolean; hasCoverage: boolean; hasAccess: boolean }) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'projection', dir: 'desc' });
 
@@ -51,8 +51,9 @@ export default function ProjectionTable({ players, events, loading, hasCoverage 
   }, [events]);
   const lookup = (p: DfsPlayerProjection, k?: string | null) => (k ? teamInfo.get(`${p.sport}|${k.toLowerCase()}`) : undefined);
 
-  const groupCount = useMemo(() => new Set(players.filter((p) => p.projection !== null).map(groupKey)).size, [players]);
-  const hasMultipleGroups = useMemo(() => new Set(players.map(groupKey)).size > 1, [players]);
+  const groupCount = useMemo(() => hasAccess ? new Set(players.filter((p) => p.projection !== null).map(groupKey)).size : 0, [players, hasAccess]);
+  const hasMultipleGroups = useMemo(() => hasAccess && new Set(players.map(groupKey)).size > 1, [players, hasAccess]);
+  const displayGroupKey = (player: DfsPlayerProjection) => hasAccess ? groupKey(player) : 'salary-only';
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
     const f = term ? players.filter((p) => [p.name, p.team, p.opponent, p.position, p.rosterPositions].some((v) => v?.toLowerCase().includes(term))) : players;
@@ -60,8 +61,9 @@ export default function ProjectionTable({ players, events, loading, hasCoverage 
     return [...f].sort((a, b) => {
       const missingOrder = Number(a.projection === null) - Number(b.projection === null);
       if (missingOrder) return missingOrder;
-      const groupOrder = groupKey(a).localeCompare(groupKey(b));
+      const groupOrder = displayGroupKey(a).localeCompare(displayGroupKey(b));
       if (groupOrder !== 0) return groupOrder;
+      if (sort.key === 'projection' && !hasAccess) return a.name.localeCompare(b.name);
       if (sort.key === 'projection' || sort.key === 'salary') {
         const av = a[sort.key], bv = b[sort.key];
         if (av == null) return bv == null ? 0 : 1;
@@ -72,7 +74,7 @@ export default function ProjectionTable({ players, events, loading, hasCoverage 
       const bv = sort.key === 'position' ? b.rosterPositions ?? b.position : b[sort.key];
       return String(av ?? '').localeCompare(String(bv ?? '')) * m;
     });
-  }, [players, q, sort]);
+  }, [players, q, sort, hasAccess]);
 
   if (loading) return <div style={{ display: 'grid', gap: 4 }}>{Array.from({ length: 8 }, (_, n) => <div className="skeleton" key={n} style={{ height: 30 }} />)}</div>;
   if (!players.length) return <div className="state-box"><div className="state-icon"><TrendingUp size={17} /></div><strong>No projections available</strong><p>{hasCoverage ? 'No player projection rows were returned for this filter.' : 'Projection coverage is not available for the selected slate. Events and news may still be available.'}</p></div>;
@@ -97,11 +99,13 @@ export default function ProjectionTable({ players, events, loading, hasCoverage 
     <div className="pt-legend" aria-label="Projection color legend">
       {TIERS.map((t) => <span key={t.key}><i className={`pt-sw ${t.key}`} />{t.label}<em>{t.desc}</em></span>)}
     </div>
-    <p className="pt-note">Colors compare sourced forecasts with the same sport, basis and source ({groupCount} {groupCount === 1 ? 'group' : 'groups'}), not confidence or DFS value. Forecast groups stay separate when sorting. Salary-only players appear below forecasts and remain neutral; “—” means unavailable, not zero. ESPN forecasts are not DraftKings or FanDuel scoring, and historical averages are not used as projections.</p>
-    <div className="pt-scroll" role="region" aria-label="Player projections table" tabIndex={0}>
-      <table className="pt-table">
+    {hasAccess
+      ? <p className="pt-note">Colors compare sourced forecasts with the same sport, basis and source ({groupCount} {groupCount === 1 ? 'group' : 'groups'}), not confidence or DFS value. Forecast groups stay separate when sorting. Salary-only players appear below forecasts and remain neutral; “—” means unavailable, not zero. ESPN forecasts are not DraftKings or FanDuel scoring, and historical averages are not used as projections.</p>
+      : <p className="pt-note">Salary browsing is free. “—” means a salary or player field was not supplied; unavailable values are not zero. Projection columns and projection exports require verified Player Projections access.</p>}
+    <div className="pt-scroll" role="region" aria-label={hasAccess ? 'Player projections table' : 'Player salary browsing table'} tabIndex={0}>
+      <table className={`pt-table ${hasAccess ? '' : 'pt-table-salary-only'}`}>
         <thead><tr>
-          <th className="num rk">#</th><Th k="name" label="Player" /><Th k="salary" label="Salary" num /><Th k="position" label="Pos" /><Th k="team" label="Team" /><Th k="opponent" label="Opp" /><Th k="projection" label="Proj" num /><th>Tier</th><th>Basis</th>
+          {hasAccess && <th className="num rk">#</th>}<Th k="name" label="Player" /><Th k="salary" label="Salary" num /><Th k="position" label="Pos" /><Th k="team" label="Team" /><Th k="opponent" label="Opp" />{hasAccess && <><Th k="projection" label="Proj" num /><th>Tier</th><th>Basis</th></>}
         </tr></thead>
         <tbody>{rows.length ? rows.map((p, i) => {
           const t = tiers.get(p.id)!;
@@ -110,23 +114,23 @@ export default function ProjectionTable({ players, events, loading, hasCoverage 
           const homeAway = p.homeAway ?? mine?.homeAway;
           const prefix = homeAway === 'home' ? 'vs ' : homeAway === 'away' ? 'at ' : '';
           const logo = p.teamLogo ?? mine?.logo;
-          const newGroup = i === 0 || groupKey(rows[i - 1]) !== groupKey(p);
+          const newGroup = i === 0 || displayGroupKey(rows[i - 1]) !== displayGroupKey(p);
           if (newGroup) rowInGroup = 0;
           const groupRow = ++rowInGroup;
           return <Fragment key={p.id}>
             {hasMultipleGroups && newGroup && <tr className="pt-group-row"><td colSpan={9}>{p.projectionType} · {p.source}</td></tr>}
             <tr className={t.key} data-testid={`projection-${p.id}`}>
-            <td className="num rk">{p.projection === null ? '—' : groupRow}</td>
+            {hasAccess && <td className="num rk">{p.projection === null ? '—' : groupRow}</td>}
             <td className="pname">{p.name}</td>
             <td className={`num ${p.salary == null ? 'dim' : ''}`} title={p.salarySource ?? 'No salary source connected'}>{p.salary == null ? '—' : `$${p.salary.toLocaleString('en-US')}`}</td>
             <td className="mono">{p.rosterPositions || p.position || '—'}</td>
             <td><span className="pt-team">{logo ? <img src={logo} alt="" loading="lazy" /> : <span className="pt-logo-fb" />}<span className="mono">{p.team || '—'}</span></span></td>
             <td className="mono" title={p.gameInfo ?? undefined}>{oppAbbr ? `${prefix}${oppAbbr}` : '—'}</td>
-            <td className="num proj">{p.projection == null ? '—' : p.projection.toFixed(2)}</td>
+            {hasAccess && <><td className="num proj">{p.projection == null ? '—' : p.projection.toFixed(2)}</td>
             <td><span className={`pt-tier ${t.key}`} title={t.size ? `Percentile ${Math.round(t.pct * 100)} of ${t.size} in group` : 'No sourced forecast'}>{t.label}</span></td>
-            <td className="basis">{p.projectionType} · {p.source}</td>
+            <td className="basis">{p.projectionType} · {p.source}</td></>}
           </tr></Fragment>;
-        }) : <tr><td colSpan={9} className="pt-empty">No players match "{q}".</td></tr>}</tbody>
+        }) : <tr><td colSpan={hasAccess ? 9 : 5} className="pt-empty">No players match "{q}".</td></tr>}</tbody>
       </table>
     </div>
   </div>;

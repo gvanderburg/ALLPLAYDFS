@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@layer theme, base, clerk, components, utilities;
 @import 'tailwindcss';
+@import '@clerk/themes/shadcn.css';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
 
@@ -337,7 +339,7 @@ h1 { color: #f0f2ec; font-size: clamp(28px, 2.7vw, 37px); }
 .btn:hover { background: #242c23; border-color: #4c5848; }
 .btn-primary { color: #10150d; background: #9aed4b; border-color: #9aed4b; }
 .btn-primary:hover { background: #b2f677; border-color: #b2f677; }
-.content-grid { grid-template-columns: minmax(0, 1.72fr) minmax(300px, .82fr); gap: 15px; }
+.content-grid { grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr); gap: 15px; }
 .left-stack, .right-stack { gap: 15px; }
 .panel { border-color: #252b25; border-radius: 7px; background: #121613; }
 .panel-head { padding: 13px 15px 12px; border-bottom-color: #252b25; }
@@ -355,7 +357,7 @@ h1 { color: #f0f2ec; font-size: clamp(28px, 2.7vw, 37px); }
 .total-pill { color: #a3eb5b; }
 .coverage-strip { display: none; }
 .coverage-legend { display: none; }
-.news-scroll { max-height: 375px; scrollbar-color: #485143 #111511; }
+.news-scroll { max-height: 620px; scrollbar-color: #485143 #111511; }
 .news-item { border-bottom-color: #252b25; }
 .news-thumb { border-radius: 5px; background: #20261f; }
 .news-title { color: #e2e7de; }
@@ -475,3 +477,60 @@ h1 { color: #f0f2ec; font-size: clamp(28px, 2.7vw, 37px); }
   .action-group .btn { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Membership and branded auth surfaces: the existing blue-gray / mint desk,
+   with restrained mint accents reserved for verified access. */
+.member-cta { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:15px 16px; margin:0 0 15px; border:1px solid #52675f; border-radius:8px; background:linear-gradient(110deg,#283a39,#222d38 70%); }
+.member-cta-copy { min-width:0; }
+.member-cta-title { display:flex; align-items:center; gap:8px; color:#e8f0eb; font:600 14px 'Space Grotesk',sans-serif; margin:0 0 4px; }
+.member-cta-title svg { color:#9adcb9; }
+.member-cta p { margin:0; color:#b3c0c5; font-size:11px; line-height:1.5; }
+.member-cta .member-price { color:#c6e8d3; white-space:nowrap; font:500 10px var(--app-font-mono); }
+.member-cta-action { display:flex; align-items:center; gap:9px; flex-shrink:0; }
+.member-cta a, .member-inline-link { text-decoration:none; }
+.member-inline-link { color:#a9e4c1; font-size:11px; font-weight:600; }
+.member-inline-link:hover { text-decoration:underline; }
+.member-error { color:#f0b7ae!important; }
+.member-loading { height:74px; border-radius:8px; }
+.account-wrap { width:min(980px,100%); margin:0 auto; padding:38px clamp(16px,4vw,38px) 64px; }
+.account-top { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:18px 0 24px; }
+.account-brand { color:var(--slate-text); text-decoration:none; font:700 15px 'Space Grotesk',sans-serif; letter-spacing:-.04em; display:flex; align-items:center; gap:9px; }
+.account-brand-mark { width:26px; height:26px; border-radius:7px; display:grid; place-items:center; background:#9adcb9; color:#273a38; }
+.account-hero { padding:clamp(23px,5vw,44px); border:1px solid var(--slate-border); border-radius:10px; background:linear-gradient(135deg,#3a4752,#313b48 60%,#334640); }
+.account-kicker { color:#a8dec0; font:500 10px var(--app-font-mono); letter-spacing:.14em; text-transform:uppercase; }
+.account-hero h1 { color:#f0f3f2; margin:10px 0 8px; font-size:clamp(28px,5vw,40px); }
+.account-hero p { max-width:590px; color:#c1ccd0; line-height:1.65; margin:0; }
+.account-panel { margin-top:17px; padding:22px; background:var(--slate-panel); border:1px solid var(--slate-border); border-radius:9px; }
+.account-panel h2 { color:var(--slate-text); font:600 16px 'Space Grotesk',sans-serif; margin:0 0 5px; }
+.account-panel-intro { color:var(--slate-muted); font-size:12px; line-height:1.6; margin:0 0 18px; }
+.membership-state { display:flex; align-items:flex-start; gap:13px; padding:16px; border:1px solid var(--slate-divider); border-radius:7px; background:#303744; }
+.membership-state-icon { flex:0 0 34px; width:34px; height:34px; display:grid; place-items:center; border-radius:7px; background:#414d5a; color:#b8d8c5; }
+.membership-state h3 { color:#edf1f2; font:600 14px 'Space Grotesk',sans-serif; margin:1px 0 5px; }
+.membership-state p { color:#bac5cc; font-size:12px; line-height:1.6; margin:0; }
+.membership-state .member-error { color:#f0b7ae!important; }
+.membership-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:16px; }
+.membership-footnote { margin:18px 0 0; padding-top:15px; border-top:1px solid var(--slate-divider); color:#aeb9c3; font-size:11px; line-height:1.65; }
+.membership-footnote strong { color:#d9e6dd; }
+.account-status-pill { display:inline-flex; align-items:center; gap:6px; color:#c3ead3; font:500 10px var(--app-font-mono); text-transform:uppercase; letter-spacing:.08em; }
+.account-status-dot { width:6px; height:6px; border-radius:50%; background:#9adcb9; }
+.auth-page { min-height:100dvh; display:grid; grid-template-columns:minmax(0,1fr); place-items:center; padding:28px 16px; background:radial-gradient(ellipse at 50% 0%,#46525c,#303743 58%,#2b303c); }
+.auth-brand-note { position:fixed; top:22px; left:26px; color:#e8edf0; text-decoration:none; display:flex; align-items:center; gap:9px; font:700 15px 'Space Grotesk',sans-serif; }
+.auth-brand-note .account-brand-mark { width:28px; height:28px; }
+.member-confirm { width:min(440px,100%); border:1px solid #727d90; border-radius:10px; padding:23px; background:var(--slate-panel); box-shadow:0 22px 70px #12151b99; }
+.member-confirm h2 { color:var(--slate-text); font:600 19px 'Space Grotesk',sans-serif; margin:0 0 9px; }
+.member-confirm p { color:var(--slate-muted); line-height:1.6; font-size:12px; margin:0; }
+.member-confirm-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+@media (max-width:620px) {
+  .topbar { padding:0 10px; }
+  .topbar-right { gap:6px; }
+  .topbar-right .user-dot { display:none; }
+  .header-install-btn { padding:0 8px; font-size:10px; }
+  .account-header-link { padding:0 7px; }
+  .member-cta { align-items:flex-start; flex-direction:column; gap:11px; }
+  .member-cta-action { width:100%; }
+  .member-cta-action .btn { flex:1; }
+  .account-wrap { padding-top:20px; }
+  .account-panel { padding:16px; }
+  .auth-brand-note { top:14px; left:16px; }
+}
+.pt-table-salary-only { min-width: 560px; }
