@@ -90,8 +90,8 @@ export default function Account() {
       </header>
       <section className="account-hero">
         <div className="account-kicker">Your account / membership</div>
-        <h1>Player Projections</h1>
-        <p>One focused membership for the full player table: available stats, salary values, sourced forecasts and exports. Daily game slates and sports news remain free.</p>
+        <h1>Player Projections &amp; Game Takes</h1>
+        <p>One membership for the full player table and the owner’s members-only documents and video breakdowns. Available stats, salary values, forecasts and exports are included. Daily game slates and sports news remain free.</p>
       </section>
       <section className="account-panel" aria-labelledby="account-id-title" style={{ marginBottom: 18 }}>
         <h2 id="account-id-title">Your account ID</h2>
@@ -120,7 +120,7 @@ export default function Account() {
         {entitled && !status?.cancelAtPeriodEnd && <div className="membership-actions"><button className="btn btn-quiet" onClick={() => setConfirmCancel(true)} disabled={cancel.isPending}>{cancel.isPending && <LoaderCircle size={14} className="spin" />}{owner ? 'Stop existing paid renewal' : 'Stop renewal'}</button></div>}
         {!entitled && !unavailable && !checkoutReturned && <div className="membership-actions"><MembershipCheckoutButton signedIn={isSignedIn === true} label="Continue to secure checkout" /></div>}
         {unavailable && <div className="membership-actions"><button className="btn btn-quiet" onClick={() => void verify()} disabled={membershipQuery.isFetching || refreshing}><RefreshCw size={14} className={membershipQuery.isFetching || refreshing ? 'spin' : ''} /> Retry status</button></div>}
-        <p className="membership-footnote"><strong>{owner ? 'Owner access: no monthly fee.' : '$1.99 USD / month, plus applicable taxes.'}</strong> Player Projections only. Forecasts use ESPN as the default source and its default fantasy scoring; they are not DraftKings or FanDuel-scored and daily coverage is not guaranteed. Missing forecasts remain missing. Season forecasts are labeled as such. Nothing is a guaranteed outcome.</p>
+        <p className="membership-footnote"><strong>{owner ? 'Owner access: no monthly fee.' : '$1.99 USD / month, plus applicable taxes.'}</strong> Includes player data and Game Takes. Forecasts use ESPN as the default source and its default fantasy scoring; they are not DraftKings or FanDuel-scored and daily coverage is not guaranteed. Missing forecasts remain missing. Season forecasts are labeled as such. Nothing is a guaranteed outcome.</p>
       </section>
     </div>
     {confirmCancel && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !cancel.isPending) setConfirmCancel(false); }}>

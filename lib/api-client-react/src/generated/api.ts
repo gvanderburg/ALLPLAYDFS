@@ -22,13 +22,19 @@ import type {
 import type {
   CreateMembershipCheckout200,
   DfsDashboard,
+  GameTake,
+  GameTakeInput,
   GetDfsDashboardParams,
   HealthStatus,
-  MembershipStatus
+  ListGameTakes200,
+  MembershipStatus,
+  PublishTakeInput,
+  RequestTakeUpload200,
+  TakeUploadInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType } from '../custom-fetch';
+import type { ErrorType , BodyType } from '../custom-fetch';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -53,6 +59,499 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListGameTakesUrl = () => {
+
+
+
+
+  return `/api/takes`
+}
+
+/**
+ * @summary List members-only game takes; unpaid accounts receive no items
+ */
+export const listGameTakes = async ( options?: Parameters<typeof customFetch>[1]): Promise<ListGameTakes200> => {
+
+  return customFetch<ListGameTakes200>(getListGameTakesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGameTakesQueryKey = () => {
+    return [
+    `/api/takes`
+    ] as const;
+    }
+
+
+export const getListGameTakesQueryOptions = <TData = Awaited<ReturnType<typeof listGameTakes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGameTakes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGameTakesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGameTakes>>> = ({ signal }) => listGameTakes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGameTakes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGameTakesQueryResult = NonNullable<Awaited<ReturnType<typeof listGameTakes>>>
+export type ListGameTakesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List members-only game takes; unpaid accounts receive no items
+ */
+
+export function useListGameTakes<TData = Awaited<ReturnType<typeof listGameTakes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGameTakes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGameTakesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateGameTakeUrl = () => {
+
+
+
+
+  return `/api/takes`
+}
+
+/**
+ * @summary Owner publishes a completed, verified upload
+ */
+export const createGameTake = async (publishTakeInput: PublishTakeInput, options?: Parameters<typeof customFetch>[1]): Promise<GameTake> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<GameTake>(getCreateGameTakeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(publishTakeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateGameTakeMutationKey = () => ['createGameTake'] as const;
+
+export const getCreateGameTakeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGameTake>>, TError,CreateGameTakeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGameTake>>, TError,CreateGameTakeMutationVariables, TContext> => {
+
+const mutationKey = getCreateGameTakeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGameTake>>, CreateGameTakeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createGameTake(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGameTakeMutationResult = NonNullable<Awaited<ReturnType<typeof createGameTake>>>
+    export type CreateGameTakeMutationBody = BodyType<PublishTakeInput>
+    export type CreateGameTakeMutationError = ErrorType<void>
+    export type CreateGameTakeMutationVariables = {data: BodyType<PublishTakeInput>}
+
+    /**
+ * @summary Owner publishes a completed, verified upload
+ */
+export const useCreateGameTake = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGameTake>>, TError,CreateGameTakeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGameTake>>,
+        TError,
+        CreateGameTakeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateGameTakeMutationOptions(options));
+    }
+
+export const getRequestTakeUploadUrl = () => {
+
+
+
+
+  return `/api/takes/uploads`
+}
+
+/**
+ * @summary Owner requests a private direct-upload URL
+ */
+export const requestTakeUpload = async (takeUploadInput: TakeUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<RequestTakeUpload200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RequestTakeUpload200>(getRequestTakeUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(takeUploadInput)
+  }
+);}
+
+
+
+
+
+export const getRequestTakeUploadMutationKey = () => ['requestTakeUpload'] as const;
+
+export const getRequestTakeUploadMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestTakeUpload>>, TError,RequestTakeUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestTakeUpload>>, TError,RequestTakeUploadMutationVariables, TContext> => {
+
+const mutationKey = getRequestTakeUploadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestTakeUpload>>, RequestTakeUploadMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestTakeUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestTakeUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestTakeUpload>>>
+    export type RequestTakeUploadMutationBody = BodyType<TakeUploadInput>
+    export type RequestTakeUploadMutationError = ErrorType<void>
+    export type RequestTakeUploadMutationVariables = {data: BodyType<TakeUploadInput>}
+
+    /**
+ * @summary Owner requests a private direct-upload URL
+ */
+export const useRequestTakeUpload = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestTakeUpload>>, TError,RequestTakeUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestTakeUpload>>,
+        TError,
+        RequestTakeUploadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestTakeUploadMutationOptions(options));
+    }
+
+export const getUpdateGameTakeUrl = (id: string,) => {
+
+
+
+
+  return `/api/takes/${id}`
+}
+
+/**
+ * @summary Owner edits title, description, sport and game
+ */
+export const updateGameTake = async (id: string,
+    gameTakeInput: GameTakeInput, options?: Parameters<typeof customFetch>[1]): Promise<GameTake> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<GameTake>(getUpdateGameTakeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(gameTakeInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateGameTakeMutationKey = () => ['updateGameTake'] as const;
+
+export const getUpdateGameTakeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGameTake>>, TError,UpdateGameTakeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateGameTake>>, TError,UpdateGameTakeMutationVariables, TContext> => {
+
+const mutationKey = getUpdateGameTakeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateGameTake>>, UpdateGameTakeMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateGameTake(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateGameTakeMutationResult = NonNullable<Awaited<ReturnType<typeof updateGameTake>>>
+    export type UpdateGameTakeMutationBody = BodyType<GameTakeInput>
+    export type UpdateGameTakeMutationError = ErrorType<void>
+    export type UpdateGameTakeMutationVariables = {id: string;data: BodyType<GameTakeInput>}
+
+    /**
+ * @summary Owner edits title, description, sport and game
+ */
+export const useUpdateGameTake = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGameTake>>, TError,UpdateGameTakeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateGameTake>>,
+        TError,
+        UpdateGameTakeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateGameTakeMutationOptions(options));
+    }
+
+export const getDeleteGameTakeUrl = (id: string,) => {
+
+
+
+
+  return `/api/takes/${id}`
+}
+
+/**
+ * @summary Owner removes a take and its protected file
+ */
+export const deleteGameTake = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteGameTakeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteGameTakeMutationKey = () => ['deleteGameTake'] as const;
+
+export const getDeleteGameTakeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGameTake>>, TError,DeleteGameTakeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteGameTake>>, TError,DeleteGameTakeMutationVariables, TContext> => {
+
+const mutationKey = getDeleteGameTakeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteGameTake>>, DeleteGameTakeMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteGameTake(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteGameTakeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteGameTake>>>
+
+    export type DeleteGameTakeMutationError = ErrorType<void>
+    export type DeleteGameTakeMutationVariables = {id: string}
+
+    /**
+ * @summary Owner removes a take and its protected file
+ */
+export const useDeleteGameTake = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGameTake>>, TError,DeleteGameTakeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteGameTake>>,
+        TError,
+        DeleteGameTakeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteGameTakeMutationOptions(options));
+    }
+
+export const getGetGameTakeFileUrl = (id: string,) => {
+
+
+
+
+  return `/api/takes/${id}/file`
+}
+
+/**
+ * @summary Stream document or video after current membership verification; supports byte ranges
+ */
+export const getGameTakeFile = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getGetGameTakeFileUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGameTakeFileQueryKey = (id: string,) => {
+    return [
+    `/api/takes/${id}/file`
+    ] as const;
+    }
+
+
+export const getGetGameTakeFileQueryOptions = <TData = Awaited<ReturnType<typeof getGameTakeFile>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGameTakeFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGameTakeFileQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGameTakeFile>>> = ({ signal }) => getGameTakeFile(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGameTakeFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGameTakeFileQueryResult = NonNullable<Awaited<ReturnType<typeof getGameTakeFile>>>
+export type GetGameTakeFileQueryError = ErrorType<void>
+
+
+/**
+ * @summary Stream document or video after current membership verification; supports byte ranges
+ */
+
+export function useGetGameTakeFile<TData = Awaited<ReturnType<typeof getGameTakeFile>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGameTakeFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGameTakeFileQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetMembershipStatusUrl = () => {
 

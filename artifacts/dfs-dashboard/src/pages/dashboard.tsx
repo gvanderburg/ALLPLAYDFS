@@ -10,7 +10,7 @@ import useMembership from '@/hooks/use-membership';
 import {
   Activity, AlertCircle, ArrowDownToLine, CalendarDays,
   Download, ExternalLink, Info, Newspaper, RefreshCw, ShieldCheck,
-  Smartphone, TrendingUp, X,
+  Smartphone, TrendingUp, X, Film,
 } from 'lucide-react';
 
 const SPORTS: { id: DfsSport; name: string; short: string }[] = [
@@ -232,13 +232,14 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
   return <div className="app-shell">
     <header className="topbar">
       <Link href="/" className="brand" aria-label="ALLPLAY home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">ALLPLAY</span></Link>
-      <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span>{signedIn ? <Link href="/account" className="btn btn-quiet account-header-link" data-testid="link-account">Account</Link> : <Link href="/sign-in" className="btn btn-quiet account-header-link" data-testid="link-sign-in">Sign in</Link>}<button className="btn btn-primary header-install-btn" onClick={quickInstall} disabled={installed || installing} data-testid="button-install-top"><ArrowDownToLine size={15} />{installed ? 'Installed' : installing ? 'Installing…' : 'Install app'}</button><span className="user-dot" aria-label={signedIn ? 'Signed-in personal dashboard' : 'Personal dashboard'}>{signedIn ? 'ME' : 'FREE'}</span></div>
+      <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><Link href="/takes" className="btn btn-quiet account-header-link" aria-label="Game takes" data-testid="link-takes-mobile"><Film size={14} />Takes</Link>{signedIn ? <Link href="/account" className="btn btn-quiet account-header-link" data-testid="link-account">Account</Link> : <Link href="/sign-in" className="btn btn-quiet account-header-link" data-testid="link-sign-in">Sign in</Link>}<button className="btn btn-primary header-install-btn" onClick={quickInstall} disabled={installed || installing} data-testid="button-install-top"><ArrowDownToLine size={15} />{installed ? 'Installed' : installing ? 'Installing…' : 'Install app'}</button><span className="user-dot" aria-label={signedIn ? 'Signed-in personal dashboard' : 'Personal dashboard'}>{signedIn ? 'ME' : 'FREE'}</span></div>
     </header>
     <aside className="side-rail" aria-label="Dashboard navigation">
       <div className="rail-caption">YOUR WORKSPACE</div>
       <Link className={`rail-link ${projectionsOnly ? '' : 'selected'}`} href={overviewPath} aria-current={projectionsOnly ? undefined : 'page'}><Activity size={15} />Overview</Link>
       <Link className="rail-link" href={projectionsOnly ? `${overviewPath}#slate-section` : '#slate-section'}><CalendarDays size={15} />Live slate</Link>
       <Link className={`rail-link ${projectionsOnly ? 'selected' : ''}`} href="/projections" aria-current={projectionsOnly ? 'page' : undefined} data-testid="link-projections"><TrendingUp size={15} />Projections</Link>
+      <Link className="rail-link" href="/takes" data-testid="link-takes-sidebar"><Film size={15} />Game takes</Link>
       <Link className="rail-link" href={projectionsOnly ? `${overviewPath}#news-section` : '#news-section'}><Newspaper size={15} />News desk</Link>
       <div className="rail-note"><span className="rail-live-dot" />Slate data refreshes every 5 minutes</div>
       <div className="rail-bottom"><span className="rail-caption">BUILT FOR EVERY LEAGUE</span><div className="rail-sports">NFL · NHL · WNBA<br />NBA · MLB · NASCAR · CFB</div></div>

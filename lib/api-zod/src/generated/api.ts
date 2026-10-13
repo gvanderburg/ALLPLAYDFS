@@ -9,6 +9,162 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary List members-only game takes; unpaid accounts receive no items
+ */
+export const listGameTakesResponseItemsItemOneTitleMax = 150;
+
+export const listGameTakesResponseItemsItemOneDescriptionMax = 5000;
+
+export const listGameTakesResponseItemsItemOneGameMax = 150;
+
+
+
+export const ListGameTakesResponse = zod.object({
+  "hasAccess": zod.boolean(),
+  "isOwner": zod.boolean(),
+  "items": zod.array(zod.object({
+  "title": zod.string().min(1).max(listGameTakesResponseItemsItemOneTitleMax),
+  "description": zod.string().max(listGameTakesResponseItemsItemOneDescriptionMax),
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
+  "game": zod.string().max(listGameTakesResponseItemsItemOneGameMax)
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "fileName": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().int(),
+  "createdAt": zod.coerce.date()
+})))
+})
+
+
+/**
+ * @summary Owner publishes a completed, verified upload
+ */
+export const createGameTakeBodyOneTitleMax = 150;
+
+export const createGameTakeBodyOneDescriptionMax = 5000;
+
+export const createGameTakeBodyOneGameMax = 150;
+
+
+
+export const CreateGameTakeBody = zod.object({
+  "title": zod.string().min(1).max(createGameTakeBodyOneTitleMax),
+  "description": zod.string().max(createGameTakeBodyOneDescriptionMax),
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
+  "game": zod.string().max(createGameTakeBodyOneGameMax)
+}).and(zod.object({
+  "uploadId": zod.string().uuid()
+}))
+
+export const createGameTakeResponseOneTitleMax = 150;
+
+export const createGameTakeResponseOneDescriptionMax = 5000;
+
+export const createGameTakeResponseOneGameMax = 150;
+
+
+
+export const CreateGameTakeResponse = zod.object({
+  "title": zod.string().min(1).max(createGameTakeResponseOneTitleMax),
+  "description": zod.string().max(createGameTakeResponseOneDescriptionMax),
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
+  "game": zod.string().max(createGameTakeResponseOneGameMax)
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "fileName": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}))
+
+
+/**
+ * @summary Owner requests a private direct-upload URL
+ */
+export const requestTakeUploadBodyFileNameMax = 200;
+
+export const requestTakeUploadBodySizeMax = 262144000;
+
+
+
+export const RequestTakeUploadBody = zod.object({
+  "fileName": zod.string().min(1).max(requestTakeUploadBodyFileNameMax),
+  "contentType": zod.enum(['application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'video/mp4', 'video/webm']),
+  "size": zod.number().int().min(1).max(requestTakeUploadBodySizeMax)
+})
+
+export const RequestTakeUploadResponse = zod.object({
+  "uploadId": zod.string().uuid(),
+  "uploadUrl": zod.string().url()
+})
+
+
+/**
+ * @summary Owner edits title, description, sport and game
+ */
+export const UpdateGameTakeParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateGameTakeBodyTitleMax = 150;
+
+export const updateGameTakeBodyDescriptionMax = 5000;
+
+export const updateGameTakeBodyGameMax = 150;
+
+
+
+export const UpdateGameTakeBody = zod.object({
+  "title": zod.string().min(1).max(updateGameTakeBodyTitleMax),
+  "description": zod.string().max(updateGameTakeBodyDescriptionMax),
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
+  "game": zod.string().max(updateGameTakeBodyGameMax)
+})
+
+export const updateGameTakeResponseOneTitleMax = 150;
+
+export const updateGameTakeResponseOneDescriptionMax = 5000;
+
+export const updateGameTakeResponseOneGameMax = 150;
+
+
+
+export const UpdateGameTakeResponse = zod.object({
+  "title": zod.string().min(1).max(updateGameTakeResponseOneTitleMax),
+  "description": zod.string().max(updateGameTakeResponseOneDescriptionMax),
+  "sport": zod.enum(['nfl', 'nhl', 'wnba', 'nba', 'mlb', 'nascar', 'cfb']),
+  "game": zod.string().max(updateGameTakeResponseOneGameMax)
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "fileName": zod.string(),
+  "contentType": zod.string(),
+  "size": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}))
+
+
+/**
+ * @summary Owner removes a take and its protected file
+ */
+export const DeleteGameTakeParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DeleteGameTakeResponse = zod.void()
+
+
+/**
+ * @summary Stream document or video after current membership verification; supports byte ranges
+ */
+export const GetGameTakeFileParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetGameTakeFileResponse = zod.unknown()
+
+
+/**
  * @summary Get the signed-in account's verified projection access
  */
 export const GetMembershipStatusResponse = zod.object({

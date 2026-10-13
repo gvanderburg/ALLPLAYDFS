@@ -5,6 +5,69 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type DfsSport = typeof DfsSport[keyof typeof DfsSport];
+
+
+export const DfsSport = {
+  nfl: 'nfl',
+  nhl: 'nhl',
+  wnba: 'wnba',
+  nba: 'nba',
+  mlb: 'mlb',
+  nascar: 'nascar',
+  cfb: 'cfb',
+} as const;
+
+export interface GameTakeInput {
+  /**
+     * @minLength 1
+     * @maxLength 150
+     */
+  title: string;
+  /** @maxLength 5000 */
+  description: string;
+  sport: DfsSport;
+  /** @maxLength 150 */
+  game: string;
+}
+
+export type PublishTakeInput = GameTakeInput & {
+  uploadId: string;
+};
+
+export type TakeUploadInputContentType = typeof TakeUploadInputContentType[keyof typeof TakeUploadInputContentType];
+
+
+export const TakeUploadInputContentType = {
+  'application/pdf': 'application/pdf',
+  'text/plain': 'text/plain',
+  'application/vndopenxmlformats-officedocumentwordprocessingmldocument': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'video/mp4': 'video/mp4',
+  'video/webm': 'video/webm',
+} as const;
+
+export interface TakeUploadInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  fileName: string;
+  contentType: TakeUploadInputContentType;
+  /**
+     * @minimum 1
+     * @maximum 262144000
+     */
+  size: number;
+}
+
+export type GameTake = GameTakeInput & {
+  id: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+  createdAt: string;
+};
+
 export interface MembershipStatus {
   signedIn: boolean;
   /** Server-assigned owner access; never granted by the browser. */
@@ -27,19 +90,6 @@ export interface MembershipStatus {
 export interface HealthStatus {
   status: string;
 }
-
-export type DfsSport = typeof DfsSport[keyof typeof DfsSport];
-
-
-export const DfsSport = {
-  nfl: 'nfl',
-  nhl: 'nhl',
-  wnba: 'wnba',
-  nba: 'nba',
-  mlb: 'mlb',
-  nascar: 'nascar',
-  cfb: 'cfb',
-} as const;
 
 export type DfsSalaryPlatform = typeof DfsSalaryPlatform[keyof typeof DfsSalaryPlatform];
 
@@ -191,6 +241,17 @@ export interface DfsDashboard {
   salaryCoverage: DfsSalaryCoverage;
   sourceNotes: string[];
 }
+
+export type ListGameTakes200 = {
+  hasAccess: boolean;
+  isOwner: boolean;
+  items: GameTake[];
+};
+
+export type RequestTakeUpload200 = {
+  uploadId: string;
+  uploadUrl: string;
+};
 
 export type CreateMembershipCheckout200 = {
   purchaseUrl: string;

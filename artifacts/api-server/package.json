@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:takes": "node --test tests/take-files.test.mjs",
     "test:membership": "node --test tests/membership.test.mjs",
     "test:slate": "node --test tests/slate.test.mjs",
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
@@ -14,6 +15,7 @@
   "dependencies": {
     "@clerk/express": "^2.1.78",
     "@clerk/shared": "^4.40.0",
+    "@google-cloud/storage": "^8.4.0",
     "@whop/sdk": "^0.0.42",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",

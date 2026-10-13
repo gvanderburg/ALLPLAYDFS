@@ -13,6 +13,113 @@ tags:
   - name: dfs
     description: Daily fantasy sports dashboard
 paths:
+  /takes:
+    get:
+      operationId: listGameTakes
+      tags: [takes]
+      summary: List members-only game takes; unpaid accounts receive no items
+      responses:
+        "200":
+          description: Verified access and content
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [hasAccess, isOwner, items]
+                properties:
+                  hasAccess: { type: boolean }
+                  isOwner: { type: boolean }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/GameTake" }
+    post:
+      operationId: createGameTake
+      tags: [takes]
+      summary: Owner publishes a completed, verified upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishTakeInput"
+      responses:
+        "201":
+          description: Published take
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GameTake" }
+        "403": { description: Owner access required }
+        "400": { description: Invalid metadata or incomplete upload }
+  /takes/uploads:
+    post:
+      operationId: requestTakeUpload
+      tags: [takes]
+      summary: Owner requests a private direct-upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TakeUploadInput"
+      responses:
+        "200":
+          description: Private upload ticket; PUT file bytes directly to uploadUrl before publishing
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploadId, uploadUrl]
+                properties:
+                  uploadId: { type: string, format: uuid }
+                  uploadUrl: { type: string, format: uri }
+        "403": { description: Owner access required }
+        "400": { description: Invalid file or size }
+  /takes/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateGameTake
+      tags: [takes]
+      summary: Owner edits title, description, sport and game
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GameTakeInput" }
+      responses:
+        "200":
+          description: Updated take
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GameTake" }
+        "403": { description: Owner access required }
+        "404": { description: Take not found }
+    delete:
+      operationId: deleteGameTake
+      tags: [takes]
+      summary: Owner removes a take and its protected file
+      responses:
+        "204": { description: Removed }
+        "403": { description: Owner access required }
+        "404": { description: Take not found }
+  /takes/{id}/file:
+    get:
+      operationId: getGameTakeFile
+      tags: [takes]
+      summary: Stream document or video after current membership verification; supports byte ranges
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Protected file bytes }
+        "206": { description: Protected video byte range }
+        "403": { description: Membership required }
+        "404": { description: Take not found }
   /membership:
     get:
       operationId: getMembershipStatus
@@ -120,6 +227,41 @@ paths:
           description: Invalid date or sport
 components:
   schemas:
+    PublishTakeInput:
+      allOf:
+        - { $ref: "#/components/schemas/GameTakeInput" }
+        - type: object
+          required: [uploadId]
+          properties:
+            uploadId: { type: string, format: uuid }
+    TakeUploadInput:
+      type: object
+      required: [fileName, contentType, size]
+      properties:
+        fileName: { type: string, minLength: 1, maxLength: 200 }
+        contentType:
+          type: string
+          enum: [application/pdf, text/plain, application/vnd.openxmlformats-officedocument.wordprocessingml.document, video/mp4, video/webm]
+        size: { type: integer, minimum: 1, maximum: 262144000 }
+    GameTakeInput:
+      type: object
+      required: [title, description, sport, game]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 150 }
+        description: { type: string, maxLength: 5000 }
+        sport: { $ref: "#/components/schemas/DfsSport" }
+        game: { type: string, maxLength: 150 }
+    GameTake:
+      allOf:
+        - { $ref: "#/components/schemas/GameTakeInput" }
+        - type: object
+          required: [id, fileName, contentType, size, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            fileName: { type: string }
+            contentType: { type: string }
+            size: { type: integer }
+            createdAt: { type: string, format: date-time }
     MembershipStatus:
       type: object
       required: [signedIn, hasAccess, ready, status, price, currency, interval, cancelAtPeriodEnd, renewsAt, manageUrl, error]
