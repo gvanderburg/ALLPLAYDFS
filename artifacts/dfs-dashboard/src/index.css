@@ -515,6 +515,95 @@ html, body { background: #101722; }
 .salary-locked-note { display: flex; align-items: center; gap: 7px; border: 1px solid #34434a; }
 .salary-locked-note svg { color: #a7d2ba; flex: 0 0 auto; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* The model page is an owner-operated worksheet: compact, boxed and deliberately dense. */
+.model-app { background: #171a25; color: #e5e7ef; }
+.model-app .topbar { height: 54px; padding-inline: 22px; background: #202331; border-color: #3a3d4b; }
+.model-app .brand-mark { width: 26px; height: 26px; border-radius: 5px; }
+.model-app .side-rail { background: #202331; border-color: #3a3d4b; }
+.model-app .main-wrap.model-main { width: min(1840px, 100%); padding: 14px 16px 28px; }
+.model-app .model-breadcrumb { margin-bottom: 9px; }
+.model-app .model-heading { margin-bottom: 7px; align-items: center; }
+.model-app .model-heading h1 { font-size: clamp(21px, 2vw, 29px); letter-spacing: -.04em; }
+.model-app .model-heading .eyebrow { margin: 0 0 4px; font-size: 8px; }
+.model-app .model-heading .subhead { display: none; }
+.model-app .model-heading-badge { padding: 6px 9px; }
+.model-app .model-identity-strip { margin-bottom: 8px; }
+.model-app .model-controls { margin-bottom: 8px; }
+.model-app .model-control-top { padding: 8px 10px; gap: 9px 13px; }
+.model-app .model-control-date .date-field { height: 29px; }
+.model-app .model-control-actions .btn { height: 29px; }
+.model-app .model-sport-scroll { padding-bottom: 7px; }
+.model-app .model-sport-tab { padding: 6px 13px; }
+.model-app .model-disclaimer { margin-bottom: 8px; padding: 7px 10px; }
+.model-app .model-sheet { border-radius: 4px; background: #262a38; }
+.model-app .model-sheet-bar { padding: 8px 10px; background: #272b39; }
+.model-app .model-sheet-mark { width: 26px; height: 26px; }
+.model-app .model-sheet-overview { padding: 8px 11px; background: #292d3b; }
+.model-app .model-sheet-overview > div:first-child strong { font-size: 13px; }
+.model-app .model-overview-stats { gap: 22px; }
+.model-app .model-overview-stats b { font-size: 12px; }
+.model-app .model-table-area { padding: 8px 8px 0; }
+.model-app .model-table-tools { margin-bottom: 5px; }
+.model-app .model-search, .model-app .model-role-filter { height: 29px; }
+.model-app .model-salary-filter { display: inline-flex; gap: 6px; align-items: center; height: 29px; padding: 0 7px; border: 1px solid #485061; color: #a8adbb; background: #292d3a; font: 8px var(--app-font-mono); text-transform: uppercase; white-space: nowrap; }
+.model-app .model-salary-filter select { max-width: 110px; padding: 0; border: 0; background: transparent; color: #e0e2ea; font-size: 9px; }
+.model-app .model-salary-coverage { min-height: 18px; padding: 2px 1px 5px; color: #858b9b; font: 8px var(--app-font-mono); }
+.model-app .model-grid-scroll { max-height: min(72vh, 820px); overflow: auto; border-color: #4a4e5c; background: #303442; }
+.model-app .model-grid { min-width: 860px; border-collapse: separate; border-spacing: 0; font-size: 10px; }
+.model-app .model-grid th { padding: 6px 7px; background: #282c39; color: #afb3c0; border-right: 1px solid #444957; border-bottom: 1px solid #505463; font-size: 8px; }
+.model-app .model-grid th button small { padding-top: 2px; font-size: 7px; }
+.model-app .model-grid .model-player-column { min-width: 180px; }
+.model-app .model-grid td { height: 34px; padding: 3px 7px; background: #303442; border-right: 1px solid #484c5a; border-bottom: 1px solid #484c5a; color: #d8dbe3; }
+.model-app .model-player-row:hover td, .model-app .model-player-row:hover .model-player-name { background: #3b4050; }
+.model-app .model-player-name { min-width: 180px; background: #303442; }
+.model-app .model-player-name strong { font-size: 10px; font-weight: 500; }
+.model-app .model-player-name small { display: inline; margin-left: 7px; font-size: 7px; color: #778090; }
+.model-app .model-opponent { display: inline; margin: 0 0 0 5px; font-size: 8px; }
+.model-app .model-team { display: inline; }
+.model-app .model-team-logo { display: inline-block; width: 14px; height: 14px; margin-right: 4px; vertical-align: -3px; object-fit: contain; }
+.model-app .availability-pill { padding: 2px 4px; border: 0; background: transparent; color: #9eabb1; font-size: 7px; }
+.model-app .model-stat-cell { min-width: 64px; }
+.model-app .model-number { min-width: 48px; padding: 3px 5px; background: #3a3f4f; color: #e1e3e9; font-size: 10px; }
+.model-app .model-tier-high { background: #3a4851; color: #c4ead7; }
+.model-app .model-tier-mid-high { background: #3b4550; color: #dae2c7; }
+.model-app .model-tier-mid-low { background: #4a4550; color: #e2d3ac; }
+.model-app .model-tier-low { background: #4b4148; color: #e0bab1; }
+.model-app .model-missing { color: #8e94a2; background: #363a48; }
+.model-app .model-salary-cell { min-width: 70px; text-align: right !important; font: 9px var(--app-font-mono); color: #d8dbe3; }
+.model-app .model-sample { font-size: 9px; }
+.model-app .model-sample small { display: inline; margin-left: 3px; }
+.model-app .model-expand { position: sticky; right: 0; z-index: 2; background: #303442 !important; border-left: 1px solid #555968; }
+.model-app .model-grid thead .model-expand { z-index: 4; background: #282c39 !important; }
+.model-app .model-expand button { display: inline-grid; place-items: center; width: 23px; height: 23px; border: 1px solid #596071; background: #353a49; color: #b5cdbf; }
+.model-app .model-expand button:hover { background: #485347; }
+.model-app .model-legend { padding: 7px 1px; }
+.model-app .model-detail-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 12px; background: rgba(10,12,18,.76); }
+.model-app .model-detail-dialog { width: min(1000px, 100%); max-height: min(88dvh, 850px); overflow: auto; padding: 13px; border: 1px solid #64697a; background: #272b38; box-shadow: 0 18px 50px rgba(0,0,0,.42); }
+.model-app .model-detail-dialog-head { position: sticky; top: -13px; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; margin: -13px 0 12px; background: #272b38; border-bottom: 1px solid #444957; }
+.model-app .model-detail-dialog-head h2 { margin: 4px 0 0; color: #edf0f4; font: 600 17px 'Space Grotesk', sans-serif; }
+.model-app .model-detail-dialog-head .btn { height: 29px; font-size: 10px; }
+.model-app .model-detail-dialog .model-detail { width: 100%; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.model-app .model-detail-dialog .model-detail-table { min-width: 740px; }
+.model-app .model-detail-dialog .model-history-row { background: #202430; }
+.model-app .model-footer { margin-top: 10px; }
+@media (max-width: 767px) {
+  .model-app .main-wrap.model-main { padding: 10px 8px 26px; }
+  .model-app .model-breadcrumb { margin-bottom: 8px; }
+  .model-app .model-heading { margin-bottom: 6px; }
+  .model-app .model-heading-badge { display: none; }
+  .model-app .model-identity-strip { display: none; }
+  .model-app .model-control-top { padding: 8px; }
+  .model-app .model-control-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; }
+  .model-app .model-control-actions .btn { min-width: 0; font-size: 8px; }
+  .model-app .model-grid-scroll { max-height: 67vh; max-width: 100%; overflow: auto; }
+  .model-app .model-grid { min-width: 850px; }
+  .model-app .model-grid .model-player-column, .model-app .model-player-name { min-width: 145px !important; }
+  .model-app .model-player-name { left: 0; }
+  .model-app .model-detail-backdrop { padding: 0; align-items: end; }
+  .model-app .model-detail-dialog { width: 100%; max-height: 88dvh; padding: 12px 10px; }
+  .model-app .model-detail-dialog-head { top: -12px; margin: -12px 0 10px; }
+}
 @media (max-width: 950px) {
   .model-control-top { align-items: flex-end; }
   .model-control-applied { order: 3; flex-basis: 100%; }

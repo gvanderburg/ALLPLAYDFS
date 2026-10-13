@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { useAuth } from '@clerk/react';
-import type { DfsSport, GetModelProjectionsParams, ModelMetric, ModelPlayerProjection, ModelProjectionSheet, ModelStatEstimate } from '@workspace/api-client-react';
+import { getGetDfsDashboardQueryKey, useGetDfsDashboard } from '@workspace/api-client-react';
+import type { DfsDashboard, DfsSalaryPlatform, DfsSport, GetDfsDashboardParams, GetModelProjectionsParams, ModelMetric, ModelPlayerProjection, ModelProjectionSheet, ModelStatEstimate } from '@workspace/api-client-react';
 import MembershipCheckoutButton from '@/components/membership-checkout-button';
 import { useModelProjections } from '@/hooks/use-model-projections';
 import {
   Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, BarChart3,
-  CalendarDays, ChevronDown, ChevronRight, CircleHelp, Download, Film, Info,
+  CalendarDays, ChevronRight, CircleHelp, Download, Film, Info,
   LockKeyhole, Newspaper, RefreshCw, Search, Settings2, ShieldCheck, SlidersHorizontal,
   TrendingUp, UserRound,
 } from 'lucide-react';
@@ -115,7 +116,7 @@ function ModelState({ sheet, loading, error, onRetry }: { sheet?: ModelProjectio
   return null;
 }
 
-function MetricRank({ metric, stat, players }: { metric: ModelMetric; stat?: ModelStatEstimate; players: ModelPlayerProjection[] }) {
+const MetricRank = memo(function MetricRank({ metric, stat, players }: { metric: ModelMetric; stat?: ModelStatEstimate; players: ModelPlayerProjection[] }) {
   const value = stat?.projected;
   if (value == null) return <span className="model-number model-missing">—</span>;
   const valid = players.flatMap((player) => player.stats.find((item) => item.id === metric.id)?.projected ?? []);
@@ -123,8 +124,8 @@ function MetricRank({ metric, stat, players }: { metric: ModelMetric; stat?: Mod
   const rank = sorted.indexOf(value);
   const percentile = sorted.length < 2 ? .5 : rank / (sorted.length - 1);
   const tier = percentile < .25 ? 'high' : percentile < .5 ? 'mid-high' : percentile < .75 ? 'mid-low' : 'low';
-  return <span className={`model-number model-tier-${tier}`} title="Relative only to this sheet; not a calibrated probability">{fmt(value, metric.unit)}</span>;
-}
+  return <span className={`model-number model-tier-${tier}`} title="Relative only to this sheet; not a calibrated probability">{value.toFixed(2)}</span>;
+});
 
 function PlayerDetail({ player, sheet, metrics }: { player: ModelPlayerProjection; sheet: ModelProjectionSheet; metrics: ModelMetric[] }) {
   return <div className="model-detail">
@@ -147,11 +148,60 @@ function PlayerDetail({ player, sheet, metrics }: { player: ModelPlayerProjectio
   </div>;
 }
 
-function PlayerTable({ sheet }: { sheet: ModelProjectionSheet }) {
+function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: ModelProjectionSheet; dashboard?: DfsDashboard; platform: DfsSalaryPlatform; onPlatformChange: (platform: DfsSalaryPlatform) => void }) {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [direction, setDirection] = useState<'asc' | 'desc'>('asc');
+  const [detailPlayer, setDetailPlayer] = useState<ModelPlayerProjection | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  useEffect(() => { setDetailPlayer(null); }, [sheet]);
+  useEffect(() => {
+    if (!detailPlayer) return;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDetailPlayer(null);
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        closeButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      returnFocusRef.current?.focus();
+    };
+  }, [detailPlayer]);
+  const salaryRows = useMemo(() => {
+    const selectedSlateId = dashboard?.salaryCoverage?.platform === platform ? dashboard.salaryCoverage.selectedSlateId : null;
+    const dashboardDate = dashboard?.date?.slice(0, 10);
+    const dateMatches = !!sheet.slateDate && dashboardDate === sheet.slateDate;
+    const rows = (dashboard?.projections ?? []).filter((row) =>
+      dateMatches && !!selectedSlateId && row.sport === sheet.sport && row.salaryPlatform === platform
+      && row.salary != null && row.salarySlateId === selectedSlateId,
+    );
+    return sheet.players.map((player) => {
+      // ESPN and salary-provider numeric IDs are different namespaces.
+      // Require a unique name/team match on both sides rather than equating IDs.
+      const name = player.name.trim().toLocaleLowerCase();
+      const team = player.team.trim().toLocaleLowerCase();
+      const uniquePlayer = sheet.players.filter((item) => item.name.trim().toLocaleLowerCase() === name && item.team.trim().toLocaleLowerCase() === team).length === 1;
+      const nameMatches = rows.filter((row) => row.name.trim().toLocaleLowerCase() === name && !!team && row.team?.trim().toLocaleLowerCase() === team);
+      return { playerId: player.id, row: uniquePlayer && nameMatches.length === 1 ? nameMatches[0] : undefined };
+    });
+  }, [dashboard?.projections, dashboard?.salaryCoverage, dashboard?.date, sheet.players, sheet.sport, sheet.requestedDate, sheet.slateDate, platform]);
+  const salaryFor = (playerId: string) => salaryRows.find((item) => item.playerId === playerId)?.row?.salary;
+  const salaryCoverage = dashboard?.salaryCoverage;
+  const matchupFor = (player: ModelPlayerProjection) => {
+    if (!dashboard || dashboard.date?.slice(0, 10) !== sheet.slateDate) return undefined;
+    const team = player.team.trim().toLocaleLowerCase();
+    const opponent = player.opponent.trim().toLocaleLowerCase();
+    if (!team || !opponent) return undefined;
+    const games = dashboard.events.filter((event) => event.sport === sheet.sport && event.competitors.some((item) => item.abbreviation.trim().toLocaleLowerCase() === team) && event.competitors.some((item) => item.abbreviation.trim().toLocaleLowerCase() === opponent));
+    if (games.length !== 1) return undefined;
+    return games[0].competitors.find((item) => item.abbreviation.trim().toLocaleLowerCase() === team);
+  };
   const roles = useMemo(() => [...new Set(sheet.players.map((player) => player.position).filter(Boolean))].sort(), [sheet.players]);
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -175,32 +225,36 @@ function PlayerTable({ sheet }: { sheet: ModelProjectionSheet }) {
     <div className="model-table-tools">
       <label className="model-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a player, team, opponent…" aria-label="Search model players" /><kbd>/</kbd></label>
       <label className="model-role-filter"><UserRound size={14} /><span className="sr-only">Filter by role</span><select value={role} onChange={(event) => setRole(event.target.value)}><option value="all">All roles</option>{roles.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+      <label className="model-salary-filter"><span>Salary metadata</span><select value={platform} onChange={(event) => onPlatformChange(event.target.value as DfsSalaryPlatform)} aria-label="Salary platform"><option value="draftkings">DraftKings</option><option value="fanduel">FanDuel</option></select></label>
       <span className="model-result-count">{visible.length} <i>/</i> {sheet.players.length}</span>
     </div>
+    <div className="model-salary-coverage" role="status">{salaryCoverage?.platform === platform && salaryCoverage.available ? `${platform === 'draftkings' ? 'DraftKings' : 'FanDuel'} salaries for the selected slate · only unique player/team matches are shown · unmatched salaries shown as —` : 'Salary coverage unavailable for this platform and slate · salary shown as —'}</div>
     {sheet.players.length === 0 ? <div className="model-state model-empty"><TrendingUp size={22} /><h3>No player estimates published</h3><p>There are no model rows for this date. Missing samples stay blank; they are never filled with zero.</p></div>
       : visible.length === 0 ? <div className="model-state model-empty"><Search size={20} /><h3>No matching players</h3><p>Try another name or role.</p><button className="btn btn-quiet" onClick={() => { setSearch(''); setRole('all'); }}>Clear filters</button></div>
         : <div className="model-grid-scroll" role="region" aria-label="ALLPLAY raw stat projection sheet" tabIndex={0}>
           <table className="model-grid">
             <thead><tr><th className="model-player-column"><button onClick={() => toggleSort('name')}>PLAYER {sortBy === 'name' ? direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} /> : <ArrowUpDown size={12} />}</button></th>
-              <th>ROLE</th><th>TEAM / OPP</th><th>AVAILABILITY</th>
+              <th>ROLE</th><th>TEAM / OPP</th><th className="model-salary-cell">SALARY</th><th>AVAILABILITY</th>
               {sheet.metrics.map((metric) => <th className="model-stat-header" key={metric.id}><button onClick={() => toggleSort(metric.id)} title={`Sort by ${metric.label}`}>{metric.label}{sortBy === metric.id ? direction === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} /> : <ArrowUpDown size={11} />}<small>{metric.unit || metric.group}</small></button></th>)}
               <th className="model-samples-head">SAMPLE</th><th aria-label="Details" /></tr></thead>
             <tbody>{visible.map((player) => <tr key={player.id} className="model-player-row">
-              <td className="model-player-name"><span className="model-player-initials">{player.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span><span><strong>{player.name}</strong><small>{player.participation === 'conditional' ? 'IF ACTIVE' : player.participation.toUpperCase()}</small></span></td>
+              <td className="model-player-name"><span><strong>{player.name}</strong><small>{player.participation === 'conditional' ? 'IF ACTIVE' : player.participation.toUpperCase()}</small></span></td>
               <td className="model-mono">{player.position || '—'}</td>
-              <td><span className="model-team">{player.team || '—'}</span><small className="model-opponent">vs {player.opponent || '—'}</small></td>
+              <td><span className="model-team">{matchupFor(player)?.logo && <img className="model-team-logo" src={matchupFor(player)?.logo ?? undefined} alt="" loading="lazy" onError={(event) => { event.currentTarget.hidden = true; }} />}{player.team || '—'}</span><small className="model-opponent">{matchupFor(player)?.homeAway === 'away' ? 'at' : 'vs'} {player.opponent || '—'}</small></td>
+              <td className="model-salary-cell">{salaryFor(player.id) == null ? '—' : `$${salaryFor(player.id)?.toLocaleString('en-US')}`}</td>
               <td><span className={`availability-pill ${/out|inactive|doubtful/i.test(player.availability) ? 'availability-alert' : ''}`}>{player.availability || '—'}</span></td>
               {sheet.metrics.map((metric) => <td key={metric.id} className="model-stat-cell"><MetricRank metric={metric} stat={player.stats.find((stat) => stat.id === metric.id)} players={sheet.players} /></td>)}
               <td className="model-sample">{player.historicalGames || '—'} <small>games</small></td>
-              <td className="model-expand"><details><summary aria-label={`Show ${player.name} calculation and history`}><ChevronDown size={15} /></summary><PlayerDetail player={player} sheet={sheet} metrics={sheet.metrics} /></details></td>
+              <td className="model-expand"><button type="button" aria-label={`Show ${player.name} calculation and history`} title="Calculation & history" onClick={(event) => { returnFocusRef.current = event.currentTarget; setDetailPlayer(player); }}><Info size={14} /></button></td>
             </tr>)}</tbody>
           </table>
         </div>}
     <div className="model-legend"><span><i className="legend-dot legend-mint" /> Higher within this sheet</span><span><i className="legend-dot legend-amber" /> Mid-range</span><span><i className="legend-dot legend-coral" /> Lower within this sheet</span><span className="legend-disclaimer">Color is relative to this slate only.</span></div>
+    {detailPlayer && <div className="model-detail-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailPlayer(null); }}><section className="model-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="player-detail-title"><div className="model-detail-dialog-head"><div><span className="model-kicker">PLAYER DETAIL · PRIVATE MODEL</span><h2 id="player-detail-title">{detailPlayer.name}</h2></div><button ref={closeButtonRef} className="btn btn-quiet" type="button" onClick={() => setDetailPlayer(null)}>Close</button></div><PlayerDetail player={detailPlayer} sheet={sheet} metrics={sheet.metrics} /></section></div>}
   </div>;
 }
 
-function SheetBody({ sheet, loading, error, retry }: { sheet?: ModelProjectionSheet; loading: boolean; error: boolean; retry: () => void }) {
+function SheetBody({ sheet, loading, error, retry, dashboard, platform, onPlatformChange }: { sheet?: ModelProjectionSheet; loading: boolean; error: boolean; retry: () => void; dashboard?: DfsDashboard; platform: DfsSalaryPlatform; onPlatformChange: (platform: DfsSalaryPlatform) => void }) {
   return <>
     <ModelState sheet={sheet} loading={loading} error={error} onRetry={retry} />
     {sheet?.status === 'ready' && <div className="model-sheet-content">
@@ -208,7 +262,7 @@ function SheetBody({ sheet, loading, error, retry }: { sheet?: ModelProjectionSh
         <div><span className="model-kicker">MODEL SHEET · {sheet.sport.toUpperCase()}</span><strong>{sheet.slateDate ? readableDate(sheet.slateDate) : 'Date not published'}</strong><small>Requested {sheet.requestedDate} · cut off {readableDate(sheet.effectiveAsOf)}</small></div>
         <div className="model-overview-stats"><span><b>{sheet.players.length}</b><small>PLAYERS</small></span><span><b>{sheet.gameCount}</b><small>GAMES</small></span><span><b>{sheet.observedTeams}</b><small>TEAMS</small></span><span><b>{sheet.failedGames}</b><small>FAILED</small></span></div>
       </div>
-      <PlayerTable sheet={sheet} />
+      <PlayerTable sheet={sheet} dashboard={dashboard} platform={platform} onPlatformChange={onPlatformChange} />
       <div className="model-method">
         <div className="model-method-title"><BarChart3 size={15} /><strong>WHAT PRODUCES THE NUMBER</strong><span>ALLPLAY CUSTOM MODEL · NOT BACKTESTED</span></div>
         <p>{sheet.modelFormula || 'Recent player performance is blended with up to ten appearances, then adjusted by observed opponent matchup history.'}</p>
@@ -241,15 +295,19 @@ export function ModelPreview({ sport, date }: { sport: DfsSport; date: string })
 }
 
 export default function ModelProjectionsPage() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useAuth();
   const signedIn = isLoaded && isSignedIn === true;
   const [sport, setSport] = useState<DfsSport>('nfl');
   const [date, setDate] = useState(today);
   const [draft, setDraft] = useState<Settings>(defaultSettings);
   const [applied, setApplied] = useState<Settings>(defaultSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [salaryPlatform, setSalaryPlatform] = useState<DfsSalaryPlatform>('draftkings');
   const params = useMemo<GetModelProjectionsParams>(() => ({ sport, date, ...applied }), [sport, date, applied]);
   const { sheet, query, membership, verified } = useModelProjections(params);
+  const dashboardParams = useMemo<GetDfsDashboardParams>(() => ({ sport, date: sheet?.slateDate || date, salaryPlatform }), [sport, date, sheet?.slateDate, salaryPlatform]);
+  const dashboardKey = useMemo(() => [...getGetDfsDashboardQueryKey(dashboardParams), { clerkUserId: userId ?? 'signed-out' }] as const, [dashboardParams, userId]);
+  const dashboardQuery = useGetDfsDashboard(dashboardParams, { query: { queryKey: dashboardKey, enabled: verified && sheet?.status === 'ready', refetchOnWindowFocus: false, staleTime: 60_000 } });
   const [focusSport, setFocusSport] = useState(sport);
   useEffect(() => { setFocusSport(sport); }, [sport]);
   useEffect(() => {
@@ -304,7 +362,7 @@ export default function ModelProjectionsPage() {
           <div className="model-sheet-bar"><div><div className="model-sheet-mark"><BarChart3 size={17} /></div><div><span className="model-kicker">ALLPLAY / MATCHUP STAT PROJECTIONS</span><h2 id="model-sheet-title">{selectedSport} research sheet</h2></div></div><span className={`model-status-tag ${sheet?.status === 'ready' ? 'status-ready' : sheet?.status === 'warming' ? 'status-warming' : ''}`}>{query.isError ? 'ERROR' : sheet?.status?.toUpperCase() ?? (query.data?.status === 'locked' ? 'LOCKED' : query.isLoading ? 'REQUESTING' : 'PENDING')}</span></div>
           <div className="model-sheet-body">{verified && query.data?.status === 'locked'
             ? <div className="model-state"><LockKeyhole size={22} /><h3>Model sheet is locked</h3><p>ALLPLAY has not released player values for this request. No cached model data is displayed.</p></div>
-            : <SheetBody sheet={sheet} loading={query.isLoading && !query.data} error={query.isError} retry={() => void query.refetch()} />}</div>
+             : <SheetBody sheet={sheet} loading={query.isLoading && !query.data} error={query.isError} retry={() => void query.refetch()} dashboard={verified && sheet?.status === 'ready' ? dashboardQuery.data : undefined} platform={salaryPlatform} onPlatformChange={setSalaryPlatform} />}</div>
         </section>}
       <footer className="model-footer"><span>ALLPLAY · Owner-built matchup model</span><span><Link href="/user-portal">Overview</Link><Link href="/takes">Game Takes</Link><Link href="/account">Account</Link></span></footer>
     </main>
