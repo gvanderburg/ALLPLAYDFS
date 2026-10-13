@@ -1,10 +1,11 @@
 import type { ModelProjectionSheet } from "@workspace/api-zod";
 import { METRICS } from "./metrics";
 import { calculatePlayers } from "./calculate";
-import { loadHistory, resolveModelSlate, slateCandidates } from "./provider";
+import { loadHistory, resolveModelSlate, slateCandidates, unstartedModelEvents } from "./provider";
 import type { ModelSettings, ModelSport } from "./types";
 import { list, obj, str } from "./normalize";
 import { publishedMatchups } from "./published-rankings";
+import { forecastHistoryCutoff, verifiedFinalsAsOf } from "./history-cutoff";
 
 interface Job { expiresAt: number; sheet: ModelProjectionSheet; }
 const jobs = new Map<string, Job>();
@@ -28,7 +29,7 @@ export function emptyModelSheet(
     players: [], metrics: METRICS[sport].map(({ id, label, unit, group, higherIsBetter }) => ({ id, label, unit, group, higherIsBetter })),
     modelFormula: sport === "nascar" ?
       "Blend recency-weighted finishes with up to 10 prior-race finishes, then shrink an exact published-venue adjustment toward neutral. No team-defense or fantasy-point scoring is used." :
-      "Blend recency-weighted form with up to 10 prior appearances. Where available, predict workload × per-opportunity rate, then apply a sample-shrunk opponent stat adjustment capped at ±20%.",
+      "Predict current workload × recorded per-opportunity efficiency, using recency-weighted completed games and a sample-shrunk matchup adjustment capped at ±20%. Football uses current-season form when at least two appearances exist; previous-season history is a sparse-sample fallback.",
     notes: status === "locked" ? ["Player stats, histories and model estimates require verified membership or owner access."] :
       ["ALLPLAY's independent statistical baseline—not a provider forecast and not an accuracy-tested machine-learning model."],
   };
@@ -38,12 +39,12 @@ function sharedHistory(
   sport: ModelSport, cutoff: string, progress: (done: number, total: number, failed: number) => void,
   context: { teams: string[]; phase: number; season: number },
 ) {
-  const key = `${sport}:${cutoff}:${context.phase}:${context.season}:${[...context.teams].sort().join(",")}`;
+  const key = `${sport}:${Math.floor(Date.parse(cutoff) / 300_000)}:${context.phase}:${context.season}:${[...context.teams].sort().join(",")}`;
   let entry = historyLoads.get(key);
   if (!entry || entry.expiresAt < Date.now()) {
     const listeners = new Set<typeof progress>();
     const created = {
-      expiresAt: Date.now() + 30 * 60_000, listeners, progress: [0, 0, 0] as [number, number, number],
+      expiresAt: Date.now() + 5 * 60_000, listeners, progress: [0, 0, 0] as [number, number, number],
       promise: Promise.resolve({ games: [], failed: 0, truncated: false }) as ReturnType<typeof loadHistory>,
     };
     historyLoads.set(key, created);
@@ -77,8 +78,8 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
       job.expiresAt = Date.now() + 5 * 60_000;
       return;
     }
-    const day = Math.min(Date.parse(`${slate.date}T00:00:00Z`), Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`));
-    const cutoff = new Date(day).toISOString();
+    const forward = slate.date >= new Date().toISOString().slice(0, 10) || unstartedModelEvents(slate.events).length > 0;
+    let cutoff = forward ? new Date().toISOString() : forecastHistoryCutoff(slate.date);
     job.sheet.effectiveAsOf = new Date(cutoff);
     const history = await sharedHistory(sport, cutoff, (done, total, failed) => {
       job.sheet.processedGames = done;
@@ -89,9 +90,21 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
         .map(c => str(obj(c).id || obj(obj(c).team).id)).filter(Boolean)))],
       phase: slate.phase, season: Number(obj(slate.events[0]?.season).year),
     });
-    const eligible = history.games.filter(game => game.phase === slate.phase);
+    if (forward) {
+      cutoff = new Date().toISOString();
+      slate.events = unstartedModelEvents(slate.events);
+      job.sheet.gameCount = slate.events.length;
+      if (!slate.events.length) {
+        job.sheet.status = "unavailable";
+        job.sheet.notes.push("The selected games started while history was loading. Refresh to research the next unstarted slate; no post-start forecast is substituted.");
+        job.expiresAt = Date.now() + 60_000;
+        return;
+      }
+    }
+    job.sheet.effectiveAsOf = new Date(cutoff);
+    const eligible = (forward ? verifiedFinalsAsOf(history.games, cutoff) : history.games).filter(game => game.phase === slate.phase);
     const candidates = await slateCandidates(sport, slate, eligible);
-    const calculated = calculatePlayers(sport, candidates.players, eligible, settings, cutoff, slate.phase, slate.venue);
+    const calculated = calculatePlayers(sport, candidates.players, eligible, settings, cutoff, slate.phase, slate.venue, Number(obj(slate.events[0]?.season).year));
     const published = await publishedMatchups(calculated.players, sport, Number(obj(slate.events[0]?.season).year), slate.date, new Date(cutoff));
     job.sheet.players = published.players;
     job.sheet.generatedAt = new Date();
@@ -102,15 +115,17 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
     job.sheet.notes.push(
       ...candidates.notes,
       "Current depth charts / dated lineups and observed recent workload determine role eligibility. Backup QBs, unconfirmed goalies, non-probable pitchers and unverified entrants cannot become full-game value picks. Basketball bench rotations may still offer value based on recorded minutes. Missing roles are not zero-point forecasts.",
-      `Recent form uses the last ${settings.recentGames} published appearances with weights 0.8^age; its blend weight is ${settings.recentWeight}%. Baseline is up to 10 earlier appearances, not a full-season average.`,
+      `Recent form uses the last ${settings.recentGames} published appearances with weights 0.8^age; its blend weight is ${settings.recentWeight}%. Baseline is up to 10 appearances. Football prefers the slate's current season once two player appearances exist; prior-season records are used only for sparse player coverage.`,
       `Matchup influence is ${settings.matchupWeight}%, shrunk by opponent games/5 and observed teams/8 (each capped at 1). Adjustment never exceeds ±20%.`,
-      "Only completed games before the displayed UTC cutoff are used. Requested-day games, live games and future results are excluded; preseason and regular-season data are not mixed.",
+      "Forward forecasts include verified games finished earlier today. A stored final-observation timestamp must precede the displayed data snapshot; live, unfinished and future games are excluded. Completed-game discovery and sheets refresh on a five-minute cache cycle while the page is used; this is not an unattended background training service.",
       "Historical samples count published box-score appearances, not scheduled games. DNPs and unpublished categories are not filled with zero; observed zero stats remain valid zeros.",
-      "Opponent ranks are calculated from observed stat totals per game, lowest to highest, among covered teams with at least two games. They are not official overall or position-specific league power rankings.",
+      "Opponent ranks use observed stats among covered teams with at least two games. Football yards, catches, TDs and interceptions use per-attempt/per-target efficiency so opportunity and matchup volume are not counted twice. Other matchup metrics remain per game. These are not published power rankings.",
       "Goalie and pitcher matchups use opponent attacking production. NBA/WNBA minutes, NHL ice time and MLB innings/at-bats determine opportunity where available. Saves are reconciled to shots faced minus goals allowed; catches/completions/hits cannot exceed their opportunity estimates.",
       "These are conditional-on-playing estimates. Injuries, trades, confirmed lineups, starting roles, pace and coaching changes are not learned automatically. Check availability before using any estimate.",
       "ALLPLAY forecasts raw stats from ESPN completed box scores. Published site scoring rules convert those own forecasts to fantasy points; provider fantasy forecasts and ownership predictions are never copied.",
-      "Upcoming teams' latest ten completed same-phase appearances are prioritized, including the preceding season if needed. Older records can reflect changed roles; recent-form weights use appearance order, not calendar age.",
+      "Upcoming teams' latest ten completed same-phase appearances are prioritized. Football passing yards and TDs scale with attempts, rushing output with carries, and receiving output with targets. Verified current roles change the opportunity once, not twice. Older records can reflect changed roles; recent weights use appearance order, not calendar age.",
+      "Fantasy scores are base player scores, not Showdown MVP/Captain scores. An uploaded slate's 1.5× projection, projected ownership and future Actual=0 entries are not completed-game training outcomes and are never copied into forecasts.",
+      "Football TD and interception rates shrink toward observed league rates when at least eight players have two usable appearances. Published same-position cohorts are preferred; boxes without positions use an explicitly labeled opportunity-type cohort, never guessed WR/RB/TE labels. Prior strength comes from observed between-player variation, capped by median recorded opportunities; it is not fitted to an uploaded forecast or an accuracy guarantee.",
       "Fantasy outcome ranges use 2,048 deterministic count simulations from ALLPLAY means and sample-shrunk historical variance. Supported scoring is available where all required inputs have at least two appearances. Missing scoring inputs leave full totals/ranges blank; known-stat subtotals are not full projections.",
       "Model team/game totals use covered teams' historical scoring production and a sample-shrunk opponent allowance adjustment. They are independent model estimates, not market lines. Totals are unavailable outside NHL/NBA/WNBA or with fewer than two team appearances.",
       "Hockey PP/SH points and shot attempts require play logs that reconcile to box scores. Football zero category counts require reconciled team category totals; rare scores require a complete play log and matched final score. Missing input is not zero.",

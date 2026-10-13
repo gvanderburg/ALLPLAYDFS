@@ -25,12 +25,45 @@ export function enrichFootball(data: Json, competition: Json, players: Map<strin
       const group = groups.find(g => str(g.name || g.type) === category);
       if (!group) continue;
       const keys = list(group.keys).map(str), entries = list(group.athletes).map(obj);
+      const ids = entries.map(e => str(obj(e.athlete).id));
+      if (ids.some(id => !id) || new Set(ids).size !== ids.length) continue;
+      if (category === "passing") {
+        const index = keys.indexOf("completions/passingAttempts");
+        const pair = (value: unknown) => {
+          const parts = str(value).split("/");
+          return parts.length === 2 ? parts.map(numeric) : [null, null];
+        };
+        const total = pair(list(group.totals)[index]);
+        const values = entries.map(e => pair(list(e.stats)[index]));
+        const reconciled = index >= 0 && total.every(v => v !== null && v >= 0) &&
+          values.every(v => v.every(n => n !== null && n >= 0) && v[0]! <= v[1]!) &&
+          [0, 1].every(i => values.reduce((sum, row) => sum + row[i]!, 0) === total[i]);
+        if (reconciled) for (const player of active) {
+          const row = values[ids.indexOf(player.id)] ?? [0, 0];
+          player.stats.passingCompletions = row[0]!;
+          player.stats.passingAttempts = row[1]!;
+        }
+      }
       for (const [source, target] of Object.entries(fields)) {
         const index = keys.indexOf(source);
         const total = index < 0 ? null : numeric(list(group.totals)[index]);
         const observations = entries.map(e => numeric(list(e.stats)[index]));
-        if (total === null || observations.some(v => v === null) ||
-            Math.abs(observations.reduce<number>((n, v) => n + (v ?? 0), 0) - total) > .001) continue;
+        if (total === null || observations.some(v => v === null)) continue;
+        const sum = observations.reduce<number>((n, v) => n + (v ?? 0), 0);
+        let reconciled = Math.abs(sum - total) <= .001;
+        // ESPN's team passing total is NET of sacks; athlete passing yards are GROSS.
+        // Validate both sack components before deriving absent-player zeros.
+        if (!reconciled && category === "passing" && source === "passingYards") {
+          const sackIndex = keys.indexOf("sacks-sackYardsLost");
+          const pair = (value: unknown) => str(value).split("-").map(numeric);
+          const totalSacks = pair(list(group.totals)[sackIndex]);
+          const sacks = entries.map(e => pair(list(e.stats)[sackIndex]));
+          const verifiedSacks = sackIndex >= 0 && totalSacks.length === 2 && totalSacks.every(v => v !== null && v >= 0) &&
+            sacks.every(row => row.length === 2 && row.every(v => v !== null && v >= 0)) &&
+            [0, 1].every(i => sacks.reduce((n, row) => n + row[i]!, 0) === totalSacks[i]);
+          reconciled = verifiedSacks && Math.abs(sum - totalSacks[1]! - total) <= .001;
+        }
+        if (!reconciled) continue;
         const recorded = new Map(entries.map((e, i) => [str(obj(e.athlete).id), observations[i]!]));
         for (const player of active) player.stats[target] = recorded.get(player.id) ?? 0;
       }

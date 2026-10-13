@@ -3,6 +3,7 @@ import type { ModelSport } from "./types";
 
 export interface MetricDefinition extends ModelMetric {
   exposure?: string;
+  matchupExposure?: string;
   matchup?: { metric: string; mode: "allowed" | "attack" };
   maximum?: number;
   minimum?: number;
@@ -13,18 +14,18 @@ const metric = (id: string, label: string, group: string, options: Partial<Metri
 const allowed = (id: string, label: string, group: string, options: Partial<MetricDefinition> = {}) =>
   metric(id, label, group, { matchup: { metric: id, mode: "allowed" }, ...options });
 const football = [
-  allowed("passingYards", "Pass yards", "Passing", { unit: "yards" }),
-  allowed("passingTDs", "Pass TD", "Passing"),
   allowed("passingAttempts", "Pass attempts", "Passing"),
-  allowed("passingCompletions", "Completions", "Passing"),
-  allowed("interceptionsThrown", "INT thrown", "Passing", { higherIsBetter: false }),
+  allowed("passingCompletions", "Completions", "Passing", { exposure: "passingAttempts", matchupExposure: "passingAttempts" }),
+  allowed("passingYards", "Pass yards", "Passing", { unit: "yards", exposure: "passingAttempts", matchupExposure: "passingAttempts" }),
+  allowed("passingTDs", "Pass TD", "Passing", { exposure: "passingAttempts", matchupExposure: "passingAttempts" }),
+  allowed("interceptionsThrown", "INT thrown", "Passing", { higherIsBetter: false, exposure: "passingAttempts", matchupExposure: "passingAttempts" }),
   allowed("rushingAttempts", "Rush attempts", "Rushing"),
-  allowed("rushingYards", "Rush yards", "Rushing", { unit: "yards" }),
-  allowed("rushingTDs", "Rush TD", "Rushing"),
-  allowed("receptions", "Receptions", "Receiving"),
-  allowed("receivingYards", "Rec yards", "Receiving", { unit: "yards" }),
-  allowed("receivingTDs", "Rec TD", "Receiving"),
+  allowed("rushingYards", "Rush yards", "Rushing", { unit: "yards", exposure: "rushingAttempts", matchupExposure: "rushingAttempts" }),
+  allowed("rushingTDs", "Rush TD", "Rushing", { exposure: "rushingAttempts", matchupExposure: "rushingAttempts" }),
   allowed("targets", "Targets", "Receiving"),
+  allowed("receptions", "Receptions", "Receiving", { exposure: "targets", matchupExposure: "targets" }),
+  allowed("receivingYards", "Rec yards", "Receiving", { unit: "yards", exposure: "targets", matchupExposure: "targets" }),
+  allowed("receivingTDs", "Rec TD", "Receiving", { exposure: "targets", matchupExposure: "targets" }),
   metric("fumblesLost", "Fumbles lost", "Scoring", { higherIsBetter: false }),
   metric("twoPointConversions", "2PT conversions", "Scoring"),
   metric("returnTouchdowns", "Return TD", "Scoring"),

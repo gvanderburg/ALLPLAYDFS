@@ -159,11 +159,12 @@ function PlayerDetail({ player, sheet, metrics }: { player: ModelPlayerProjectio
       <table className="model-detail-table"><thead><tr><th>STAT</th><th>ESTIMATE</th><th>RECENT AVG</th><th>BASELINE ≤10</th><th>OPP RANK</th><th>ADJUSTMENT</th><th>OPP AVG</th><th>LEAGUE AVG</th><th>SAMPLE</th></tr></thead>
         <tbody>{player.stats.map((stat) => {
           const metric = metrics.find((item) => item.id === stat.id);
-          return <tr key={stat.id}><th>{metric?.label ?? stat.id}<small>{metric?.unit || 'raw stat'}</small></th><td className="detail-highlight">{fmt(stat.projected, metric?.unit)}</td><td>{fmt(stat.recentAverage, metric?.unit)} <small>n={stat.recentSampleSize}</small></td><td>{fmt(stat.baselineAverage, metric?.unit)}</td><td>{stat.opponentRank == null ? '—' : `${stat.opponentRank} / ${stat.rankedTeams || '—'}`}<small>{stat.rankedTeams ? 'observed teams' : 'unranked'}</small></td><td>{fmt(stat.matchupMultiplier, '×')}</td><td>{fmt(stat.opponentMean, metric?.unit)}<small>{stat.defenseGames} games</small></td><td>{fmt(stat.leagueMean, metric?.unit)}</td><td>{stat.sampleSize} <small>total</small></td></tr>;
+          return <tr key={stat.id}><th>{metric?.label ?? stat.id}<small>{metric?.unit || 'raw stat'}</small></th><td className="detail-highlight">{fmt(stat.projected, metric?.unit)}</td><td>{fmt(stat.recentAverage, metric?.unit)} <small>n={stat.recentSampleSize}</small></td><td>{fmt(stat.baselineAverage, metric?.unit)}</td><td>{stat.opponentRank == null ? '—' : `${stat.opponentRank} / ${stat.rankedTeams || '—'}`}<small>{stat.rankedTeams ? 'observed teams' : 'unranked'}</small></td><td>{fmt(stat.matchupMultiplier, '×')}</td><td>{fmt(stat.opponentMean, metric?.unit)}<small>{stat.matchupBasis || 'Per game'} · {stat.defenseGames} games</small></td><td>{fmt(stat.leagueMean, metric?.unit)}<small>{stat.matchupBasis || 'Per game'}</small></td><td>{stat.sampleSize} <small>total</small></td></tr>;
         })}</tbody>
       </table>
     </div>
     <div className="model-history">
+      {player.stats.some(stat => stat.ratePriorMean != null) && <p className="model-reference-note">Rare-event efficiency uses observed league evidence: {player.stats.filter(stat => stat.ratePriorMean != null).map(stat => `${sheet.metrics.find(metric => metric.id === stat.id)?.label || stat.id}: ${(stat.ratePriorMean! * 100).toFixed(2)}% per opportunity, prior strength ${(stat.ratePriorOpportunities ?? 0).toFixed(1)} (${stat.ratePriorScope || 'cohort not published'})`).join(' · ')}. These are stabilizing historical inputs, not calibrated outcome probabilities.</p>}
       <div className="model-history-head"><strong>LAST PERFORMANCES</strong><span>{player.history.length} appearances · cutoff {readableDate(sheet.effectiveAsOf)}</span></div>
       {player.history.length ? <div className="model-history-list">{player.history.map((item) => <article className="model-history-row" key={`${player.id}-${item.eventId}-${item.date}`}><time>{readableDate(item.date)}</time><span>vs {item.opponent || '—'}</span><div>{Object.entries(item.stats).map(([id, value]) => {
         const metric = metrics.find((candidate) => candidate.id === id);
@@ -404,7 +405,7 @@ function SheetBody({ sheet, loading, error, retry, dashboard, platform, onPlatfo
       <PlayerTable sheet={sheet} dashboard={dashboard} platform={platform} onPlatformChange={onPlatformChange} />
       <div className="model-method">
         <div className="model-method-title"><BarChart3 size={15} /><strong>WHAT PRODUCES THE NUMBER</strong><span>ALLPLAY CUSTOM MODEL · NOT BACKTESTED</span></div>
-        <p>{sheet.modelFormula || 'Recent player performance is blended with up to ten appearances, then adjusted by observed opponent matchup history.'}</p>
+        <p>{sheet.modelFormula || 'Recent player performance is blended with up to ten appearances, then adjusted by observed opponent matchup history.'} Fantasy points are base scores, before any Showdown MVP/Captain multiplier.</p>
         <ul>{sheet.notes.map((note, index) => <li key={`${index}-${note}`}>{note}</li>)}</ul>
          <div className="model-caveats"><span>Conditional on participation</span><span>Observed ranks are not calibrated probabilities</span><span>Rank 1 = lowest observed metric</span><span>Site-rule scoring · simulation ranges are not confidence intervals</span><span>Not backtested</span>{sheet.sport === 'nascar' && <span>Same-venue history only where supported; entry pool is conditional if published</span>}</div>
       </div>

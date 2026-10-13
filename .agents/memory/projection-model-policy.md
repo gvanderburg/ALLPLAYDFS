@@ -32,3 +32,15 @@ For NFL matchup context, the user selected both PFF secondary strength and Fanta
 **Why:** They want both defensive-unit quality and position-specific matchup information, while retaining independent ALLPLAY player forecasts.
 
 **How to apply:** Keep the two ratings separately labeled and dated. Public preview coverage is not permission to retrieve gated report rows. Do not invent an ordinal-rank-to-stat adjustment: incorporating published ratings into numerical forecasts requires an explicit, tested mapping rather than an arbitrary bonus.
+
+Uploaded projection sheets are diagnostic benchmarks, not completed-game labels. Normalize the scoring site and roster-slot multiplier before comparing forecasts.
+
+**Why:** The user's FanDuel Showdown reference had 1.5× headline projections but separate base `fd_points`, and all future-game “Actual” entries were zero. Comparing unlike slots or treating those placeholders as outcomes would corrupt calibration.
+
+**How to apply:** Compare base-to-base (or apply the same explicit slot multiplier to both). Keep published projections and ownership separate from verified final-game results. The user wants forecasts to keep incorporating real completed games from 2026-10-13 onward; forward updates are required, but improved accuracy must be demonstrated against actual subsequent results, not similarity to another forecaster.
+
+Recheck official contest scoring rather than assuming older FanDuel conventions.
+
+**Why:** FanDuel's official rules, verified on 2026-10-13 at https://www.fanduel.com/rules, list NFL +3 bonuses for 300 passing yards and 100 rushing/receiving yards. Treating all such bonuses as DraftKings-only would incorrectly alter this model.
+
+**How to apply:** Confirm the current sport and contest variant before changing coefficients or interpreting a reference sheet's points. Do not infer scoring rules solely from another provider's projection totals.

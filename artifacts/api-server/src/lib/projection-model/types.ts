@@ -11,6 +11,8 @@ export interface HistoricalGame {
   version: number;
   id: string;
   date: string;
+  /** When the source was actually observed to report this game as completed. */
+  finalObservedAt?: string;
   phase: number;
   season: number;
   venue: string;
@@ -44,4 +46,4 @@ export const MODEL_SPORTS: Record<ModelSport, { path: string; historyDays: numbe
   nascar: { path: "racing/nascar-premier", historyDays: 730 },
 };
 // Bump together when parsing, eligibility or historical-data meaning changes.
-export const HISTORY_VERSION = 4;
+export const HISTORY_VERSION = 5;

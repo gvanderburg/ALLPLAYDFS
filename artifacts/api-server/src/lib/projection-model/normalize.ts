@@ -103,7 +103,7 @@ export function normalizeSummary(payload: unknown, sport: ModelSport): Historica
   if (sport === "nfl" || sport === "cfb") enrichFootball(data, competition, players);
   if (sport === "mlb") enrichBaseball(data, competition, players);
   return {
-    version: HISTORY_VERSION, id, date, teams, players: [...players.values()],
+    version: HISTORY_VERSION, id, date, finalObservedAt: new Date().toISOString(), teams, players: [...players.values()],
     phase: Number(obj(header.season).type ?? 0), season: Number(obj(header.season).year ?? 0),
     venue: str(obj(obj(data.gameInfo).venue).fullName),
   };
@@ -221,7 +221,7 @@ export function normalizeRace(eventValue: unknown): HistoricalGame | null {
     }] : [];
   });
   return players.length ? {
-    version: HISTORY_VERSION, id, date, phase: Number(obj(event.season).type ?? 0), season: Number(obj(event.season).year ?? 0),
+    version: HISTORY_VERSION, id, date, finalObservedAt: new Date().toISOString(), phase: Number(obj(event.season).type ?? 0), season: Number(obj(event.season).year ?? 0),
     venue: str(event.name), teams: [], players,
   } : null;
 }

@@ -7,6 +7,8 @@ import { annualHistoryRanges } from "./date-ranges";
 import { completedScheduleIds } from "./schedule-history";
 import { baseballBoxFor } from "./baseball-scoring";
 import { loadTeamRoles } from "./playing-roles";
+import { unstartedModelEvents } from "./history-cutoff";
+export { unstartedModelEvents } from "./history-cutoff";
 
 const SITE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE = "https://sports.core.api.espn.com/v2/sports";
@@ -36,11 +38,14 @@ export async function resolveModelSlate(sport: ModelSport, requestedDate: string
   let payload = obj(await fetchSportsJson(`${base}/scoreboard?dates=${date.replaceAll("-", "")}&limit=200`));
   const today = new Date().toISOString().slice(0, 10);
   const initial = list(payload.events).map(obj);
-  if (!initial.length || (requestedDate === today && initial.every(e => obj(obj(e.status).type).completed === true))) {
+  // A US slate day may be yesterday in UTC but still contain unstarted evening games.
+  const forward = requestedDate >= today || unstartedModelEvents(initial).length > 0;
+  if (!initial.length || (forward && !unstartedModelEvents(initial).length)) {
     const next = await findNextSlate(base, requestedDate, payload, fetchSportsJson);
     if (next) { date = next.date; payload = obj(next.scoreboard); }
   }
-  const events = list(payload.events).map(obj);
+  const discovered = list(payload.events).map(obj);
+  const events = forward || date >= today ? unstartedModelEvents(discovered) : discovered;
   return {
     date, events, phase: numeric(obj(events[0]?.season).type) ?? 0,
     venue: sport === "nascar" ? str(events[0]?.name) : "",
@@ -51,6 +56,7 @@ function storedHistory(value: unknown): value is HistoricalGame {
   const record = obj(value);
   return record.version === HISTORY_VERSION && typeof record.id === "string" &&
     typeof record.date === "string" && Number.isFinite(Date.parse(record.date)) &&
+    typeof record.finalObservedAt === "string" && Number.isFinite(Date.parse(record.finalObservedAt)) &&
     Array.isArray(record.teams) && Array.isArray(record.players);
 }
 
@@ -60,7 +66,7 @@ export async function loadHistory(
 ): Promise<{ games: HistoricalGame[]; failed: number; truncated: boolean; scheduleFailures?: number }> {
   const config = MODEL_SPORTS[sport];
   const before = new Date(cutoff), after = new Date(before.getTime() - config.historyDays * 86400000);
-  const lastDay = new Date(before.getTime() - 86400000).toISOString().slice(0, 10).replaceAll("-", "");
+  const lastDay = new Date(before.getTime() - 1).toISOString().slice(0, 10).replaceAll("-", "");
   const startDay = after.toISOString().slice(0, 10).replaceAll("-", "");
   if (sport === "nascar") {
     // A multi-year racing query is HTTP 400, even though individual annual ranges work.

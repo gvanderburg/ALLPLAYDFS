@@ -453,6 +453,10 @@ components:
         recentAverage: { type: ["number", "null"] }
         baselineAverage: { type: ["number", "null"] }
         matchupMultiplier: { type: number }
+        matchupBasis: { type: string, description: Unit of opponent and league means, such as per passing attempt rather than per game }
+        ratePriorMean: { type: number, description: Completed-game cohort event frequency per opportunity, when supported }
+        ratePriorOpportunities: { type: number, description: Empirically estimated prior strength in opportunity units }
+        ratePriorScope: { type: string, description: Published position cohort or explicit opportunity-based fallback when historical positions are absent }
         opponentRank: { type: ["integer", "null"] }
         rankedTeams: { type: integer }
         defenseGames: { type: integer }

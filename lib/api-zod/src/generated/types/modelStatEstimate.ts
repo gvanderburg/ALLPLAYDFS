@@ -15,6 +15,14 @@ export interface ModelStatEstimate {
   /** @nullable */
   baselineAverage: number | null;
   matchupMultiplier: number;
+  /** Unit of opponent and league means */
+  matchupBasis?: string;
+  /** Completed-game cohort event frequency per opportunity */
+  ratePriorMean?: number;
+  /** Empirically estimated prior strength in opportunity units */
+  ratePriorOpportunities?: number;
+  /** Published position cohort or explicit opportunity-based fallback when historical positions are absent */
+  ratePriorScope?: string;
   /** @nullable */
   opponentRank: number | null;
   rankedTeams: number;

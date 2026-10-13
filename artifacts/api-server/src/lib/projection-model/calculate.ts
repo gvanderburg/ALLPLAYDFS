@@ -2,6 +2,7 @@ import type { ModelHistoryAppearance, ModelPlayerProjection, ModelStatEstimate }
 import { METRICS, type MetricDefinition } from "./metrics";
 import type { HistoricalGame, ModelSettings, ModelSport, SlatePlayer, StatValues } from "./types";
 import { fantasyForecasts, modelTeamTotals, teamTotalFor } from "./fantasy";
+import { footballEfficiencyPriors, type EfficiencyPrior } from "./football-efficiency";
 
 const round = (n: number) => Math.round(n * 100) / 100;
 const mean = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length;
@@ -40,7 +41,13 @@ function makeProfiles(games: HistoricalGame[], definition: MetricDefinition): Ma
     const totals = teamTotals(game);
     for (const team of game.teams) {
       const sourceTeam = definition.matchup.mode === "attack" ? team : game.teams.find(t => t.id !== team.id);
-      const value = sourceTeam ? totals.get(sourceTeam.id)?.[definition.matchup.metric] : undefined;
+      const sourceStats = sourceTeam ? totals.get(sourceTeam.id) : undefined;
+      let value = sourceStats?.[definition.matchup.metric];
+      if (definition.matchupExposure) {
+        const exposure = sourceStats?.[definition.matchupExposure];
+        if (exposure === undefined || exposure <= 0) continue;
+        value = value === undefined ? undefined : value / exposure;
+      }
       if (value === undefined || !Number.isFinite(value)) continue;
       const values = samples.get(team.id) ?? [];
       values.push(value);
@@ -59,7 +66,7 @@ function makeProfiles(games: HistoricalGame[], definition: MetricDefinition): Ma
 
 function estimate(
   metric: MetricDefinition, history: ModelHistoryAppearance[], settings: ModelSettings,
-  profile: OpponentProfile | undefined, workload: Record<string, number>,
+  profile: OpponentProfile | undefined, workload: Record<string, number>, prior?: EfficiencyPrior,
 ): ModelStatEstimate {
   const rows = history.filter(row => row.stats[metric.id] !== undefined);
   const recent = rows.slice(0, settings.recentGames);
@@ -83,8 +90,14 @@ function estimate(
       return denominator > 0 ? numerator / denominator : null;
     };
     const r = rate(recentExposure, true), b = rate(withExposure, false);
-    if (withExposure.length >= 2 && r !== null && b !== null)
-      base = workload[metric.exposure] * (recentShare * r + (1 - recentShare) * b);
+    if (withExposure.length >= 2 && r !== null && b !== null) {
+      let efficiency = recentShare * r + (1 - recentShare) * b;
+      if (prior) {
+        const opportunities = withExposure.reduce((sum, row) => sum + row.stats[metric.exposure!], 0);
+        efficiency = (opportunities * efficiency + prior.opportunities * prior.mean) / (opportunities + prior.opportunities);
+      }
+      base = workload[metric.exposure] * efficiency;
+    }
   }
   const reliability = profile ? Math.min(1, profile.games / 5) * Math.min(1, profile.teams / 8) : 0;
   const factor = profile && profile.league > 0 ?
@@ -96,6 +109,10 @@ function estimate(
     opponentRank: profile?.rank ?? null, rankedTeams: profile?.teams ?? 0, defenseGames: profile?.games ?? 0,
     opponentMean: profile ? round(profile.value) : null, leagueMean: profile ? round(profile.league) : null,
     sampleSize: rows.length, recentSampleSize: recent.length,
+    matchupBasis: metric.matchupExposure ? `Per ${metric.matchupExposure.replace(/([A-Z])/g, " $1").toLowerCase().replace(/s$/, "")}` : "Per game",
+    ratePriorMean: prior?.mean,
+    ratePriorOpportunities: prior?.opportunities,
+    ratePriorScope: prior?.scope,
   };
 }
 
@@ -106,7 +123,14 @@ function enforceConsistency(stats: ModelStatEstimate[]) {
     if (a?.projected != null && b?.projected != null) a.projected = Math.min(a.projected, b.projected);
   };
   limit("passingCompletions", "passingAttempts");
+  limit("passingTDs", "passingCompletions");
   limit("receptions", "targets");
+  limit("receivingTDs", "receptions");
+  limit("rushingTDs", "rushingAttempts");
+  const attemptsThrown = byId.get("passingAttempts")?.projected, completedPasses = byId.get("passingCompletions")?.projected;
+  const interceptions = byId.get("interceptionsThrown");
+  if (interceptions?.projected != null && attemptsThrown != null && completedPasses != null)
+    interceptions.projected = Math.min(interceptions.projected, Math.max(0, attemptsThrown - completedPasses));
   limit("hits", "atBats");
   limit("homeRuns", "hits");
   const hitTypes = ["singles", "doubles", "triples", "homeRuns"].map(id => byId.get(id));
@@ -135,48 +159,44 @@ function enforceConsistency(stats: ModelStatEstimate[]) {
 
 export function calculatePlayers(
   sport: ModelSport, candidates: SlatePlayer[], input: HistoricalGame[], settings: ModelSettings,
-  cutoff: string, phase: number, venue = "",
+  cutoff: string, phase: number, venue = "", season?: number,
 ): { players: ModelPlayerProjection[]; observedTeams: number } {
   const games = input.filter(game => Date.parse(game.date) < Date.parse(cutoff) && (!phase || phase === game.phase))
     .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
   const metrics = METRICS[sport];
-  const profiles = new Map(metrics.map(metric => [metric.id, makeProfiles(games, metric)]));
-  const observedTeams = new Set(games.flatMap(game => game.teams.map(team => team.id))).size;
+  const football = sport === "nfl" || sport === "cfb";
+  const currentSeason = Number.isFinite(season) ? season! : Math.max(0, ...games.map(game => game.season));
+  const seasonGames = football ? games.filter(game => game.season === currentSeason) : games;
+  const matchupGames = football && seasonGames.length >= 2 ? seasonGames : games;
+  const profiles = new Map(metrics.map(metric => [metric.id, makeProfiles(matchupGames, metric)]));
+  const efficiencyPriors = football ? footballEfficiencyPriors(matchupGames) : new Map<string, EfficiencyPrior>();
+  const observedTeams = new Set(matchupGames.flatMap(game => game.teams.map(team => team.id))).size;
   const totals = modelTeamTotals(sport, games, settings);
   const players = candidates.map((candidate): ModelPlayerProjection => {
-    const history: ModelHistoryAppearance[] = games.flatMap(game => {
+    const playerGames = games.filter(game => game.players.some(player => player.id === candidate.id));
+    const currentAppearances = playerGames.filter(game => game.season === currentSeason);
+    // Old teams/roles are a sparse-sample fallback, not an equally weighted current-season baseline.
+    const estimationGames = football && currentAppearances.length >= 2 ? currentAppearances : playerGames;
+    const history: ModelHistoryAppearance[] = estimationGames.flatMap(game => {
       const player = game.players.find(p => p.id === candidate.id);
       return player ? [{ eventId: game.id, date: new Date(game.date), opponent: sport === "nascar" ? game.venue :
         game.teams.find(team => team.id !== player.teamId)?.abbreviation ?? "", stats: player.stats }] : [];
     }).slice(0, 10);
     const workload: Record<string, number> = {};
-    let priorRoleWorkload: number | null = null;
     const stats = metrics.map(metric => {
-      const estimateValue = estimate(metric, history, settings, profiles.get(metric.id)?.get(candidate.opponentId), workload);
+      const estimateValue = estimate(metric, history, settings, profiles.get(metric.id)?.get(candidate.opponentId), workload,
+        efficiencyPriors.get(`${candidate.position}:${metric.id}`) ?? efficiencyPriors.get(`UNSPECIFIED:${metric.id}`));
       // Current observed rotation workload replaces old full-game opportunity;
       // never assign an arbitrary backup percentage or turn unknown playing time into zero.
       if (candidate.roleContext?.eligible === false) estimateValue.projected = null;
       else if (candidate.roleContext?.workloadUnit === metric.id && candidate.roleContext.recentWorkload != null &&
         ["minutes", "timeOnIce", "atBats", "passingAttempts", "rushingAttempts", "targets", "receptions", "inningsPitched"].includes(metric.id) &&
         estimateValue.sampleSize >= 2) {
-        priorRoleWorkload = estimateValue.projected == null ? null : estimateValue.projected / (estimateValue.matchupMultiplier || 1);
         estimateValue.projected = Math.min(metric.maximum ?? Infinity, Math.max(metric.minimum ?? 0, candidate.roleContext.recentWorkload));
       }
       if (!metric.exposure && estimateValue.projected !== null) workload[metric.id] = estimateValue.projected;
       return estimateValue;
     }).filter(stat => stat.sampleSize > 0);
-    if ((sport === "nfl" || sport === "cfb") && priorRoleWorkload != null && priorRoleWorkload > 0 &&
-      candidate.roleContext?.recentWorkload != null && candidate.roleContext.eligible) {
-      const related: Record<string, string[]> = {
-        passingAttempts: ["passingYards", "passingTDs", "passingCompletions", "interceptionsThrown"],
-        rushingAttempts: ["rushingYards", "rushingTDs"],
-        targets: ["receptions", "receivingYards", "receivingTDs"],
-        receptions: ["receivingYards", "receivingTDs"],
-      };
-      const ratio = candidate.roleContext.recentWorkload / priorRoleWorkload;
-      for (const stat of stats) if (stat.projected != null && (related[candidate.roleContext.workloadUnit ?? ""] ?? []).includes(stat.id))
-        stat.projected = round(stat.projected * ratio);
-    }
     if (sport === "nascar") {
       const finish = stats.find(stat => stat.id === "finish");
       // Published venue labels can combine different configurations; do not infer
