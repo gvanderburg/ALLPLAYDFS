@@ -68,7 +68,7 @@ function EventSlate({ events, loading }: { events: DfsEvent[]; loading: boolean 
     const live = /live|in progress|in-progress/i.test(event.status);
     return <article className="event-row" key={event.id} data-testid={`event-${event.id}`}>
       <div>
-        <div className="event-league">{event.league} <span style={{ color: '#45515d' }}>·</span> {formatDate(event.startTime, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</div>
+        <div className="event-league">{event.league} <span style={{ color: 'var(--slate-muted)' }}>·</span> {formatDate(event.startTime, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</div>
         <div className="event-name">{event.shortName || event.name}</div>
         <div className="competitors" style={{ marginTop: 9 }}>
           <span className="team-chip">{away?.abbreviation ?? '—'}</span><span>{away?.name ?? 'TBD'}</span>
@@ -100,12 +100,13 @@ function NewsFeed({ news, loading }: { news: DfsNewsItem[]; loading: boolean }) 
       : <article className="news-item" key={item.id} data-testid={`news-${item.id}`}>{content}</article>;
   })}</div>;
 }
-function InstallDialog({ onClose, onInstall, canInstall, isInstalled }: { onClose: () => void; onInstall: () => void; canInstall: boolean; isInstalled: boolean }) {
+function InstallDialog({ onClose, onInstall, canInstall, isInstalled, installing, installError }: { onClose: () => void; onInstall: () => void; canInstall: boolean; isInstalled: boolean; installing: boolean; installError: string | null }) {
   const isAppleMobile = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="install-modal" role="dialog" aria-modal="true" aria-labelledby="install-title">
       <div className="modal-top"><div><div className="eyebrow">Ready when you are</div><h2 id="install-title">Keep your slate close</h2></div><button className="btn btn-quiet icon-btn" onClick={onClose} aria-label="Close installation help"><X size={16} /></button></div>
       <p className="modal-copy">Add the DFS cockpit to your home screen or desktop for a focused, app-like launch. Your date and league filters stay right here in the dashboard.</p>
+      {installError && <div className="install-note" role="alert">{installError}</div>}
       {isInstalled ? <div className="install-note">This dashboard is already installed on this device.</div> :
         canInstall ? <div className="install-note">Your browser can install this dashboard now. Choose Install to add it to your apps.</div> :
           <ol className="install-steps">{isAppleMobile ? <>
@@ -114,7 +115,7 @@ function InstallDialog({ onClose, onInstall, canInstall, isInstalled }: { onClos
             <li>Open your browser menu near the address bar.</li><li>Choose <b>Install app</b> or <b>Add to home screen</b>.</li><li>Confirm the prompt to launch it as a standalone app.</li>
           </>}</ol>}
       {!isAppleMobile && !canInstall && !isInstalled && <div className="install-note">Install availability depends on the browser and secure app hosting. On desktop, look for the install icon in the address bar.</div>}
-      <div className="modal-actions"><button className="btn btn-quiet" onClick={onClose}>Not now</button>{canInstall && !isInstalled && <button className="btn btn-primary" onClick={onInstall}><ArrowDownToLine size={15} /> Install app</button>}</div>
+      <div className="modal-actions"><button className="btn btn-quiet" onClick={onClose}>Not now</button>{canInstall && !isInstalled && <button className="btn btn-primary" onClick={onInstall} disabled={installing}><ArrowDownToLine size={15} /> {installing ? 'Installing…' : 'Install app'}</button>}</div>
     </section>
   </div>;
 }
@@ -128,7 +129,9 @@ export default function Dashboard() {
   const slateId = salarySelection?.context === salaryContext ? salarySelection.id : undefined;
   const [installOpen, setInstallOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
-  const [installed, setInstalled] = useState(false);
+  const [installed, setInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true);
+  const [installing, setInstalling] = useState(false);
+  const [installError, setInstallError] = useState<string | null>(null);
   const params = useMemo(() => ({ date, sport, salaryPlatform, slateId }), [date, sport, salaryPlatform, slateId]);
   const query = useGetDfsDashboard(params, { query: { queryKey: getGetDfsDashboardQueryKey(params), refetchOnWindowFocus: false, refetchInterval: 5 * 60 * 1000 } });
   const data = query.data;
@@ -150,12 +153,31 @@ export default function Dashboard() {
     return () => { window.removeEventListener('beforeinstallprompt', handlePrompt); window.removeEventListener('appinstalled', handleInstalled); };
   }, []);
   const doInstall = async () => {
-    if (!installPrompt) return;
+    if (!installPrompt || installing) return;
     const prompt = installPrompt as Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
-    await prompt.prompt();
-    const choice = await prompt.userChoice;
-    if (choice.outcome === 'accepted') setInstalled(true);
-    setInstallPrompt(null);
+    setInstalling(true);
+    setInstallError(null);
+    try {
+      await prompt.prompt();
+      const choice = await prompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setInstalled(true);
+        setInstallOpen(false);
+      }
+    } catch {
+      setInstallError('The browser could not open its install prompt. Use the browser’s install menu or the instructions below.');
+      setInstallOpen(true);
+    } finally {
+      setInstallPrompt(null);
+      setInstalling(false);
+    }
+  };
+  const quickInstall = () => {
+    if (installPrompt && !installed) void doInstall();
+    else {
+      setInstallError(null);
+      setInstallOpen(true);
+    }
   };
   const refresh = () => query.refetch();
   const formatUpdatedAt = data?.updatedAt ? formatDate(data.updatedAt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null;
@@ -163,7 +185,7 @@ export default function Dashboard() {
   return <div className="app-shell">
     <header className="topbar">
       <a href="/" className="brand" aria-label="ALLPLAY home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">ALLPLAY</span></a>
-      <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><span className="user-dot" aria-label="Personal dashboard">ME</span></div>
+      <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><button className="btn btn-primary header-install-btn" onClick={quickInstall} disabled={installed || installing} data-testid="button-install-top"><ArrowDownToLine size={15} />{installed ? 'Installed' : installing ? 'Installing…' : 'Install app'}</button><span className="user-dot" aria-label="Personal dashboard">ME</span></div>
     </header>
     <aside className="side-rail" aria-label="Dashboard navigation">
       <div className="rail-caption">YOUR WORKSPACE</div>
@@ -177,8 +199,8 @@ export default function Dashboard() {
     </aside>
     <main className="main-wrap" id="overview">
       <div className="page-heading">
-        <div><div className="eyebrow">Your daily edge <span style={{ color: '#46545f' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>Slate, in focus.</h1><p className="subhead">Every matchup, number and note for the decisions ahead.</p></div>
-        <div className="date-stamp"><div>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div><div style={{ marginTop: 5, color: '#596774' }}>{formatUpdatedAt ? `DATA UPDATED ${formatUpdatedAt.toUpperCase()}` : 'AWAITING DATA'}</div></div>
+        <div><div className="eyebrow">Your daily edge <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>Slate, in focus.</h1><p className="subhead">Every matchup, number and note for the decisions ahead.</p></div>
+        <div className="date-stamp"><div>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div><div style={{ marginTop: 5, color: 'var(--slate-muted)' }}>{formatUpdatedAt ? `DATA UPDATED ${formatUpdatedAt.toUpperCase()}` : 'AWAITING DATA'}</div></div>
       </div>
       <div className="control-bar">
         <div className="filter-group">
@@ -255,7 +277,7 @@ export default function Dashboard() {
             <div className="panel-head panel-head-accent"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> Player projections</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">{loading ? 'UPDATING' : `${forecastCount} / ${projections.length} FORECASTS`}</span><button className="btn btn-quiet icon-btn" style={{ height: 29, width: 29 }} onClick={() => downloadCsv(`${sport}-${salaryPlatform}-${salaryCoverage?.selectedSlateId ?? 'no-slate'}-${date}.csv`, projectionExportRows(projections))} disabled={!projections.length} aria-label="Export player projections and salaries" data-testid="button-export-projections-panel"><Download size={14} /></button></div></div>
             <div className="panel-body" style={{ paddingTop: 16, paddingBottom: 16 }}>
               <SalaryControls platform={salaryPlatform} coverage={salaryCoverage} loading={loading} onPlatformChange={setSalaryPlatform} onSlateChange={(id) => setSalarySelection({ context: salaryContext, id })} />
-              {currentSportCoverage && !currentSportCoverage.projectionsAvailable && <div className="coverage-detail" style={{ margin: '0 0 14px', padding: '0 0 12px', borderTop: 0, borderBottom: '1px solid #252e39' }}><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6, color: '#eab66f' }} />Projection coverage is unavailable for {currentSportCoverage.label}. {currentSportCoverage.message}</div>}
+              {currentSportCoverage && !currentSportCoverage.projectionsAvailable && <div className="coverage-detail" style={{ margin: '0 0 14px', padding: '0 0 12px', borderTop: 0, borderBottom: '1px solid var(--slate-divider)' }}><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6, color: '#eab66f' }} />Projection coverage is unavailable for {currentSportCoverage.label}. {currentSportCoverage.message}</div>}
               <ProjectionTable key={`${salaryContext}:${salaryCoverage?.selectedSlateId ?? 'none'}`} players={projections} events={events} loading={loading && !data} hasCoverage={currentSportCoverage?.projectionsAvailable ?? true} />
             </div>
           </section>
@@ -267,7 +289,7 @@ export default function Dashboard() {
           </section>
           <XTimeline key={sport} sport={sport} />
           <section className="panel" aria-labelledby="coverage-heading">
-            <div className="panel-head"><h2 className="panel-title" id="coverage-heading"><ShieldCheck size={16} /> Coverage & sources</h2><CircleHelp size={15} color="#71808c" /></div>
+            <div className="panel-head"><h2 className="panel-title" id="coverage-heading"><ShieldCheck size={16} /> Coverage & sources</h2><CircleHelp size={15} color="var(--slate-muted)" /></div>
             <div className="panel-body">
               {currentSportCoverage ? <><div className="micro-label">{currentSportCoverage.label} · SELECTED SLATE</div><div className="coverage-detail" style={{ borderTop: 0, paddingTop: 0, marginTop: 8 }}>{currentSportCoverage.message}</div></> : <p className="coverage-detail" style={{ borderTop: 0, paddingTop: 0, marginTop: 0 }}>Coverage is reported by the data source. Availability may vary by sport and date.</p>}
               {data?.sourceNotes?.length ? <><div className="micro-label" style={{ margin: '18px 0 8px' }}>Source notes</div><ul className="notes-list">{data.sourceNotes.map((note, index) => <li key={`${index}-${note}`}>{note}</li>)}</ul></> : <div className="coverage-detail"><Info size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />No source notes were supplied for this response.</div>}
@@ -286,6 +308,6 @@ export default function Dashboard() {
       </div>
       <div className="footer-line">BUILT FOR THE MOMENT BEFORE LOCK · YOUR SLATE, YOUR CALL</div>
     </main>
-    {installOpen && <InstallDialog onClose={() => setInstallOpen(false)} onInstall={doInstall} canInstall={!!installPrompt} isInstalled={installed} />}
+    {installOpen && <InstallDialog onClose={() => setInstallOpen(false)} onInstall={doInstall} canInstall={!!installPrompt} isInstalled={installed} installing={installing} installError={installError} />}
   </div>;
 }

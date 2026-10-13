@@ -1,0 +1,124 @@
+/* Palette-only overrides. Layout, spacing, typography and interactions stay
+   in index.css; this theme follows the user's blue-gray player-table reference. */
+:root, .dark {
+  --background: 227 16% 22%;
+  --foreground: 220 23% 96%;
+  --card: 224 15% 25%;
+  --card-foreground: 220 23% 96%;
+  --card-border: 220 13% 37%;
+  --border: 220 13% 37%;
+  --input: 220 13% 37%;
+  --primary: 151 51% 57%;
+  --primary-foreground: 155 27% 17%;
+  --secondary: 224 15% 28%;
+  --secondary-foreground: 220 23% 96%;
+  --muted: 224 15% 28%;
+  --muted-foreground: 217 18% 73%;
+  --accent: 153 18% 28%;
+  --accent-foreground: 150 59% 73%;
+  --popover: 224 15% 25%;
+  --popover-foreground: 220 23% 96%;
+  --popover-border: 220 13% 37%;
+  --ring: 151 51% 57%;
+  --sidebar: 224 16% 23%;
+  --sidebar-foreground: 220 23% 96%;
+  --sidebar-border: 220 13% 37%;
+  --sidebar-primary: 151 51% 57%;
+  --sidebar-primary-foreground: 155 27% 17%;
+  --sidebar-accent: 224 15% 28%;
+  --sidebar-accent-foreground: 220 23% 96%;
+  --sidebar-ring: 151 51% 57%;
+  --chart-1: 151 51% 57%;
+  --chart-2: 36 55% 69%;
+  --chart-3: 209 52% 72%;
+  --slate-background: #2e3240;
+  --slate-panel: #343846;
+  --slate-raised: #3d4353;
+  --slate-border: #535b6b;
+  --slate-divider: #4b5262;
+  --slate-text: #f1f3f7;
+  --slate-muted: #b0bac9;
+  --slate-green: #58c98e;
+}
+
+html, body, .app-shell { background: var(--slate-background); color: var(--slate-text); }
+.topbar, .side-rail { background: #303542; border-color: var(--slate-divider); }
+.brand, .brand-name, h1, .panel-title, .event-name, .news-title,
+.state-box strong, .install-modal h2 { color: var(--slate-text); }
+.brand-mark { background: var(--slate-green); color: #20382e; }
+.brand-name span, .eyebrow, .panel-title svg, .total-pill, .text-link,
+.x-timeline-host .twitter-timeline { color: #8cdeb3; }
+.today-label, .micro-label, .rail-caption, .rail-note, .rail-sports,
+.subhead, .panel-meta, .event-league, .news-byline, .news-desc,
+.coverage-detail, .notes-list, .state-box, .pt-note, .pt-count,
+.pt-legend em, .salary-updated, .x-feed-meta, .x-feed-state,
+.x-embed-status, .x-embed-footer p, .footer-line { color: var(--slate-muted); }
+.user-dot, .rail-note, .rail-bottom { border-color: var(--slate-divider); color: var(--slate-muted); }
+.rail-link { color: var(--slate-muted); }
+.rail-link svg { color: #a5afbf; }
+.rail-link:hover { background: var(--slate-raised); color: var(--slate-text); }
+.rail-link.selected { background: #3b514a; color: #b1eccb; }
+.rail-link.selected svg { color: var(--slate-green); }
+.rail-live-dot { background: var(--slate-green); }
+.date-stamp { color: #d3dbe6; }
+.control-bar, .panel, .summary-strip { background: var(--slate-panel); border-color: var(--slate-border); }
+.date-field, .salary-controls select, .pt-search { background: #303543; border-color: var(--slate-border); color: var(--slate-text); }
+.date-field::placeholder, .pt-search input::placeholder { color: var(--slate-muted); }
+.sport-tab, .btn { background: var(--slate-raised); border-color: var(--slate-border); color: var(--slate-text); }
+.sport-tab.active { background: var(--slate-green); border-color: var(--slate-green); color: #20382e; }
+.sport-tab:hover:not(.active), .btn:hover { background: #4a5263; border-color: #798397; }
+.btn-primary { background: var(--slate-green); border-color: var(--slate-green); color: #20382e; }
+.btn-primary:hover { background: #75d9a5; border-color: #75d9a5; }
+.panel-head, .panel-head-accent { background: var(--slate-raised); border-color: var(--slate-border); }
+.panel-head-accent .panel-title { color: var(--slate-text); }
+.panel-head-accent .panel-title svg { color: #8cdeb3; }
+.panel-head-accent .panel-meta { color: #c1cad7; }
+.panel-head-accent .btn { background: #464e60; border-color: #667184; color: var(--slate-text); }
+.panel-head-accent .btn:hover { background: #535e72; border-color: #8290a4; color: var(--slate-text); }
+.event-row { background: #353b49; border-color: var(--slate-border); }
+.event-row:hover { border-color: #8290a4; }
+.team-chip, .news-byline .type-tag { background: #454d5e; color: #e0e6ef; }
+.team-chip .score { color: var(--slate-text); }
+.versus, .total-pill.missing { color: #a5afbf; }
+.event-time { color: #d3dbe6; }
+.news-item, .coverage-detail, .salary-section, .x-embed-footer { border-color: var(--slate-divider); }
+.news-thumb, .state-icon { background: #414b5a; }
+.state-icon { color: #8cdeb3; }
+.salary-status.available { color: #b8d9c9; }
+.salary-controls select:disabled { color: #a5afbf; }
+.pt-search input { color: var(--slate-text); }
+.pt-search, .pt-search button { color: var(--slate-muted); }
+.pt-search:focus-within { border-color: var(--slate-green); }
+.pt-scroll { background: var(--slate-panel); border-color: var(--slate-border); }
+.pt-table th { background: #3b4151; border-color: var(--slate-border); color: #c7d0de; }
+.pt-table td { background: var(--slate-panel); border-color: var(--slate-border); color: var(--slate-text); }
+.pt-table tbody tr:nth-child(even) td { background: #373c4b; }
+.pt-table .pname { color: var(--slate-text); }
+.pt-table .rk, .pt-table .dim, .pt-table .basis, .pt-empty { color: #a5afbf; }
+.pt-table .pt-group-row td { background: #303542; color: #d0d9e5; }
+.pt-table tbody tr:hover td { background: #454d5f; }
+.pt-logo-fb { background: #485164; }
+.pt-sort.on { color: #b1eccb; }
+.pt-t1, .t1 { --tc: #7cd9a8; --tb: #384e49; }
+.pt-t2, .t2 { --tc: #9dc6ed; --tb: #384758; }
+.pt-t3, .t3 { --tc: #e2c68e; --tb: #4a4644; }
+.pt-t4, .t4 { --tc: #e3a99f; --tb: #4c4047; }
+.pt-t0, .t0 { --tc: #adb6c5; --tb: #3a404f; }
+.pt-table tbody tr td.proj { color: var(--tc); background: var(--tb); border-left-color: var(--tc); }
+.pt-tier { color: #252b36; }
+.pt-legend { color: #d3dbe6; }
+.summary-strip, .summary-intro, .summary-metric { border-color: var(--slate-divider); }
+.summary-kicker, .summary-metric span { color: var(--slate-muted); }
+.summary-sport { color: var(--slate-text); }
+.summary-metric strong { color: #8cdeb3; }
+.x-feed-meta { background: #303542; border-color: var(--slate-divider); }
+.x-feed-state strong { color: var(--slate-text); }
+.x-mark { color: var(--slate-text); }
+.news-scroll, .x-scroll, .pt-scroll, .sport-tabs { scrollbar-color: #6c778c #303542; }
+.install-modal { background: var(--slate-panel); border-color: #727d90; }
+.modal-copy, .install-steps { color: #c1cad7; }
+.install-note { background: #3b514a; border-color: var(--slate-green); color: #d5eadf; }
+.error-box { background: #4a3942; border-color: #a57179; color: #f0c1bd; }
+.skeleton { background-image: linear-gradient(90deg, #3c4252 25%, #4a5365 40%, #3c4252 65%); }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible,
+.pt-sort:focus-visible, .pt-scroll:focus-visible, .salary-controls select:focus-visible { outline-color: var(--slate-green); }
