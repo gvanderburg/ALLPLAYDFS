@@ -106,7 +106,7 @@ export default function ProjectionTable({ players, events, loading, hasCoverage,
     <div className="pt-scroll" role="region" aria-label={hasAccess ? 'Player projections table' : 'Player salary browsing table'} tabIndex={0}>
       <table className={`pt-table ${hasAccess ? '' : 'pt-table-salary-only'}`}>
         <thead><tr>
-          {hasAccess && <th className="num rk">#</th>}<Th k="name" label="Player" /><Th k="salary" label="Salary" num /><Th k="position" label="Pos" /><Th k="team" label="Team" /><Th k="opponent" label="Opp" />{hasAccess && <><Th k="projection" label="Proj" num /><th>Tier</th><th>Basis</th></>}
+          {hasAccess && <th className="num rk">#</th>}<Th k="name" label="Player" /><Th k="position" label="Pos" /><Th k="team" label="Team" /><Th k="opponent" label="Opp" />{hasAccess && <><Th k="projection" label="Proj" num /><th>Tier</th><th>Basis</th></>}
         </tr></thead>
         <tbody>{rows.length ? rows.map((p, i) => {
           const t = tiers.get(p.id)!;
@@ -119,11 +119,10 @@ export default function ProjectionTable({ players, events, loading, hasCoverage,
           if (newGroup) rowInGroup = 0;
           const groupRow = ++rowInGroup;
           return <Fragment key={p.id}>
-            {hasMultipleGroups && newGroup && <tr className="pt-group-row"><td colSpan={9}>{p.projectionType} · {p.source}</td></tr>}
+            {hasMultipleGroups && newGroup && <tr className="pt-group-row"><td colSpan={8}>{p.projectionType} · {p.source}</td></tr>}
             <tr className={t.key} data-testid={`projection-${p.id}`}>
             {hasAccess && <td className="num rk">{p.projection === null ? '—' : groupRow}</td>}
             <td className="pname">{p.name}</td>
-            <td className={`num ${p.salary == null ? 'dim' : ''}`} title={p.salarySource ?? 'No salary source connected'}>{p.salary == null ? '—' : `$${p.salary.toLocaleString('en-US')}`}</td>
             <td className="mono">{p.rosterPositions || p.position || '—'}</td>
             <td><span className="pt-team">{logo ? <img src={logo} alt="" loading="lazy" /> : <span className="pt-logo-fb" />}<span className="mono">{p.team || '—'}</span></span></td>
             <td className="mono" title={p.gameInfo ?? undefined}>{oppAbbr ? `${prefix}${oppAbbr}` : '—'}</td>
@@ -131,7 +130,7 @@ export default function ProjectionTable({ players, events, loading, hasCoverage,
             <td><span className={`pt-tier ${t.key}`} title={t.size ? `Percentile ${Math.round(t.pct * 100)} of ${t.size} in group` : 'No sourced forecast'}>{t.label}</span></td>
             <td className="basis">{p.projectionType} · {p.source}</td></>}
           </tr></Fragment>;
-        }) : <tr><td colSpan={hasAccess ? 9 : 5} className="pt-empty">No players match "{q}".</td></tr>}</tbody>
+        }) : <tr><td colSpan={hasAccess ? 8 : 4} className="pt-empty">No players match "{q}".</td></tr>}</tbody>
       </table>
     </div>
   </div>;

@@ -109,6 +109,12 @@ function enforceConsistency(stats: ModelStatEstimate[]) {
   limit("receptions", "targets");
   limit("hits", "atBats");
   limit("homeRuns", "hits");
+  const hitTypes = ["singles", "doubles", "triples", "homeRuns"].map(id => byId.get(id));
+  const hits = byId.get("hits")?.projected;
+  if (hits != null && hitTypes.every(s => s?.projected != null)) {
+    const sum = hitTypes.reduce((n, s) => n + s!.projected!, 0);
+    if (sum > hits && sum > 0) for (const s of hitTypes) s!.projected = round(s!.projected! * hits / sum);
+  }
   limit("goals", "shots");
   const g = byId.get("goals")?.projected, a = byId.get("assists")?.projected;
   if (g != null && a != null) {

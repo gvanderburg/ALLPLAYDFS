@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildModelSheetCsv, findUniqueSelectedSlateSalary, MODEL_REFERENCE_HEADERS } from '../src/lib/model-sheet-export.ts';
+import { build } from 'esbuild';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+const dir = await mkdtemp(join(tmpdir(), 'allplay-sheet-export-'));
+await build({ entryPoints: ['src/lib/model-sheet-export.ts'], bundle: true, platform: 'node', format: 'esm', outfile: join(dir, 'export.mjs') });
+const { buildModelSheetCsv, findUniqueSelectedSlateSalary, MODEL_REFERENCE_HEADERS } = await import(pathToFileURL(join(dir, 'export.mjs')));
+test.after(() => rm(dir, { recursive: true, force: true }));
 
 function parseCsv(text) {
   const rows = [];

@@ -14,3 +14,9 @@ The latest direction is to match the near-black NASCAR analytics-table reference
 **Why:** On 2026-10-13 the user explicitly requested that both the website layout/look and projection sheets look like the newly supplied dark table. This supersedes the earlier palette-only blue-gray instruction.
 
 **How to apply:** Use the latest reference for presentation, while preserving ALLPLAY's real sport-specific columns, separate tabs, membership gates, navigation and working features. The cropped table does not define a replacement for necessary navigation. Any visible history trend must use actual observations; do not invent racing fields, confidence ratings or lineup actions solely because the reference shows them.
+
+Hiding salary from projection charts is a presentation change, not a request to disconnect salary sources or stop salary-based research calculations.
+
+**Why:** On 2026-10-13 the user requested no salary on the charts and compact injury tags, not removal of the underlying DFS salary functionality.
+
+**How to apply:** Keep salaries available behind the scenes for value, supported ownership calculations and exports. Use compact injury badges rather than a large status column; OUT is red and QUESTIONABLE is yellow.

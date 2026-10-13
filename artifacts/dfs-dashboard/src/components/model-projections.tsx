@@ -4,8 +4,11 @@ import { useAuth } from '@clerk/react';
 import { getGetDfsDashboardQueryKey, useGetDfsDashboard } from '@workspace/api-client-react';
 import type { DfsDashboard, DfsSalaryPlatform, DfsSport, GetDfsDashboardParams, GetModelProjectionsParams, ModelMetric, ModelPlayerProjection, ModelProjectionSheet, ModelStatEstimate } from '@workspace/api-client-react';
 import MembershipCheckoutButton from '@/components/membership-checkout-button';
+import { ResearchShortlist } from '@/components/research-shortlist';
 import { useModelProjections } from '@/hooks/use-model-projections';
-import { buildModelSheetCsv } from '@/lib/model-sheet-export';
+import { buildModelSheetCsv, findUniqueSelectedSlateSalary } from '@/lib/model-sheet-export';
+import { InjuryBadge } from '@/components/injury-badge';
+import { deriveLineupInsights } from '@/lib/lineup-insights';
 import {
   Activity, AlertCircle, ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, BarChart3,
   CalendarDays, ChevronRight, CircleHelp, Download, Film, Info,
@@ -180,6 +183,8 @@ function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: 
   const [columnView, setColumnView] = useState<'raw' | 'fantasy'>(hasScoring ? 'fantasy' : 'raw');
   const [fantasySite, setFantasySite] = useState<FantasySite>(platform);
   const [detailPlayer, setDetailPlayer] = useState<ModelPlayerProjection | null>(null);
+  const research = useMemo(() => deriveLineupInsights(sheet, dashboard, platform, fantasySite, 'balanced'), [sheet, dashboard, platform, fantasySite]);
+  const researchByPlayer = useMemo(() => new Map(research.rows.map((row) => [row.playerId, row])), [research.rows]);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const detailDialogRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -216,27 +221,13 @@ function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: 
     };
   }, [detailPlayer]);
   const salaryRows = useMemo(() => {
-    const selectedSlateId = dashboard?.salaryCoverage?.platform === platform ? dashboard.salaryCoverage.selectedSlateId : null;
-    const dashboardDate = dashboard?.date?.slice(0, 10);
-    const dateMatches = !!sheet.slateDate && dashboardDate === sheet.slateDate;
-    const rows = (dashboard?.projections ?? []).filter((row) =>
-      dateMatches && !!selectedSlateId && row.sport === sheet.sport && row.salaryPlatform === platform
-      && row.salary != null && row.salarySlateId === selectedSlateId,
-    );
-    return sheet.players.map((player) => {
-      // ESPN and salary-provider numeric IDs are different namespaces.
-      // Require a unique name/team match on both sides rather than equating IDs.
-      const name = player.name.trim().toLocaleLowerCase();
-      const team = player.team.trim().toLocaleLowerCase();
-      const uniquePlayer = sheet.players.filter((item) => item.name.trim().toLocaleLowerCase() === name && item.team.trim().toLocaleLowerCase() === team).length === 1;
-      const nameMatches = rows.filter((row) => row.name.trim().toLocaleLowerCase() === name && !!team && row.team?.trim().toLocaleLowerCase() === team);
-      return { playerId: player.id, row: uniquePlayer && nameMatches.length === 1 ? nameMatches[0] : undefined };
-    });
-  }, [dashboard?.projections, dashboard?.salaryCoverage, dashboard?.date, sheet.players, sheet.sport, sheet.requestedDate, sheet.slateDate, platform]);
+    return sheet.players.map((player) => ({ playerId: player.id,
+      row: findUniqueSelectedSlateSalary(player, sheet, dashboard, platform) }));
+  }, [dashboard, sheet, platform]);
   const salaryFor = (playerId: string) => salaryRows.find((item) => item.playerId === playerId)?.row?.salary;
   const salaryCoverage = dashboard?.salaryCoverage;
   const matchupFor = (player: ModelPlayerProjection) => {
-    if (!dashboard || dashboard.date?.slice(0, 10) !== sheet.slateDate) return undefined;
+    if (!dashboard || dashboard.date?.slice(0, 10) !== sheet.slateDate?.slice(0, 10)) return undefined;
     const team = player.team.trim().toLocaleLowerCase();
     const opponent = player.opponent.trim().toLocaleLowerCase();
     if (!team || !opponent) return undefined;
@@ -294,6 +285,9 @@ function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: 
     ).sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name) * (direction === 'asc' ? 1 : -1);
       const valueFor = (player: ModelPlayerProjection) => {
+        const pick = researchByPlayer.get(player.id);
+        if (sortBy === 'research:rank') return pick?.rank ?? null;
+        if (sortBy === 'research:ownership') return pick?.estimatedOwnership ?? null;
         if (sortBy.startsWith('fantasy:')) {
           const key = sortBy.slice('fantasy:'.length) as 'mean' | 'value' | 'p25' | 'p50' | 'p75' | 'p85' | 'p95' | 'p99' | 'std';
           const forecast = forecastFor(player, fantasySite);
@@ -314,10 +308,10 @@ function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: 
       if (bv == null) return -1;
       return (av - bv) * (direction === 'asc' ? 1 : -1);
     });
-  }, [sheet.players, search, role, sortBy, direction, fantasySite, platform, salaryRows]);
+  }, [sheet.players, search, role, sortBy, direction, fantasySite, platform, salaryRows, researchByPlayer]);
   const toggleSort = (id: string) => {
     if (sortBy === id) setDirection((current) => current === 'asc' ? 'desc' : 'asc');
-    else { setSortBy(id); setDirection(id === 'name' ? 'asc' : 'desc'); }
+    else { setSortBy(id); setDirection(id === 'name' || id === 'research:rank' ? 'asc' : 'desc'); }
   };
   const sortHeader = (label: string, id: string, detail?: string) => <th key={id} aria-sort={sortBy === id ? direction === 'asc' ? 'ascending' : 'descending' : 'none'}>
     <button onClick={() => toggleSort(id)} title={`Sort by ${label}`}>{label}{sortBy === id ? direction === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} /> : <ArrowUpDown size={11} />}{detail && <small>{detail}</small>}</button>
@@ -326,28 +320,34 @@ function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { sheet: 
      <div className="model-table-tools">
       <label className="model-search"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a player, team, opponent…" aria-label="Search model players" /><kbd>/</kbd></label>
       <label className="model-role-filter"><UserRound size={14} /><span className="sr-only">Filter by role</span><select value={role} onChange={(event) => setRole(event.target.value)}><option value="all">All roles</option>{roles.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-      <label className="model-salary-filter"><span>Salary metadata</span><select value={platform} onChange={(event) => { const next = event.target.value as DfsSalaryPlatform; onPlatformChange(next); setFantasySite(next); setSortBy('fantasy:mean'); setDirection('desc'); }} aria-label="Salary platform"><option value="draftkings">DraftKings</option><option value="fanduel">FanDuel</option></select></label>
+      <label className="model-salary-filter"><span>DFS site</span><select value={platform} onChange={(event) => { const next = event.target.value as DfsSalaryPlatform; onPlatformChange(next); setFantasySite(next); setSortBy('fantasy:mean'); setDirection('desc'); }} aria-label="DFS platform"><option value="draftkings">DraftKings</option><option value="fanduel">FanDuel</option></select></label>
       <label className="model-salary-filter"><span>Columns</span><select value={columnView} onChange={(event) => { const next = event.target.value as 'raw' | 'fantasy'; setColumnView(next); setSortBy(next === 'fantasy' ? 'fantasy:mean' : 'name'); setDirection(next === 'fantasy' ? 'desc' : 'asc'); }} aria-label="Sheet columns"><option value="raw">Raw stats</option><option value="fantasy">Fantasy scoring</option></select></label>
       {columnView === 'fantasy' && <label className="model-salary-filter"><span>Scoring rules</span><select value={fantasySite} onChange={(event) => { setFantasySite(event.target.value as FantasySite); setSortBy('fantasy:mean'); setDirection('desc'); }} aria-label="Fantasy scoring site">{fantasySites.map((site) => <option key={site} value={site}>{siteLabel(site)}</option>)}</select></label>}
       <span className="model-result-count">{visible.length} <i>/</i> {sheet.players.length}</span>
     </div>
-      <div className="model-salary-coverage" role="status">{salaryCoverage?.platform === platform && salaryCoverage.available ? `${platform === 'draftkings' ? 'DraftKings' : 'FanDuel'} salaries for the selected slate · only unique player/team matches are shown · unmatched salaries shown as —` : 'Salary coverage unavailable for this platform and slate · salary shown as —'}{columnView === 'fantasy' ? ` · ${siteLabel(fantasySite)} forecast availability follows published scoring coverage; unsupported scoring stays blank. ` : ''}Min/Max Exp export defaults are research metadata only (0–100), not optimizer controls.</div>
+     <ResearchShortlist sheet={sheet} dashboard={dashboard} platform={platform} site={fantasySite} onOpenPlayer={(playerId) => {
+       const player = sheet.players.find((item) => item.id === playerId);
+       if (player) setDetailPlayer(player);
+     }} />
+       <div className="model-salary-coverage" role="status">{salaryCoverage?.platform === platform && salaryCoverage.available ? 'Verified same-slate salaries are used behind the scenes for value and supported ownership estimates.' : 'Salary coverage unavailable for this platform and slate; value and ownership may be unavailable.'}{columnView === 'fantasy' ? ` ${siteLabel(fantasySite)} forecast availability follows published scoring coverage; unsupported scoring stays blank. ` : ''}Min/Max Exp export defaults are research metadata only (0–100), not optimizer controls.</div>
     {sheet.players.length === 0 ? <div className="model-state model-empty"><TrendingUp size={22} /><h3>No player estimates published</h3><p>There are no model rows for this date. Missing samples stay blank; they are never filled with zero.</p></div>
       : visible.length === 0 ? <div className="model-state model-empty"><Search size={20} /><h3>No matching players</h3><p>Try another name or role.</p><button className="btn btn-quiet" onClick={() => { setSearch(''); setRole('all'); }}>Clear filters</button></div>
         : <div className="model-grid-scroll" role="region" aria-label="ALLPLAY raw stat projection sheet" tabIndex={0}>
           <table className="model-grid">
-             <thead><tr><th className="model-player-column"><button onClick={() => toggleSort('name')}>PLAYER {sortBy === 'name' ? direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} /> : <ArrowUpDown size={12} />}</button></th>
-               <th className="model-history-cell">{historyMetric ? `RECENT ${historyMetric.label}` : 'RECENT HISTORY'}<small>actual · Δ model−recent</small></th><th>ROLE</th><th>TEAM / OPP</th><th className="model-salary-cell">SALARY</th><th>AVAILABILITY</th>
+              <thead><tr><th className="model-player-column"><button onClick={() => toggleSort('name')}>PLAYER {sortBy === 'name' ? direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} /> : <ArrowUpDown size={12} />}</button></th>
+                {sortHeader('Research rank', 'research:rank', 'balanced shortlist')}
+                {sortHeader('Est. ownership', 'research:ownership', 'heuristic · when supported')}
+                <th className="model-history-cell">{historyMetric ? `RECENT ${historyMetric.label}` : 'RECENT HISTORY'}<small>actual · Δ model−recent</small></th><th>ROLE</th><th>TEAM / OPP</th>
                {columnView === 'raw' ? sheet.metrics.map((metric) => <th className="model-stat-header" key={metric.id}><button onClick={() => toggleSort(metric.id)} title={`Sort by ${metric.label}`}>{metric.label}{sortBy === metric.id ? direction === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} /> : <ArrowUpDown size={11} />}<small>{metric.unit || metric.group}</small></button></th>) : <>{sortHeader(`${siteLabel(fantasySite)} Points`, 'fantasy:mean')}{sortHeader(`${platform === 'draftkings' ? 'DK' : 'FD'} Value / $1K`, 'fantasy:value')}{sortHeader('P25', 'fantasy:p25')}{sortHeader('P50', 'fantasy:p50')}{sortHeader('P75', 'fantasy:p75')}{sortHeader('P85', 'fantasy:p85')}{sortHeader('P95', 'fantasy:p95')}{sortHeader('P99', 'fantasy:p99')}{sortHeader('Std', 'fantasy:std')}<th>STATUS / INPUTS</th></>}
                 <th>ALLPLAY TEAM</th><th>ALLPLAY GAME</th>
               <th className="model-samples-head">SAMPLE</th><th aria-label="Details" /></tr></thead>
              <tbody>{visible.map((player, rowIndex) => <tr key={player.id} className="model-player-row">
-               <td className="model-player-name"><span className="model-player-cell"><span className="model-row-index" title={`Row ${rowIndex + 1} in the current sorted view`}>{rowIndex + 1}</span><span title={player.participation}><strong>{player.name}</strong></span></span></td>
-               <td className="model-history-cell"><HistoryTrendCell player={player} metric={historyMetric} /></td>
+                <td className="model-player-name"><span className="model-player-cell"><span className="model-row-index" title={`Row ${rowIndex + 1} in the current sorted view`}>{rowIndex + 1}</span><span title={player.participation}><strong>{player.name}</strong><InjuryBadge status={player.availability} /></span></span></td>
+                <td className="research-cell">{researchByPlayer.get(player.id)?.rank ?? '—'}</td>
+                <td className="research-cell">{researchByPlayer.get(player.id)?.estimatedOwnership == null ? '—' : `${researchByPlayer.get(player.id)?.estimatedOwnership?.toFixed(1)}%`}</td>
+                <td className="model-history-cell"><HistoryTrendCell player={player} metric={historyMetric} /></td>
               <td className="model-mono">{player.position || '—'}</td>
               <td><span className="model-team">{matchupFor(player)?.logo && <img className="model-team-logo" src={matchupFor(player)?.logo ?? undefined} alt="" loading="lazy" onError={(event) => { event.currentTarget.hidden = true; }} />}{player.team || '—'}</span><small className="model-opponent">{matchupFor(player)?.homeAway === 'away' ? 'at' : 'vs'} {player.opponent || '—'}</small></td>
-              <td className="model-salary-cell">{salaryFor(player.id) == null ? '—' : `$${salaryFor(player.id)?.toLocaleString('en-US')}`}</td>
-              <td><span className={`availability-pill ${/out|inactive|doubtful/i.test(player.availability) ? 'availability-alert' : ''}`}>{player.availability || '—'}</span></td>
                {columnView === 'raw' ? sheet.metrics.map((metric) => <td key={metric.id} className="model-stat-cell"><MetricRank stat={player.stats.find((stat) => stat.id === metric.id)} tier={rankTiers.get(metric.id)?.get(player.id)} /></td>) : (() => {
                  const forecast = forecastFor(player, fantasySite);
                  const ready = forecast?.status === 'ready';
@@ -389,20 +389,40 @@ function SheetBody({ sheet, loading, error, retry, dashboard, platform, onPlatfo
 }
 
 export function ModelPreview({ sport, date }: { sport: DfsSport; date: string }) {
-  const params = useMemo(() => ({ sport, date, ...defaultSettings }), [sport, date]);
+  const { userId } = useAuth();
+  const localDate = date.slice(0, 10);
+  const params = useMemo(() => ({ sport, date: localDate, ...defaultSettings }), [sport, localDate]);
   const { sheet, query, membership, verified, signedIn } = useModelProjections(params);
   const canRead = verified && query.data?.status !== 'locked';
-  const previewMetrics = sheet?.metrics.slice(0, 3) ?? [];
-  const supportedColumns = (player: ModelPlayerProjection) => previewMetrics.filter(metric =>
-    player.stats.some(stat => stat.id === metric.id && stat.projected !== null)).length;
-  const previewPlayers = (sheet?.players ?? []).filter(player => supportedColumns(player) > 0)
-    .sort((a, b) => supportedColumns(b) - supportedColumns(a)).slice(0, 5);
+  const dashboardParams = useMemo<GetDfsDashboardParams>(() => ({ sport, date: sheet?.slateDate?.slice(0, 10) || localDate, salaryPlatform: 'draftkings' }), [sport, sheet?.slateDate, localDate]);
+  const dashboardKey = useMemo(() => [...getGetDfsDashboardQueryKey(dashboardParams), { clerkUserId: userId ?? 'signed-out' }] as const, [dashboardParams, userId]);
+  const dashboardQuery = useGetDfsDashboard(dashboardParams, { query: { queryKey: dashboardKey, enabled: canRead && sheet?.status === 'ready', refetchOnWindowFocus: false, staleTime: 60_000 } });
+  const insights = useMemo(() => canRead && sheet?.status === 'ready'
+    ? deriveLineupInsights(sheet, dashboardQuery.data, 'draftkings', 'draftkings', 'balanced')
+    : null, [canRead, sheet, dashboardQuery.data]);
+  const playerById = useMemo(() => new Map((sheet?.players ?? []).map((player) => [player.id, player])), [sheet?.players]);
+  const topPicks = insights?.rows.slice(0, 4) ?? [];
   return <div className="model-preview">
      <div className="model-preview-head"><div><span className="model-kicker">ALLPLAY CUSTOM MODEL</span><h3>Independent player research</h3><p>Historical stat estimates plus site-rule fantasy simulations where scoring inputs are supported. Not a provider forecast.</p></div><Link to="/projections" className="btn btn-quiet">Open full sheet <ChevronRight size={14} /></Link></div>
     {!canRead ? <div className="model-preview-lock"><LockKeyhole size={16} />{membership.isLoading && signedIn ? 'Verifying member access…' : 'Member access required to inspect model estimates.'}</div>
-      : <><div className="model-preview-meta">{sheet?.status === 'warming' ? `Processing ${sheet.processedGames} / ${sheet.totalGames} games` : sheet?.status === 'ready' ? `${sheet.players.length} players · ${sheet.gameCount} games · cutoff ${readableDate(sheet.effectiveAsOf)}` : sheet?.status === 'unavailable' ? 'No published model sheet for this date' : query.isError ? 'Model sheet unavailable' : 'Preparing requested sport sheet'}</div>
-        {sheet?.status === 'ready' ? <div className="model-preview-scroll"><table><thead><tr><th>PLAYER</th><th>TEAM / OPP</th>{previewMetrics.map((metric) => <th key={metric.id}>{metric.label}</th>)}</tr></thead><tbody>{previewPlayers.map((player) => <tr key={player.id}><td>{player.name}<small>{player.position || player.availability}</small></td><td>{player.team}<small>vs {player.opponent}</small></td>{previewMetrics.map((metric) => <td className="model-preview-value" key={metric.id}>{fmt(player.stats.find((stat) => stat.id === metric.id)?.projected, metric.unit)}</td>)}</tr>)}</tbody></table></div>
-          : <div className="model-preview-state">{query.data?.status === 'locked' ? 'ALLPLAY has locked estimates for this request.' : sheet?.status === 'warming' ? <><span className="warming-inline-dot" /> Model running · refreshing every 3 seconds</> : sheet?.status === 'unavailable' ? 'This sport or date has no published model data.' : query.isError ? <button className="btn btn-quiet" onClick={() => query.refetch()}>Retry model request</button> : 'Model estimates remain hidden until ready.'}</div>}
+       : <><div className="model-preview-meta">{sheet?.status === 'warming' ? `Processing ${sheet.processedGames} / ${sheet.totalGames} games` : sheet?.status === 'ready' ? `${sheet.players.length} players · ${sheet.gameCount} games · cutoff ${readableDate(sheet.effectiveAsOf)}` : sheet?.status === 'unavailable' ? 'No published model sheet for this date' : query.isError ? 'Model sheet unavailable' : 'Preparing requested sport sheet'}{dashboardQuery.isLoading && sheet?.status === 'ready' ? ' · checking selected DraftKings slate coverage' : ''}</div>
+         {sheet?.status === 'ready' ? topPicks.length ? <div className="model-preview-picks" aria-label="Top ALLPLAY own-scored research picks">
+           {topPicks.map((pick) => {
+             const player = playerById.get(pick.playerId);
+             return <div className="model-preview-pick" key={pick.playerId} data-testid={`research-pick-${pick.playerId}`}>
+               <span className="model-preview-pick-rank">{String(pick.rank).padStart(2, '0')}</span>
+               <span className="model-preview-pick-name">{pick.name}<small>{pick.position || '—'} · {pick.team || '—'} vs {pick.opponent || '—'}</small></span>
+               <span className="model-preview-pick-metric"><small>ALLPLAY PTS</small><strong>{fmt(pick.points)}</strong></span>
+               <span className="model-preview-pick-metric"><small>P25 / P85</small><strong>{fmt(pick.floor)} / {fmt(pick.ceiling)}</strong></span>
+               <span className="model-preview-pick-metric"><small>DK VALUE</small><strong>{fmt(pick.value)}</strong></span>
+               {player?.availability && <span className="sr-only">{player.availability}</span>}
+             </div>;
+           })}
+           {dashboardQuery.isError ? <div className="model-preview-state">Salary slate coverage could not be checked; salary value and ownership are unavailable. <button className="btn btn-quiet" onClick={() => dashboardQuery.refetch()}>Retry slate</button></div>
+             : insights && (insights.salaryCoverage < insights.forecastCoverage || dashboardQuery.isLoading) ? <div className="model-preview-state">{dashboardQuery.isLoading ? 'Research picks use ALLPLAY points while selected-slate salary coverage loads.' : 'Some picks lack an unambiguous salary match for the selected slate; value and ownership remain blank.'}</div> : null}
+           <div className="model-preview-state">Balanced research ranking · own ALLPLAY forecasts · not a lineup. Estimated ownership, when supported, is an uncalibrated heuristic—not contest ownership.</div>
+         </div> : <div className="model-preview-state">{insights?.forecastCoverage === 0 ? 'No complete positive fantasy forecasts are available for the selected scoring rules. Partial tracked points are not full projections.' : 'No eligible research picks for this slate.'}</div>
+           : <div className="model-preview-state">{query.data?.status === 'locked' ? 'ALLPLAY has locked estimates for this request.' : sheet?.status === 'warming' ? <><span className="warming-inline-dot" /> Model running · refreshing every 3 seconds</> : sheet?.status === 'unavailable' ? 'This sport or date has no published model data.' : query.isError ? <button className="btn btn-quiet" onClick={() => query.refetch()}>Retry model request</button> : 'Model estimates remain hidden until ready.'}</div>}
       </>}
     <Link to="/projections" className="model-preview-link">Inspect calculations, recent appearances & settings <ChevronRight size={14} /></Link>
   </div>;

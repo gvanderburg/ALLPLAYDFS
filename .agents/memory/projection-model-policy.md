@@ -14,3 +14,9 @@ Published DFS-site scoring rules are allowed to convert ALLPLAY's own stat forec
 **Why:** On 2026-10-13 the user explicitly selected each site's scoring rules after clarifying that the forecast algorithm itself must be ALLPLAY's own.
 
 **How to apply:** Separate statistical forecasts from scoring coefficients. Distinguish modeled outcome percentiles from confidence intervals, and unavailable contest/lineup inputs from observed zeros. Do not label partial scoring subtotals as complete fantasy points or compute salary value from them.
+
+ALLPLAY must turn its independent history/matchup forecasts into actionable DFS research: fantasy-score estimates, reasons to consider a player, and clearly labeled ownership estimates where supportable. A formatted statistics table alone does not meet the product goal.
+
+**Why:** On 2026-10-13 the user clarified that they need suggestions for upcoming games/slates, not merely raw statistical projections.
+
+**How to apply:** Separate full fantasy scores from incomplete inputs. Ownership inferred without contest ownership history is an uncalibrated selection-share heuristic, not observed or validated contest ownership. Label its assumptions and supported slate/pool restrictions; never fill unsupported estimates with provider values or fabricated percentages.

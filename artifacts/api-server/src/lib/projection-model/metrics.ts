@@ -25,6 +25,10 @@ const football = [
   allowed("receivingYards", "Rec yards", "Receiving", { unit: "yards" }),
   allowed("receivingTDs", "Rec TD", "Receiving"),
   allowed("targets", "Targets", "Receiving"),
+  metric("fumblesLost", "Fumbles lost", "Scoring", { higherIsBetter: false }),
+  metric("twoPointConversions", "2PT conversions", "Scoring"),
+  metric("returnTouchdowns", "Return TD", "Scoring"),
+  metric("fumbleRecoveryTouchdowns", "Recovery TD", "Scoring"),
   allowed("fieldGoalsMade", "Field goals", "Kicking"),
   allowed("extraPointsMade", "Extra points", "Kicking"),
 ];
@@ -61,6 +65,8 @@ export const METRICS: Record<ModelSport, MetricDefinition[]> = {
     metric("atBats", "At bats", "Hitter"),
     ...[["hits", "Hits"], ["runs", "Runs"], ["rbi", "RBI"], ["homeRuns", "HR"], ["walks", "Walks"], ["battingStrikeouts", "K batting"]]
       .map(([id, label]) => allowed(id, label, "Hitter", { exposure: "atBats", higherIsBetter: id !== "battingStrikeouts" })),
+    ...[["singles", "1B"], ["doubles", "2B"], ["triples", "3B"], ["hitByPitch", "HBP"], ["stolenBases", "SB"]]
+      .map(([id, label]) => allowed(id, label, "Hitter", { exposure: "atBats" })),
     metric("inningsPitched", "Innings", "Pitcher", { unit: "innings", maximum: 9 }),
     ...[
       ["pitcherStrikeouts", "K pitching", "battingStrikeouts"],
@@ -69,6 +75,9 @@ export const METRICS: Record<ModelSport, MetricDefinition[]> = {
     ].map(([id, label, target]) => metric(id, label, "Pitcher", {
       exposure: "inningsPitched", matchup: { metric: target, mode: "attack" }, higherIsBetter: id === "pitcherStrikeouts",
     })),
+    metric("hitBatters", "HBP allowed", "Pitcher", { exposure: "inningsPitched", higherIsBetter: false }),
+    ...[["wins", "W"], ["qualityStarts", "QS"], ["completeGames", "CG"], ["shutouts", "SO"], ["noHitters", "No-hitter"]]
+      .map(([id, label]) => metric(id, label, "Pitcher", { maximum: 1 })),
   ],
   nascar: [metric("finish", "Expected finish", "Driver", { unit: "position", higherIsBetter: false })],
 };

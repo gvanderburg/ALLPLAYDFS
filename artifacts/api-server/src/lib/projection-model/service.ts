@@ -3,6 +3,7 @@ import { METRICS } from "./metrics";
 import { calculatePlayers } from "./calculate";
 import { loadHistory, resolveModelSlate, slateCandidates } from "./provider";
 import type { ModelSettings, ModelSport } from "./types";
+import { list, obj, str } from "./normalize";
 
 interface Job { expiresAt: number; sheet: ModelProjectionSheet; }
 const jobs = new Map<string, Job>();
@@ -34,8 +35,9 @@ export function emptyModelSheet(
 
 function sharedHistory(
   sport: ModelSport, cutoff: string, progress: (done: number, total: number, failed: number) => void,
+  context: { teams: string[]; phase: number; season: number },
 ) {
-  const key = `${sport}:${cutoff}`;
+  const key = `${sport}:${cutoff}:${context.phase}:${context.season}:${[...context.teams].sort().join(",")}`;
   let entry = historyLoads.get(key);
   if (!entry || entry.expiresAt < Date.now()) {
     const listeners = new Set<typeof progress>();
@@ -47,7 +49,7 @@ function sharedHistory(
     created.promise = loadHistory(sport, cutoff, (done, total, failed) => {
       created.progress = [done, total, failed];
       for (const callback of listeners) callback(done, total, failed);
-    }).catch(error => { historyLoads.delete(key); throw error; });
+    }, context).catch(error => { historyLoads.delete(key); throw error; });
     entry = created;
   }
   entry.listeners.add(progress);
@@ -81,6 +83,10 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
       job.sheet.processedGames = done;
       job.sheet.totalGames = total;
       job.sheet.failedGames = failed;
+    }, {
+      teams: [...new Set(slate.events.flatMap(event => list(obj(list(event.competitions)[0]).competitors)
+        .map(c => str(obj(c).id || obj(obj(c).team).id)).filter(Boolean)))],
+      phase: slate.phase, season: Number(obj(slate.events[0]?.season).year),
     });
     const eligible = history.games.filter(game => game.phase === slate.phase);
     const candidates = await slateCandidates(sport, slate, eligible);
@@ -99,9 +105,12 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
       "Goalie and pitcher matchups use opponent attacking production. NBA/WNBA minutes, NHL ice time and MLB innings/at-bats determine opportunity where available. Saves are reconciled to shots faced minus goals allowed; catches/completions/hits cannot exceed their opportunity estimates.",
       "These are conditional-on-playing estimates. Injuries, trades, confirmed lineups, starting roles, pace and coaching changes are not learned automatically. Check availability before using any estimate.",
       "ALLPLAY forecasts raw stats from ESPN completed box scores. Published site scoring rules convert those own forecasts to fantasy points; provider fantasy forecasts and ownership predictions are never copied.",
-      "Fantasy outcome ranges use 2,048 deterministic count simulations from ALLPLAY means and sample-shrunk historical variance. NHL and basketball scoring is available where all needed inputs have at least two appearances. Missing scoring inputs leave full totals/ranges blank; known-stat subtotals are not full projections.",
+      "Upcoming teams' latest ten completed same-phase appearances are prioritized, including the preceding season if needed. Older records can reflect changed roles; recent-form weights use appearance order, not calendar age.",
+      "Fantasy outcome ranges use 2,048 deterministic count simulations from ALLPLAY means and sample-shrunk historical variance. Supported scoring is available where all required inputs have at least two appearances. Missing scoring inputs leave full totals/ranges blank; known-stat subtotals are not full projections.",
       "Model team/game totals use covered teams' historical scoring production and a sample-shrunk opponent allowance adjustment. They are independent model estimates, not market lines. Totals are unavailable outside NHL/NBA/WNBA or with fewer than two team appearances.",
-      "Hockey PP/SH points and shot attempts are derived only from play logs that reconcile to box scores. Wins/OT losses need verified goalie decisions or unambiguous appearances; missing input is not zero. EV/PP line assignments and contest ownership are unavailable.",
+      "Hockey PP/SH points and shot attempts require play logs that reconcile to box scores. Football zero category counts require reconciled team category totals; rare scores require a complete play log and matched final score. Missing input is not zero.",
+      "Supplemental baseball scoring inputs use official MLB final-game box scores only after game date, full team names, final scores and unique normalized player names match the ESPN history. Failed/ambiguous matches remain missing.",
+      "Actual contest ownership and EV/PP assignments are not provided. Research shortlists can calculate explicitly uncalibrated classic-slate ownership heuristics when supported same-slate salary coverage permits; they do not optimize a valid lineup.",
       "Fractional stat counts are expected values, not guaranteed game lines or calibrated probabilities. Projected minutes, ice time and innings use decimal units; historical baseball innings are converted from outs notation.",
     );
     if (sport === "nascar") job.sheet.notes.push(
@@ -110,6 +119,7 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
     if (slate.phase === 1) job.sheet.notes.push("This is a preseason slate: only preseason appearances are used. Small samples and changing rotations reduce usefulness.");
     if (slate.date < new Date().toISOString().slice(0, 10)) job.sheet.notes.push("Past-date previews use historical results before the cutoff but current roster membership. They are not historical-roster backtests and must not be used to claim predictive accuracy.");
     if (history.failed) job.sheet.notes.push(`${history.failed} historical events could not supply a usable completed box score; coverage and ranks are partial.`);
+    if (history.scheduleFailures) job.sheet.notes.push(`${history.scheduleFailures} supplemental team-schedule lookups failed. Available recent-window records were retained; prior-season coverage may be incomplete.`);
     if (history.truncated) job.sheet.notes.push("The history provider exceeded the bounded event limit; the observed sample is incomplete.");
     if (Date.parse(slate.date) > Date.now() + 14 * 86400000) job.sheet.notes.push("This slate is more than two weeks ahead. Current rosters and roles may change; refresh near the event.");
     if (job.sheet.status === "unavailable") job.sheet.notes.push("No player has two usable recorded appearances for the matched season phase. The sheet remains unfilled rather than copying a provider forecast.");

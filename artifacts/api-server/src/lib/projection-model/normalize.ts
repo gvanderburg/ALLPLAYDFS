@@ -1,4 +1,6 @@
 import { HISTORY_VERSION, type HistoricalGame, type HistoricalPlayer, type ModelSport, type StatValues } from "./types";
+import { enrichFootball } from "./football-scoring";
+import { enrichBaseball } from "./baseball-scoring";
 
 export type Json = Record<string, unknown>;
 export const obj = (value: unknown): Json => value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
@@ -28,6 +30,7 @@ const football: Record<string, Record<string, string>> = {
   passing: { passingYards: "passingYards", passingTouchdowns: "passingTDs", interceptions: "interceptionsThrown" },
   rushing: { rushingAttempts: "rushingAttempts", rushingYards: "rushingYards", rushingTouchdowns: "rushingTDs" },
   receiving: { receptions: "receptions", receivingYards: "receivingYards", receivingTouchdowns: "receivingTDs", receivingTargets: "targets" },
+  fumbles: { fumblesLost: "fumblesLost" },
 };
 const basketball = { points: "points", rebounds: "rebounds", assists: "assists", steals: "steals", blocks: "blocks", turnovers: "turnovers" };
 const skater = { goals: "goals", assists: "assists", shotsTotal: "shots", shotsMissed: "missedShots", blockedShots: "blockedShots", plusMinus: "plusMinus", shootoutGoals: "shootoutGoals" };
@@ -97,6 +100,8 @@ export function normalizeSummary(payload: unknown, sport: ModelSport): Historica
   }
   if (teams.length !== 2 || !players.size) return null;
   if (sport === "nhl") enrichHockey(data, competition, players);
+  if (sport === "nfl" || sport === "cfb") enrichFootball(data, competition, players);
+  if (sport === "mlb") enrichBaseball(data, competition, players);
   return {
     version: HISTORY_VERSION, id, date, teams, players: [...players.values()],
     phase: Number(obj(header.season).type ?? 0), season: Number(obj(header.season).year ?? 0),

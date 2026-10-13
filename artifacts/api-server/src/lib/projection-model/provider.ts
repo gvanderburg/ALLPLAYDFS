@@ -4,6 +4,8 @@ import { findNextSlate } from "../next-slate";
 import { MODEL_SPORTS, HISTORY_VERSION, type HistoricalGame, type ModelSport, type SlatePlayer } from "./types";
 import { list, normalizeRace, normalizeSummary, numeric, obj, str, type Json } from "./normalize";
 import { annualHistoryRanges } from "./date-ranges";
+import { completedScheduleIds } from "./schedule-history";
+import { baseballBoxFor } from "./baseball-scoring";
 
 const SITE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE = "https://sports.core.api.espn.com/v2/sports";
@@ -53,7 +55,8 @@ function storedHistory(value: unknown): value is HistoricalGame {
 
 export async function loadHistory(
   sport: ModelSport, cutoff: string, progress: (completed: number, total: number, failed: number) => void,
-): Promise<{ games: HistoricalGame[]; failed: number; truncated: boolean }> {
+  context?: { teams: string[]; phase: number; season: number },
+): Promise<{ games: HistoricalGame[]; failed: number; truncated: boolean; scheduleFailures?: number }> {
   const config = MODEL_SPORTS[sport];
   const before = new Date(cutoff), after = new Date(before.getTime() - config.historyDays * 86400000);
   const lastDay = new Date(before.getTime() - 86400000).toISOString().slice(0, 10).replaceAll("-", "");
@@ -72,12 +75,28 @@ export async function loadHistory(
   // accepts them. Parse numeric IDs from its references, never follow arbitrary URLs.
   const corePath = config.path.replace("/", "/leagues/");
   const result = obj(await fetchSportsJson(`${CORE}/${corePath}/events?dates=${startDay}-${lastDay}&limit=1000`));
-  const ids = [...new Set(list(result.items).flatMap(item => {
+  // Prioritize the upcoming teams' last ten same-phase games, including the
+  // previous season when the recent calendar window contains too few games.
+  // This avoids an empty season-opener forecast and arbitrary old league rows.
+  let scheduleFailures = 0;
+  const scheduled = context ? await Promise.all(context.teams.map(async team => {
+    const selected: string[] = [];
+    for (const season of [context.season, context.season - 1]) {
+      if (!Number.isInteger(season) || season < 2000 || selected.length >= 10) break;
+      try {
+        const payload = await fetchSportsJson(`${SITE}/${config.path}/teams/${team}/schedule?season=${season}&seasontype=${context.phase}`);
+        selected.push(...completedScheduleIds(payload, cutoff, context.phase, 10 - selected.length));
+      } catch { scheduleFailures++; }
+    }
+    return selected;
+  })) : [];
+  const discovered = [...new Set([...scheduled.flat(), ...list(result.items).flatMap(item => {
     const match = str(obj(item).$ref).match(/\/events\/(\d+)(?:\?|$)/);
     return match ? [match[1]] : [];
-  }))].slice(0, 650);
-  const truncated = (numeric(result.count) ?? ids.length) > ids.length;
-  if (!ids.length) { progress(0, 0, 0); return { games: [], failed: 0, truncated }; }
+  })])];
+  const ids = discovered.slice(0, 650);
+  const truncated = discovered.length > 650 || (numeric(result.count) ?? ids.length) > ids.length;
+  if (!ids.length) { progress(0, 0, 0); return { games: [], failed: 0, truncated, scheduleFailures }; }
   const saved = await db.select().from(projectionHistory).where(and(eq(projectionHistory.sport, sport), inArray(projectionHistory.eventId, ids)));
   const cached = new Map(saved.filter(row =>
     storedHistory(row.data) && row.fetchedAt.getTime() > Date.now() - 86400000,
@@ -92,7 +111,17 @@ export async function loadHistory(
       try {
         let game = cached.get(id);
         if (!game) {
-          const payload = await fetchSportsJson(`${SITE}/${config.path}/summary?event=${id}`);
+          const payload = obj(await fetchSportsJson(`${SITE}/${config.path}/summary?event=${id}`));
+          if (sport === "nfl" || sport === "cfb") {
+            try {
+              payload.allplayFootballPlays = await fetchSportsJson(
+                `${CORE}/${corePath}/events/${id}/competitions/${id}/plays?limit=1000`);
+            } catch { /* Explicitly missing rare inputs: never replace a failed log with zero. */ }
+          }
+          if (sport === "mlb") {
+            try { payload.allplayBaseballBox = await baseballBoxFor(payload, fetchSportsJson); }
+            catch { /* Keep unsupported scoring inputs missing, not observed zeros. */ }
+          }
           game = normalizeSummary(payload, sport) ?? undefined;
           if (game) {
             const fetchedAt = new Date();
@@ -112,7 +141,7 @@ export async function loadHistory(
   }));
   const skipped = ids.length - completed;
   if (skipped) { failed += skipped; progress(completed, ids.length, failed); }
-  return { games, failed, truncated: truncated || skipped > 0 };
+  return { games, failed, truncated: truncated || skipped > 0, scheduleFailures };
 }
 
 function rosterAthletes(payload: unknown): Json[] {

@@ -40,6 +40,21 @@ export function scoringRule(sport: ModelSport, site: Site, goalie: boolean, posi
     weights: { passingYards: .04, passingTDs: 4, interceptionsThrown: -1, rushingYards: .1, rushingTDs: 6, receivingYards: .1, receivingTDs: 6, receptions: .5, fumblesLost: -2, twoPointConversions: 2, returnTouchdowns: 6, fumbleRecoveryTouchdowns: 6, ...(position === "K" ? { fieldGoalsUnder40: 3, fieldGoals40To49: 4, fieldGoals50Plus: 5, extraPointsMade: 1 } : {}) },
     bonus: sport === "nfl" ? v => 3 * (Number(v.passingYards >= 300) + Number(v.rushingYards >= 100) + Number(v.receivingYards >= 100)) : undefined,
   };
+  if ((sport === "nfl" || sport === "cfb") && site === "draftkings" && position !== "K") return {
+    source: sport === "nfl" ? "https://www.draftkings.com/help/rules/1/145" : "https://www.draftkings.com/help/rules/cfb",
+    weights: { passingYards: .04, passingTDs: 4, interceptionsThrown: -1, rushingYards: .1, rushingTDs: 6,
+      receivingYards: .1, receivingTDs: 6, receptions: 1, fumblesLost: -1, twoPointConversions: 2,
+      returnTouchdowns: 6, fumbleRecoveryTouchdowns: 6 },
+    bonus: v => 3 * (Number(v.passingYards >= 300) + Number(v.rushingYards >= 100) + Number(v.receivingYards >= 100)),
+  };
+  if (sport === "mlb" && site === "draftkings") return /^(SP|RP|P)$/.test(position)
+    ? { source: "https://www.draftkings.com/help/rules/mlb", weights: {
+      inningsPitched: 2.25, pitcherStrikeouts: 2, wins: 4, earnedRuns: -2, hitsAllowed: -.6, walksAllowed: -.6,
+      hitBatters: -.6, completeGames: 2.5, shutouts: 2.5, noHitters: 5,
+    } }
+    : { source: "https://www.draftkings.com/help/rules/mlb", weights: {
+      singles: 3, doubles: 5, triples: 8, homeRuns: 10, runs: 2, rbi: 2, walks: 2, hitByPitch: 2, stolenBases: 5,
+    } };
   if (sport === "mlb" && site === "fanduel") return /^(SP|RP|P)$/.test(position)
     ? { source: fd, weights: { inningsPitched: 3, pitcherStrikeouts: 3, earnedRuns: -3, wins: 6, qualityStarts: 4 } }
     : { source: fd, weights: { singles: 3, doubles: 6, triples: 9, homeRuns: 12, rbi: 3.5, runs: 3.2, walks: 3, stolenBases: 6, hitByPitch: 3 } };
@@ -135,6 +150,19 @@ export function fantasyForecasts(
       v.shortHandedPoints = binomial(points - v.powerPlayPoints, expected - (means.powerPlayPoints ?? 0) > 0 ? (means.shortHandedPoints ?? 0) / (expected - (means.powerPlayPoints ?? 0)) : 0, rng);
     } else if (sport === "nba" || sport === "wnba") {
       v.threePointers = Math.min(v.threePointers ?? 0, Math.floor((v.points ?? 0) / 3));
+    } else if (sport === "mlb") {
+      for (const key of ["wins", "qualityStarts", "completeGames", "shutouts", "noHitters"])
+        if (means[key] !== undefined) v[key] = Number(rng() < clamp(means[key], 0, 1));
+      if (means.singles !== undefined && means.atBats !== undefined) {
+        const categories = ["singles", "doubles", "triples", "homeRuns"];
+        const expected = categories.reduce((n, key) => n + (means[key] ?? 0), 0);
+        let hits = binomial(v.atBats ?? 0, means.atBats > 0 ? expected / means.atBats : 0, rng);
+        let remainingMean = expected;
+        for (const key of categories) {
+          v[key] = remainingMean > 0 ? binomial(hits, (means[key] ?? 0) / remainingMean, rng) : 0;
+          hits -= v[key]; remainingMean -= means[key] ?? 0;
+        }
+      }
     }
     return v;
   };
