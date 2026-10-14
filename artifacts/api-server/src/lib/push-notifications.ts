@@ -3,6 +3,7 @@ import webpush, { type PushSubscription as WebPushSubscription } from "web-push"
 import { and, eq, inArray } from "drizzle-orm";
 import {
   db,
+  pushNotificationDeliveries,
   pushNotificationReceipts,
   pushSubscriptions,
 } from "@workspace/db";
@@ -98,43 +99,87 @@ export async function notifyOwners(
     .digest("hex");
   const inserted = await db
     .insert(pushNotificationReceipts)
-    .values({ eventKey, eventType: kind })
+    .values({ eventKey, eventType: kind, status: "processing" })
     .onConflictDoNothing()
     .returning({ eventKey: pushNotificationReceipts.eventKey });
-  if (!inserted.length) return false;
+  if (!inserted.length) {
+    // Only one invocation can claim a retry; completed or in-flight events stay deduplicated.
+    const retried = await db
+      .update(pushNotificationReceipts)
+      .set({ status: "processing" })
+      .where(and(
+        eq(pushNotificationReceipts.eventKey, eventKey),
+        eq(pushNotificationReceipts.status, "retry"),
+      ))
+      .returning({ eventKey: pushNotificationReceipts.eventKey });
+    if (!retried.length) return false;
+  }
 
-  const targets = await db
-    .select()
-    .from(pushSubscriptions)
-    .where(inArray(pushSubscriptions.userId, ownerIds));
-  if (!targets.length) return true;
-
-  getVapidKeys();
-  const payload = JSON.stringify({
-    title: kind === "signup" ? "New ALLPLAY signup" : "New ALLPLAY membership",
-    body: kind === "signup"
-      ? "A new account just signed up."
-      : "A new paid membership was verified.",
-    url: "/account",
-  });
-
-  await Promise.all(targets.map(async (target) => {
-    try {
-      await webpush.sendNotification(
-        {
-          endpoint: target.endpoint,
-          keys: { p256dh: target.p256dh, auth: target.auth },
-        },
-        payload,
-        { TTL: 60 * 60 },
-      );
-    } catch (error) {
-      const statusCode = (error as { statusCode?: number }).statusCode;
-      if (statusCode === 404 || statusCode === 410) {
-        await removeOwnerPushSubscription(target.userId, target.endpoint).catch(() => undefined);
-      }
-      logger.warn({ statusCode }, "Could not deliver an ALLPLAY owner push notification");
+  try {
+    const targets = await db
+      .select()
+      .from(pushSubscriptions)
+      .where(inArray(pushSubscriptions.userId, ownerIds));
+    if (!targets.length) {
+      await db.update(pushNotificationReceipts)
+        .set({ status: "completed" })
+        .where(eq(pushNotificationReceipts.eventKey, eventKey));
+      return true;
     }
-  }));
+
+    getVapidKeys();
+    const deliveredRows = await db
+      .select({ endpoint: pushNotificationDeliveries.endpoint })
+      .from(pushNotificationDeliveries)
+      .where(eq(pushNotificationDeliveries.eventKey, eventKey));
+    const deliveredEndpoints = new Set(deliveredRows.map((row) => row.endpoint));
+    const payload = JSON.stringify({
+      title: kind === "signup" ? "New ALLPLAY signup" : "New ALLPLAY membership",
+      body: kind === "signup"
+        ? "A new account just signed up."
+        : "A new paid membership was verified.",
+      url: "/account",
+    });
+    let retryNeeded = false;
+
+    await Promise.all(targets.filter((target) => !deliveredEndpoints.has(target.endpoint))
+      .map(async (target) => {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: target.endpoint,
+              keys: { p256dh: target.p256dh, auth: target.auth },
+            },
+            payload,
+            { TTL: 60 * 60 },
+          );
+          await db.insert(pushNotificationDeliveries)
+            .values({ eventKey, endpoint: target.endpoint })
+            .onConflictDoNothing();
+        } catch (error) {
+          const statusCode = (error as { statusCode?: number }).statusCode;
+          if (statusCode === 404 || statusCode === 410) {
+            try {
+              await removeOwnerPushSubscription(target.userId, target.endpoint);
+            } catch {
+              retryNeeded = true;
+            }
+          } else {
+            retryNeeded = true;
+          }
+          logger.warn({ statusCode }, "Could not deliver an ALLPLAY owner push notification");
+        }
+      }));
+
+    await db.update(pushNotificationReceipts)
+      .set({ status: retryNeeded ? "retry" : "completed" })
+      .where(eq(pushNotificationReceipts.eventKey, eventKey));
+  } catch (error) {
+    // Leave the event retryable if key setup or another pre-delivery step fails.
+    await db.update(pushNotificationReceipts)
+      .set({ status: "retry" })
+      .where(eq(pushNotificationReceipts.eventKey, eventKey));
+    throw error;
+  }
   return true;
 }

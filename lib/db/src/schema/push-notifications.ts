@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 export const pushSubscriptions = pgTable(
   "push_subscriptions",
@@ -16,5 +16,17 @@ export const pushSubscriptions = pgTable(
 export const pushNotificationReceipts = pgTable("push_notification_receipts", {
   eventKey: text("event_key").primaryKey(),
   eventType: text("event_type").notNull(),
+  // Existing receipts predate delivery tracking and must remain deduplicated.
+  status: text("status").notNull().default("completed"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const pushNotificationDeliveries = pgTable(
+  "push_notification_deliveries",
+  {
+    eventKey: text("event_key").notNull(),
+    endpoint: text("endpoint").notNull(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.eventKey, table.endpoint] })],
+);

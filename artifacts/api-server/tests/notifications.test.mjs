@@ -13,7 +13,9 @@ const entry = `
   export {
     notifyOwners, saveOwnerPushSubscription
   } from "./src/lib/push-notifications";
-  export { db, pushSubscriptions, pushNotificationReceipts } from "@workspace/db";
+  export {
+    db, pushSubscriptions, pushNotificationDeliveries, pushNotificationReceipts
+  } from "@workspace/db";
 `;
 const dbFixture = `
 const state = () => globalThis.__notificationRows;
@@ -28,6 +30,12 @@ export const pushNotificationReceipts = {
   table: "receipts",
   eventKey: { table: "receipts", name: "eventKey" },
   eventType: { table: "receipts", name: "eventType" },
+  status: { table: "receipts", name: "status" },
+};
+export const pushNotificationDeliveries = {
+  table: "deliveries",
+  eventKey: { table: "deliveries", name: "eventKey" },
+  endpoint: { table: "deliveries", name: "endpoint" },
 };
 const matches = (row, filter) => {
   if (!filter) return true;
@@ -59,13 +67,45 @@ export const db = {
           }
         },
         onConflictDoNothing() {
-          return { returning: async () => {
+          const apply = () => {
+            if (table.table === "deliveries") {
+              if (!state().deliveries.some(row =>
+                row.eventKey === value.eventKey && row.endpoint === value.endpoint
+              )) state().deliveries.push(value);
+              return state().deliveries.filter(row =>
+                row.eventKey === value.eventKey && row.endpoint === value.endpoint
+              );
+            }
             if (state().receipts.some(row => row.eventKey === value.eventKey)) return [];
             state().receipts.push(value);
             return [{ eventKey: value.eventKey }];
-          } };
+          };
+          return {
+            returning: async () => apply(),
+            then(resolve, reject) {
+              return Promise.resolve(apply()).then(resolve, reject);
+            },
+          };
         },
       };
+    } };
+  },
+  update(table) {
+    return { set(values) {
+      let filter;
+      const finish = () => {
+        const rows = state()[table.table].filter(row => matches(row, filter));
+        for (const row of rows) Object.assign(row, values);
+        return rows;
+      };
+      const query = {
+        where(value) { filter = value; return query; },
+        returning: async () => finish(),
+        then(resolve, reject) {
+          return Promise.resolve(finish()).then(resolve, reject);
+        },
+      };
+      return query;
     } };
   },
   delete(table) {
@@ -76,11 +116,12 @@ export const db = {
 };
 `;
 
-globalThis.__notificationRows = { subscriptions: [], receipts: [] };
+globalThis.__notificationRows = { subscriptions: [], receipts: [], deliveries: [] };
 globalThis.__notificationLog = [];
 globalThis.__sentPushes = [];
 globalThis.__clerkUsers = {};
 globalThis.__deadPushEndpoint = null;
+globalThis.__failPushEndpoint = null;
 
 await build({
   stdin: { contents: entry, resolveDir: new URL("../", import.meta.url).pathname },
@@ -134,6 +175,11 @@ await build({
                   error.statusCode=410;
                   throw error;
                 }
+                if(subscription.endpoint===globalThis.__failPushEndpoint){
+                  const error=new Error("temporary push transport failure");
+                  error.statusCode=503;
+                  throw error;
+                }
               }
             };
             export default api;
@@ -167,11 +213,12 @@ await new Promise(resolve => server.on("listening", resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 
 function reset() {
-  globalThis.__notificationRows = { subscriptions: [], receipts: [] };
+  globalThis.__notificationRows = { subscriptions: [], receipts: [], deliveries: [] };
   globalThis.__notificationLog = [];
   globalThis.__sentPushes = [];
   globalThis.__clerkUsers = {};
   globalThis.__deadPushEndpoint = null;
+  globalThis.__failPushEndpoint = null;
 }
 
 async function request(user, path, method = "POST", body, origin = base) {
@@ -231,6 +278,46 @@ test("a verified membership alert is deduplicated across retries", async () => {
   assert.equal(await notifyOwners("membership", "mem_verifiedFixture"), false);
   assert.deepEqual(globalThis.__sentPushes, ["https://push.example/membership"]);
   assert.equal(globalThis.__notificationRows.receipts.length, 1);
+  assert.equal(globalThis.__notificationRows.receipts[0].status, "completed");
+  assert.equal(globalThis.__notificationRows.deliveries.length, 1);
+});
+
+test("temporary failures retry only undelivered devices", async () => {
+  reset();
+  const delivered = "https://push.example/delivered-device";
+  const temporarilyUnavailable = "https://push.example/retry-device";
+  await saveOwnerPushSubscription("user_ownerFixture", subscription(delivered));
+  await saveOwnerPushSubscription("user_ownerFixture", subscription(temporarilyUnavailable));
+  globalThis.__failPushEndpoint = temporarilyUnavailable;
+
+  assert.equal(await notifyOwners("membership", "mem_partialFixture"), true);
+  assert.equal(globalThis.__notificationRows.receipts[0].status, "retry");
+  assert.deepEqual(globalThis.__notificationRows.deliveries.map(row => row.endpoint), [delivered]);
+
+  globalThis.__failPushEndpoint = null;
+  assert.equal(await notifyOwners("membership", "mem_partialFixture"), true);
+  assert.deepEqual(globalThis.__sentPushes, [delivered, temporarilyUnavailable, temporarilyUnavailable]);
+  assert.deepEqual(
+    globalThis.__notificationRows.deliveries.map(row => row.endpoint).sort(),
+    [delivered, temporarilyUnavailable].sort(),
+  );
+  assert.equal(globalThis.__notificationRows.receipts[0].status, "completed");
+  assert.equal(await notifyOwners("membership", "mem_partialFixture"), false);
+  assert.equal(globalThis.__sentPushes.length, 3);
+});
+
+test("a signing-key failure leaves the event retryable", async () => {
+  reset();
+  await saveOwnerPushSubscription("user_ownerFixture", subscription("https://push.example/key-retry"));
+  const secret = process.env.SESSION_SECRET;
+  delete process.env.SESSION_SECRET;
+  await assert.rejects(notifyOwners("signup", "signup-key-retry-fixture"), /SESSION_SECRET is required/);
+  assert.equal(globalThis.__notificationRows.receipts[0].status, "retry");
+  process.env.SESSION_SECRET = secret;
+
+  assert.equal(await notifyOwners("signup", "signup-key-retry-fixture"), true);
+  assert.deepEqual(globalThis.__sentPushes, ["https://push.example/key-retry"]);
+  assert.equal(globalThis.__notificationRows.receipts[0].status, "completed");
 });
 
 test("expired push subscriptions are deleted and their endpoint details never reach logs", async () => {
