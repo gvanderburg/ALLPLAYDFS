@@ -15,9 +15,9 @@ Use the near-black NASCAR analytics-table reference for projection-sheet density
 
 **How to apply:** Use the latest reference for presentation, while preserving ALLPLAY's real sport-specific columns, separate tabs, membership gates, navigation and working features. The cropped table does not define a replacement for necessary navigation. Any visible history trend must use actual observations; do not invent racing fields, confidence ratings or lineup actions solely because the reference shows them.
 
-The user approved the red-and-black direction and named thespreadsports.com as a layout/feature reference, specifically requesting games scrolling along the bottom and compact slate cards.
+The user approved the red-and-black direction and named thespreadsports.com as a layout/feature reference. Keep compact slate cards and a scrolling game strip directly below the main header.
 
-**Why:** On 2026-10-13 the user said, "i like the red color scheme" and requested the reference site's experience in ALLPLAY's black-and-red palette.
+**Why:** On 2026-10-13 the user approved red-and-black branding. They subsequently requested moving the scrolling game strip to the top; this supersedes the earlier bottom placement.
 
 **How to apply:** Preserve ALLPLAY branding, separate sports, real data and access gates. Keep prototype-only historical examples clearly labeled and never move them into live feeds. Additional reference photos may refine the layout.
 
