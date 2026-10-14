@@ -7,6 +7,7 @@ import './index.css';
 import './styles/slate-theme.css';
 import './styles/reference-table-theme.css';
 import './styles/usability-pass.css';
+import './styles/red-black.css';
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {

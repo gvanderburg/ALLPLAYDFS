@@ -59,7 +59,7 @@ export function RedBlack() {
         --rb-bg:#111112; --rb-rail:#171718; --rb-panel:#1c1c1e; --rb-raised:#242426;
         --rb-line:#343437; --rb-ink:#f1efee; --rb-muted:#aaa6a5; --rb-dim:#858181;
         --rb-red:#ed493f; --rb-red-soft:#ff786d; --rb-red-ink:#1b1110; --rb-warm:#d2b393;
-        min-height:100dvh; display:grid; grid-template-columns:214px minmax(0,1fr); grid-template-rows:62px 1fr;
+        min-height:100dvh; display:grid; grid-template-columns:214px minmax(0,1fr); grid-template-rows:62px auto 1fr;
         color:var(--rb-ink); background:var(--rb-bg); font:13px/1.45 'DM Sans',ui-sans-serif,system-ui,sans-serif;
       }
       .rb-app * { box-sizing:border-box; }
@@ -165,7 +165,7 @@ export function RedBlack() {
       .rb-install-copy { margin:0 0 11px; color:#b4afae; font-size:10px; line-height:1.6; }
       .rb-bottom-line { margin-top:19px; color:#85807f; font:8px 'Space Mono',monospace; letter-spacing:.1em; }
       .rb-ticker {
-        position:fixed; z-index:25; inset-inline:0; bottom:0; display:grid;
+        position:sticky; z-index:25; grid-column:1/-1; grid-row:2; top:62px; bottom:auto; display:grid;
         grid-template-columns:205px minmax(0,1fr); align-items:center; gap:12px;
         min-height:68px; padding:7px 12px calc(7px + env(safe-area-inset-bottom));
         border-top:1px solid #4a3432; background:rgba(16,16,17,.97);
@@ -243,6 +243,14 @@ export function RedBlack() {
         .rb-empty-actions .rb-btn { justify-content:center; }
       }
       @media(prefers-reduced-motion:reduce) { .rb-app * { scroll-behavior:auto!important; transition:none!important; } }
+      .rb-top { position:sticky; top:0; z-index:30; }
+      .rb-rail { grid-row:3; }
+      .rb-main { grid-column:2; grid-row:3; padding-bottom:32px; }
+      @media(max-width:680px) {
+        .rb-app { grid-template-rows:56px auto 1fr; }
+        .rb-ticker { top:56px; padding-bottom:5px; }
+        .rb-main { grid-column:1; padding-bottom:32px; }
+      }
     `}</style>
 
     <header className="rb-top">

@@ -7,6 +7,7 @@ import SalaryControls from '@/components/salary-controls';
 import { ModelPreview } from '@/components/model-projections';
 import MembershipCheckoutButton from '@/components/membership-checkout-button';
 import useMembership from '@/hooks/use-membership';
+import { EventSlate, GameTicker } from '@/components/slate-games';
 import {
   Activity, AlertCircle, ArrowDownToLine, CalendarDays,
   Download, ExternalLink, Newspaper, RefreshCw, ShieldCheck,
@@ -55,42 +56,6 @@ function SportLabel({ sport }: { sport: string }) {
 }
 function EmptyState({ icon, title, copy }: { icon: ReactNode; title: string; copy: string }) {
   return <div className="state-box"><div className="state-icon">{icon}</div><strong>{title}</strong><p>{copy}</p></div>;
-}
-function EventSlate({ events, loading }: { events: DfsEvent[]; loading: boolean }) {
-  if (loading) return <div className="slate-list">{[1, 2, 3].map((n) => <div className="skeleton" key={n} style={{ height: 76 }} />)}</div>;
-  if (!events.length) return <EmptyState icon={<CalendarDays size={17} />} title="No events on this slate" copy="There are no events returned for this date and sport selection." />;
-  return <div className="slate-list">{events.map((event) => {
-    const [away, home] = [...event.competitors].sort((a, b) => (a.homeAway === 'away' ? -1 : b.homeAway === 'away' ? 1 : 0));
-    const teamGame = away?.homeAway === 'away' && home?.homeAway === 'home';
-    const live = /live|in progress|in-progress/i.test(event.status);
-    return <article className="event-row" key={event.id} data-testid={`event-${event.id}`}>
-      <div>
-        <div className="event-league">{event.league} <span style={{ color: 'var(--slate-muted)' }}>·</span> {formatDate(event.startTime, { weekday: 'short', hour: 'numeric', minute: '2-digit' })}</div>
-        <div className="event-name">{event.shortName || event.name}</div>
-        {teamGame && <div className="competitors" style={{ marginTop: 9 }}>
-          <span className="team-chip">{away?.abbreviation ?? '—'}</span><span>{away?.name ?? 'TBD'}</span>
-          {away?.score != null && <b>{away.score}</b>}
-          <span className="versus">vs</span>
-          <span className="team-chip">{home?.abbreviation ?? '—'}</span><span>{home?.name ?? 'TBD'}</span>
-          {home?.score != null && <b>{home.score}</b>}
-        </div>}
-      </div>
-      <div className="event-right">
-        <span className={`event-time ${live ? 'status-live' : ''}`}>{live ? event.status : formatDate(event.startTime, { hour: 'numeric', minute: '2-digit' })}</span>
-        <span className={`total-pill ${event.totalPoints == null ? 'missing' : ''}`}>{event.sport === 'nascar' ? 'Race odds unavailable' : event.totalPoints == null ? 'Total —' : `O/U ${event.totalPoints}`}</span>
-        {teamGame && <div className="event-lines">
-          <div><span>Spread</span><strong>{away?.abbreviation ?? 'Away'} {signedLine(away?.spread, true)} · {home?.abbreviation ?? 'Home'} {signedLine(home?.spread, true)}</strong></div>
-          <div><span>Moneyline</span><strong>{away?.abbreviation ?? 'Away'} {signedLine(away?.moneyline)} · {home?.abbreviation ?? 'Home'} {signedLine(home?.moneyline)}</strong></div>
-        </div>}
-        {event.oddsSource && <span className="event-odds-source">{event.oddsSource} · American odds</span>}
-      </div>
-    </article>;
-  })}</div>;
-}
-function signedLine(value?: number | null, pick = false) {
-  if (value == null) return '—';
-  if (pick && value === 0) return 'PK';
-  return value > 0 ? `+${value}` : String(value);
 }
 export function NewsFeed({ news, loading }: { news: DfsNewsItem[]; loading: boolean }) {
   if (loading) return <div style={{ display: 'grid', gap: 13 }}>{[1, 2, 3].map((n) => <div key={n} style={{ display: 'flex', gap: 12 }}><div className="skeleton" style={{ width: 57, height: 57 }} /><div style={{ flex: 1 }}><div className="skeleton" style={{ height: 12, marginBottom: 8 }} /><div className="skeleton" style={{ height: 10, width: '70%' }} /></div></div>)}</div>;
@@ -141,7 +106,7 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
   const [date, setDate] = useState(localDateString);
   const [automaticDate, setAutomaticDate] = useState(true);
   const [advanceNotice, setAdvanceNotice] = useState<string | null>(null);
-  const [sport, setSport] = useState<DfsSport>('nfl');
+  const [sport, setSport] = useState<DfsSport>(() => SPORTS.find((item) => item.id === new URLSearchParams(window.location.search).get('sport'))?.id ?? 'nfl');
   const [salaryPlatform, setSalaryPlatform] = useState<DfsSalaryPlatform>('draftkings');
   const [salarySelection, setSalarySelection] = useState<{ context: string; id: string }>();
   const salaryContext = `${sport}:${date}:${salaryPlatform}`;
@@ -222,11 +187,12 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
   const refresh = () => query.refetch();
   const formatUpdatedAt = data?.updatedAt ? formatDate(data.updatedAt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null;
 
-  return <div className="app-shell">
+  return <div className={`app-shell dashboard-red ${projectionsOnly ? '' : 'has-game-strip'}`}>
     <header className="topbar">
       <Link href="/" className="brand" aria-label="ALLPLAY home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">ALLPLAY</span></Link>
       <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><Link href="/projections" className="btn btn-quiet account-header-link" aria-label="ALLPLAY model sheet" data-testid="link-model-mobile"><TrendingUp size={14} />Model</Link><Link href="/news" className="btn btn-quiet account-header-link" aria-label="Sports news desk" data-testid="link-news-mobile"><Newspaper size={14} />News</Link><Link href="/takes" className="btn btn-quiet account-header-link" aria-label="Game takes" data-testid="link-takes-mobile"><Film size={14} />Takes</Link><Link href="/feedback" className="btn btn-quiet account-header-link" data-testid="link-feedback-mobile">Feedback</Link>{signedIn ? <Link href="/account" className="btn btn-quiet account-header-link" data-testid="link-account">Account</Link> : <Link href="/sign-in" className="btn btn-quiet account-header-link" data-testid="link-sign-in">Sign in</Link>}<button className="btn btn-primary header-install-btn" onClick={quickInstall} disabled={installed || installing} data-testid="button-install-top"><ArrowDownToLine size={15} />{installed ? 'Installed' : installing ? 'Installing…' : 'Install app'}</button><span className="user-dot" aria-label={signedIn ? 'Signed-in personal dashboard' : 'Personal dashboard'}>{signedIn ? 'ME' : 'FREE'}</span></div>
     </header>
+    {!projectionsOnly && <GameTicker events={events} sport={sportName} date={date} loading={loading} error={query.isError} updatedAt={data?.updatedAt} />}
     <aside className="side-rail" aria-label="Dashboard navigation">
       <div className="rail-caption">YOUR WORKSPACE</div>
       <Link className={`rail-link ${projectionsOnly ? '' : 'selected'}`} href={overviewPath} aria-current={projectionsOnly ? undefined : 'page'}><Activity size={15} />Overview</Link>
@@ -234,13 +200,13 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
       <Link className={`rail-link ${projectionsOnly ? 'selected' : ''}`} href="/projections" aria-current={projectionsOnly ? 'page' : undefined} data-testid="link-projections"><TrendingUp size={15} />Projections</Link>
       <Link className="rail-link" href="/takes" data-testid="link-takes-sidebar"><Film size={15} />Game takes</Link>
       <Link className="rail-link" href="/feedback" data-testid="link-feedback-sidebar">Feedback</Link>
-       <Link className="rail-link" href={`/news?sport=${sport}`} aria-label="News desk" data-testid="link-news-desk"><Newspaper size={15} />News desk</Link>
+        <a className="rail-link" href={`${import.meta.env.BASE_URL}news?sport=${sport}`} target="_blank" rel="noopener noreferrer" aria-label="News desk (opens in a new tab)" data-testid="link-news-desk"><Newspaper size={15} />News desk</a>
        <div className="rail-note"><span className="rail-live-dot" />Slates refresh every 5 minutes · News is free</div>
       <div className="rail-bottom"><span className="rail-caption">BUILT FOR EVERY LEAGUE</span><div className="rail-sports">NFL · NHL · WNBA<br />NBA · MLB · NASCAR · CFB</div></div>
     </aside>
     <main className={`main-wrap ${projectionsOnly ? 'projections-main' : ''}`} id="overview">
       <div className="page-heading">
-          <div><div className="eyebrow">{projectionsOnly ? 'Your player research' : 'Today’s slate'} <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>{projectionsOnly ? 'Player projections' : 'Slate, in focus.'}</h1><p className="subhead">{projectionsOnly ? 'ALLPLAY custom raw-stat estimates, with the calculation trail in view.' : 'Choose a sport, check today’s matchups, then open its separate research sheet.'}</p></div>
+          <div><div className="eyebrow">{projectionsOnly ? 'Your player research' : 'The research desk'} <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>{projectionsOnly ? 'Player projections' : 'Slate. Then signal.'}</h1><p className="subhead">{projectionsOnly ? 'ALLPLAY custom raw-stat estimates, with the calculation trail in view.' : 'Scan the schedule and game context first. Open the independent ALLPLAY model when you want the deeper work.'}</p></div>
         <div className="date-stamp"><div>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div><div style={{ marginTop: 5, color: 'var(--slate-muted)' }}>{formatUpdatedAt ? `DATA UPDATED ${formatUpdatedAt.toUpperCase()}` : 'AWAITING DATA'}</div></div>
       </div>
       <div className="control-bar">
@@ -316,8 +282,14 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
             <div className="panel-head panel-head-accent"><h2 className="panel-title" id="slate-heading"><CalendarDays size={16} /> {sportName} slate</h2><span className="panel-meta">{loading ? 'UPDATING' : `${events.length} ${events.length === 1 ? 'EVENT' : 'EVENTS'}`}</span></div>
             <div className="panel-body"><EventSlate events={events} loading={loading && !data} /></div>
           </section>}
+          {!projectionsOnly && <section className="panel" id="news-section" aria-labelledby="news-heading">
+            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="news-heading"><Newspaper size={16} /> {sportName} news</h2><span className="panel-meta">{loading ? 'UPDATING' : `${news.length} STORIES · FREE`}</span></div>
+            <div key={sport} className="panel-body news-scroll" role="region" aria-labelledby="news-heading" tabIndex={0} data-testid="news-scroll"><NewsFeed news={news} loading={loading && !data} /></div>
+          </section>}
+        </div>
+        <div className="right-stack">
           <section className="panel" id="projections-section" aria-labelledby="projections-heading">
-            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> ALLPLAY custom model</h2><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="panel-meta">RAW MATCHUP STATS</span><Link href="/projections" className="btn btn-quiet" style={{ height: 29, fontSize: 10 }} data-testid="link-full-projections">Full model sheet</Link></div></div>
+            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="projections-heading"><TrendingUp size={16} /> ALLPLAY player model</h2><span className="panel-meta">MEMBER ACCESS</span></div>
             <div className="panel-body" style={{ paddingTop: 12, paddingBottom: 15 }}>
               {!projectionsOnly && <ModelPreview sport={sport} date={date} />}
               {projectionsOnly && <ModelPreview sport={sport} date={date} />}
@@ -335,20 +307,14 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
               </div>}
             </div>
           </section>
-        </div>
-        {!projectionsOnly && <div className="right-stack">
-          <section className="panel" id="news-section" aria-labelledby="news-heading">
-            <div className="panel-head panel-head-accent"><h2 className="panel-title" id="news-heading"><Newspaper size={16} /> {sportName} news</h2><span className="panel-meta">{loading ? 'UPDATING' : `${news.length} STORIES`}</span></div>
-            <div key={sport} className="panel-body news-scroll" role="region" aria-labelledby="news-heading" tabIndex={0} data-testid="news-scroll"><NewsFeed news={news} loading={loading && !data} /></div>
-          </section>
-          <section className="panel">
+          {!projectionsOnly && <section className="panel">
             <div className="panel-head"><h2 className="panel-title"><Smartphone size={16} /> Your slate, one tap away</h2></div>
             <div className="panel-body">
               <p className="coverage-detail" style={{ borderTop: 0, paddingTop: 0, marginTop: 0 }}>Install this dashboard for a fast, focused home-screen launch on your devices.</p>
               <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setInstallOpen(true)} data-testid="button-install"><ArrowDownToLine size={15} /> Install / setup help</button>
             </div>
-          </section>
-        </div>}
+          </section>}
+        </div>
       </div>
       </div>
       <div className="footer-line">BUILT FOR THE MOMENT BEFORE LOCK · YOUR SLATE, YOUR CALL</div>
