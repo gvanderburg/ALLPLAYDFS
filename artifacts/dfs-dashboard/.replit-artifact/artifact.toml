@@ -17,7 +17,7 @@ run = "pnpm --filter @workspace/dfs-dashboard run dev"
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/dfs-dashboard", "run", "build" ]
 serve = "static"
-publicDir = "artifacts/dfs-dashboard/dist/public"
+publicDir = "artifacts/dfs-dashboard/dist"
 
 [[services.production.rewrites]]
 from = "/*"
