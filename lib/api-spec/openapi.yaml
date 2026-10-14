@@ -13,6 +13,54 @@ tags:
   - name: dfs
     description: Daily fantasy sports dashboard
 paths:
+  /matchup-reports:
+    get:
+      operationId: listMatchupReports
+      responses:
+        "200":
+          description: Owner-only approved reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MatchupReport" }
+  /matchup-reports/preview:
+    post:
+      operationId: previewMatchupReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MatchupReportImport" }
+      responses:
+        "200":
+          description: Validated preview; not active until approved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchupReport" }
+  /matchup-reports/{id}/approve:
+    post:
+      operationId: approveMatchupReport
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MatchupReportApproval" }
+      responses:
+        "200":
+          description: Approved report, optionally replacing an existing report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchupReport" }
+  /matchup-reports/{id}:
+    delete:
+      operationId: deleteMatchupReport
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Report deleted }
   /evaluations:
     get:
       operationId: listEvaluations
@@ -405,6 +453,60 @@ paths:
           description: Invalid date or sport
 components:
   schemas:
+    MatchupReportMetadata:
+      type: object
+      required: [publisher, season, phase, startWeek, endWeek, publishedAt, asOf, positions, rankOneMeans, sourceUrl]
+      properties:
+        publisher: { type: string, enum: [pff, fantasypros] }
+        season: { type: integer, minimum: 2020, maximum: 2100 }
+        phase: { type: string, enum: [preseason, regular, postseason] }
+        startWeek: { type: integer, minimum: 1, maximum: 22 }
+        endWeek: { type: integer, minimum: 1, maximum: 22 }
+        publishedAt: { type: string, format: date-time }
+        asOf: { type: string, format: date-time }
+        positions:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items: { type: string, enum: [secondary, QB, RB, WR, TE, K, DST] }
+        rankOneMeans: { type: string, enum: [strongest, most-allowed] }
+        sourceUrl: { type: string, maxLength: 1000 }
+    MatchupReportImport:
+      type: object
+      required: [metadata, authorized, format, content]
+      properties:
+        metadata: { $ref: "#/components/schemas/MatchupReportMetadata" }
+        authorized: { type: boolean }
+        format: { type: string, enum: [csv, json] }
+        content: { type: string, minLength: 1, maxLength: 200000 }
+    MatchupReportApproval:
+      type: object
+      required: [confirmed]
+      properties:
+        confirmed: { type: boolean }
+        replaceId: { type: ["string", "null"] }
+    MatchupRankRow:
+      type: object
+      required: [team, position, rank]
+      properties:
+        team: { type: string }
+        position: { type: string }
+        rank: { type: integer, minimum: 1, maximum: 32 }
+    MatchupReport:
+      type: object
+      required: [id, metadata, rows, fullCoverage, coverage, status, createdAt]
+      properties:
+        id: { type: string }
+        metadata: { $ref: "#/components/schemas/MatchupReportMetadata" }
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/MatchupRankRow" }
+        fullCoverage: { type: boolean }
+        coverage:
+          type: object
+          additionalProperties: { type: integer }
+        status: { type: string, enum: [preview, approved] }
+        createdAt: { type: string, format: date-time }
     EvaluationStartInput:
       type: object
       required: [sport, site, fromDate, toDate, recentGames, recentWeight, matchupWeight]
@@ -590,7 +692,7 @@ components:
         sourceUrl: { type: string }
         period: { type: string }
         asOf: { type: ["string", "null"], format: date-time }
-        status: { type: string, enum: [available, unavailable, unsupported] }
+        status: { type: string, enum: [available, unavailable, unsupported, stale] }
         note: { type: string }
     ModelStatEstimate:
       type: object

@@ -56,8 +56,8 @@ export function buildModelSheetCsv(
     'gameCount', 'processedGames', 'totalGames', 'failedGames', 'observedTeams', 'modelFormula', 'sheetNotes', 'platform',
     'ALLPLAY Research Rank', 'ALLPLAY Pick Reasons', 'ALLPLAY Pick Cautions', 'Ownership Method',
     'Value Multiple', 'Position Rank Scope',
-    'PFF Secondary Rank', 'PFF Period', 'PFF Source', 'PFF Status',
-    'FantasyPros Position Rank', 'FantasyPros Period', 'FantasyPros Source', 'FantasyPros Status',
+    'PFF Secondary Rank', 'PFF Period', 'PFF Source', 'PFF Status', 'PFF As Of', 'PFF Rank One Means', 'PFF Coverage Note',
+    'FantasyPros Position Rank', 'FantasyPros Period', 'FantasyPros Source', 'FantasyPros Status', 'FantasyPros As Of', 'FantasyPros Rank One Means', 'FantasyPros Coverage Note',
     'Playing Role', 'Depth Rank', 'Role Eligible', 'Role Source', 'Role Source URL', 'Role As Of', 'Role Note', 'Recent Workload', 'Workload Unit'];
 
   for (const [, prefix] of FORECAST_SITES) {
@@ -124,7 +124,7 @@ export function buildModelSheetCsv(
     for (const source of ['pff', 'fantasypros']) {
       const ranking = player.publishedMatchups?.find(row => row.source === source);
       audit.push(ranking?.status === 'available' ? ranking.rank ?? '' : '', ranking?.period ?? '',
-        ranking?.sourceUrl ?? '', ranking?.status ?? 'unavailable');
+        ranking?.sourceUrl ?? '', ranking?.status ?? 'unavailable', ranking?.asOf ?? '', ranking?.rankOneMeans ?? '', ranking?.note ?? '');
     }
     audit.push(player.roleContext?.label ?? '', player.roleContext?.depthRank ?? '', player.roleContext?.eligible ?? '',
       player.roleContext?.source ?? '', player.roleContext?.sourceUrl ?? '', player.roleContext?.asOf ?? '', player.roleContext?.note ?? '',

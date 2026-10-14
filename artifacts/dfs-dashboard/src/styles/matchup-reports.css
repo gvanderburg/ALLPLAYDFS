@@ -1,0 +1,16 @@
+.matchup-report-manager { margin: 16px 0; padding: 16px; }
+.matchup-report-manager summary { cursor: pointer; font-weight: 700; }
+.matchup-report-manager p { margin: 12px 0; color: #a1a1aa; font-size: 13px; }
+.matchup-report-manager fieldset { border: 0; padding: 0; min-width: 0; }
+.matchup-report-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 16px 0; }
+.matchup-report-manager label { display: block; font-size: 13px; margin: 10px 0; }
+.matchup-report-manager input:not([type=checkbox]), .matchup-report-manager select { display: block; width: 100%; padding: 8px; margin-top: 6px; background: #18181b; color: #fafafa; border: 1px solid #3f3f46; border-radius: 5px; }
+.matchup-report-manager .matchup-report-check { display: inline-flex; gap: 7px; align-items: center; margin-right: 14px; }
+.matchup-report-url { grid-column: 1 / -1; }
+.matchup-report-table { max-height: 260px; overflow: auto; margin: 12px 0; }
+.matchup-report-table table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+.matchup-report-table th, .matchup-report-table td { padding: 6px; border-bottom: 1px solid #27272a; }
+.matchup-report-item { display: flex; gap: 16px; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #27272a; font-size: 13px; }
+.matchup-report-manager h3 { margin-top: 18px; font-size: 14px; }
+.matchup-report-manager a { text-decoration: underline; }
+.matchup-report-manager [role=alert] { color: #fca5a5; }

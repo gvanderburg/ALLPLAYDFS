@@ -15,3 +15,4 @@
 - [NASCAR scoring verification](nascar-scoring-verification.md) — Classic primary rule feed differs from Pick6/secondary tables; verify the exact contest variant.
 - [New-window navigation](new-window-navigation.md) — use native artifact-prefixed anchors; the client router intercepts ordinary Link clicks despite a blank target.
 - [Historical evaluation integrity](historical-evaluation-integrity.md) — require completion evidence before cutoff; label pool/outcome bias and owner-attested ownership provenance.
+- [Published report policy](published-report-policy.md) — attest permitted access, never fill gated gaps, and keep declared periods and opposite publisher rank directions distinct.

@@ -32,7 +32,7 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 // Web/PWA clients use this app's same origin. Never expose authenticated data
 // via permissive credentialed cross-origin responses.
 app.use(cors({ origin: false }));
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(
   clerkMiddleware((req) => ({

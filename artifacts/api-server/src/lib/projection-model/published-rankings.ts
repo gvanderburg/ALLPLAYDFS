@@ -1,24 +1,10 @@
-import type { ModelPlayerProjection, PublishedMatchupRanking } from "@workspace/api-zod";
+import type { ModelPlayerProjection, PublishedMatchupRanking, MatchupReport } from "@workspace/api-zod";
 import type { ModelSport } from "./types";
 
-const teams: Record<string, string> = {
-  ARI: "Arizona Cardinals", ATL: "Atlanta Falcons", BAL: "Baltimore Ravens", BUF: "Buffalo Bills",
-  CAR: "Carolina Panthers", CHI: "Chicago Bears", CIN: "Cincinnati Bengals", CLE: "Cleveland Browns",
-  DAL: "Dallas Cowboys", DEN: "Denver Broncos", DET: "Detroit Lions", GB: "Green Bay Packers",
-  HOU: "Houston Texans", IND: "Indianapolis Colts", JAX: "Jacksonville Jaguars", KC: "Kansas City Chiefs",
-  LAC: "Los Angeles Chargers", LAR: "Los Angeles Rams", LV: "Las Vegas Raiders", MIA: "Miami Dolphins",
-  MIN: "Minnesota Vikings", NE: "New England Patriots", NO: "New Orleans Saints", NYG: "New York Giants",
-  NYJ: "New York Jets", PHI: "Philadelphia Eagles", PIT: "Pittsburgh Steelers", SEA: "Seattle Seahawks",
-  SF: "San Francisco 49ers", TB: "Tampa Bay Buccaneers", TEN: "Tennessee Titans", WAS: "Washington Commanders",
-};
-const aliases: Record<string, string> = { WSH: "WAS", JAC: "JAX", LA: "LAR", HST: "HOU", BLT: "BAL", NWE: "NE", SFO: "SF", TBB: "TB" };
+import { nflTeamKey } from "./nfl-teams";
+import { selectReportRanking } from "./report-selection";
+export { nflTeamKey } from "./nfl-teams";
 const clean = (text: string) => text.replace(/<[^>]*>/g, "").replace(/&nbsp;|&#160;/g, " ").replace(/&amp;/g, "&").trim();
-const nameKey = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "");
-export function nflTeamKey(value: string) {
-  const abbreviation = value.trim().toUpperCase();
-  return aliases[abbreviation] ?? (teams[abbreviation] ? abbreviation
-    : Object.keys(teams).find(key => nameKey(teams[key]) === nameKey(value)));
-}
 interface PublishedData {
   ranks: Record<string, Record<string, number>>;
   period: string;
@@ -106,6 +92,7 @@ async function publishedPage(url: string, parser: (html: string) => PublishedDat
 export function attachPublishedMatchups(
   players: ModelPlayerProjection[], sport: ModelSport, pff: PublishedData, fp: PublishedData,
   pffUrl: string, fpUrl: string, cutoff: Date,
+  reports: MatchupReport[] = [], context?: { season: number; phase: number; weeks: Record<string, number | null> },
 ) {
   return players.map(player => {
     const opponent = nflTeamKey(player.opponent);
@@ -113,15 +100,19 @@ export function attachPublishedMatchups(
     const make = (source: "pff" | "fantasypros", data: PublishedData): PublishedMatchupRanking => {
       const unit = source === "pff" ? "secondary" : `vs ${role || "unknown position"}`;
       const applicable = sport === "nfl" && (source === "pff" ? ["QB", "WR", "TE"].includes(role) : ["QB", "RB", "WR", "TE", "K", "DST"].includes(role));
+      const stored = applicable && context ? selectReportRanking(reports, source, player.opponent, role,
+        context.season, context.phase, context.weeks[opponent ?? ""] ?? null, cutoff) : null;
+      if (stored && stored.status !== "stale") return stored;
       const tooLate = source === "pff" && data.asOf && data.asOf >= cutoff;
       const rank = applicable && !tooLate && opponent ? data.ranks[opponent]?.[source === "pff" ? "secondary" : role] ?? null : null;
+      if (stored && rank === null) return stored;
       return { source, unit, rank, rankedTeams: 32, rankOneMeans: source === "pff" ? "strongest" : "most-allowed",
         sourceUrl: source === "pff" ? pffUrl : fpUrl, period: data.period, asOf: data.asOf,
         status: !applicable ? "unsupported" : rank === null ? "unavailable" : "available",
         note: !applicable ? sport !== "nfl" ? "These published sources cover NFL only; no cross-sport ranks are invented."
           : "Secondary ratings are passing-game context, not a rushing-defense rating."
           : tooLate ? "This rating was published after the model cutoff; excluded from this preview."
-          : `${data.note}${rank === null && data.coverage ? " This opponent/position is not present in the accessible report." : ""}` };
+          : `${data.note}${stored ? " Stored report is stale for this period; using the separately dated public source." : ""}${rank === null && data.coverage ? " This opponent/position is not present in the accessible report." : ""}` };
     };
     return { ...player, publishedMatchups: [make("pff", pff), make("fantasypros", fp)] };
   });
@@ -129,6 +120,7 @@ export function attachPublishedMatchups(
 
 export async function publishedMatchups(
   players: ModelPlayerProjection[], sport: ModelSport, season: number, slateDate: string, cutoff: Date,
+  reports: MatchupReport[] = [], context?: { phase: number; weeks: Record<string, number | null> },
 ) {
   const pffUrl = `https://www.pff.com/news/nfl-secondary-rankings-${season}`;
   const fpUrl = "https://www.fantasypros.com/nfl/points-allowed.php";
@@ -139,10 +131,11 @@ export async function publishedMatchups(
       : publishedPage(fpUrl, html => parseFantasyProsPreview(html, season), `${fpUrl}:${season}`),
   ]) : [unavailable("Published NFL secondary ranks do not cover this sport."), unavailable("Published NFL positional ranks do not cover this sport.")];
   return {
-    players: attachPublishedMatchups(players, sport, pff, fp, pffUrl, fpUrl, cutoff),
+    players: attachPublishedMatchups(players, sport, pff, fp, pffUrl, fpUrl, cutoff, reports, context ? { ...context, season } : undefined),
     notes: sport === "nfl" ? [
       `PFF secondary source: ${pff.period}. ${pff.note}`,
       `FantasyPros positional source: ${fp.period}. ${fp.note}`,
+      `${reports.length} approved stored reports checked against the published slate season, phase, week and model cutoff. Matching stored reports take precedence; partial coverage is not filled from another report.`,
       "Published ratings are separately attributed matchup context. They do not replace ALLPLAY's own forecasts, change their numerical means, or supply individual coverage assignments.",
     ] : ["NFL published matchup sources are not applied to this sport. Appropriate sport-specific sources remain unconfigured."],
   };

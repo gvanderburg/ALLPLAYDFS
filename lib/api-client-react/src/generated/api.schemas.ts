@@ -5,6 +5,129 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type MatchupReportMetadataPublisher = typeof MatchupReportMetadataPublisher[keyof typeof MatchupReportMetadataPublisher];
+
+
+export const MatchupReportMetadataPublisher = {
+  pff: 'pff',
+  fantasypros: 'fantasypros',
+} as const;
+
+export type MatchupReportMetadataPhase = typeof MatchupReportMetadataPhase[keyof typeof MatchupReportMetadataPhase];
+
+
+export const MatchupReportMetadataPhase = {
+  preseason: 'preseason',
+  regular: 'regular',
+  postseason: 'postseason',
+} as const;
+
+export type MatchupReportMetadataPositionsItem = typeof MatchupReportMetadataPositionsItem[keyof typeof MatchupReportMetadataPositionsItem];
+
+
+export const MatchupReportMetadataPositionsItem = {
+  secondary: 'secondary',
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+  K: 'K',
+  DST: 'DST',
+} as const;
+
+export type MatchupReportMetadataRankOneMeans = typeof MatchupReportMetadataRankOneMeans[keyof typeof MatchupReportMetadataRankOneMeans];
+
+
+export const MatchupReportMetadataRankOneMeans = {
+  strongest: 'strongest',
+  'most-allowed': 'most-allowed',
+} as const;
+
+export interface MatchupReportMetadata {
+  publisher: MatchupReportMetadataPublisher;
+  /**
+     * @minimum 2020
+     * @maximum 2100
+     */
+  season: number;
+  phase: MatchupReportMetadataPhase;
+  /**
+     * @minimum 1
+     * @maximum 22
+     */
+  startWeek: number;
+  /**
+     * @minimum 1
+     * @maximum 22
+     */
+  endWeek: number;
+  publishedAt: string;
+  asOf: string;
+  /**
+     * @minItems 1
+     * @maxItems 6
+     */
+  positions: MatchupReportMetadataPositionsItem[];
+  rankOneMeans: MatchupReportMetadataRankOneMeans;
+  /** @maxLength 1000 */
+  sourceUrl: string;
+}
+
+export type MatchupReportImportFormat = typeof MatchupReportImportFormat[keyof typeof MatchupReportImportFormat];
+
+
+export const MatchupReportImportFormat = {
+  csv: 'csv',
+  json: 'json',
+} as const;
+
+export interface MatchupReportImport {
+  metadata: MatchupReportMetadata;
+  authorized: boolean;
+  format: MatchupReportImportFormat;
+  /**
+     * @minLength 1
+     * @maxLength 200000
+     */
+  content: string;
+}
+
+export interface MatchupReportApproval {
+  confirmed: boolean;
+  /** @nullable */
+  replaceId?: string | null;
+}
+
+export interface MatchupRankRow {
+  team: string;
+  position: string;
+  /**
+     * @minimum 1
+     * @maximum 32
+     */
+  rank: number;
+}
+
+export type MatchupReportCoverage = {[key: string]: number};
+
+export type MatchupReportStatus = typeof MatchupReportStatus[keyof typeof MatchupReportStatus];
+
+
+export const MatchupReportStatus = {
+  preview: 'preview',
+  approved: 'approved',
+} as const;
+
+export interface MatchupReport {
+  id: string;
+  metadata: MatchupReportMetadata;
+  rows: MatchupRankRow[];
+  fullCoverage: boolean;
+  coverage: MatchupReportCoverage;
+  status: MatchupReportStatus;
+  createdAt: string;
+}
+
 export type EvaluationStartInputSport = typeof EvaluationStartInputSport[keyof typeof EvaluationStartInputSport];
 
 
@@ -372,6 +495,7 @@ export const PublishedMatchupRankingStatus = {
   available: 'available',
   unavailable: 'unavailable',
   unsupported: 'unsupported',
+  stale: 'stale',
 } as const;
 
 export interface PublishedMatchupRanking {

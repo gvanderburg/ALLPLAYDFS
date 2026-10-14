@@ -8,6 +8,179 @@
 import * as zod from 'zod';
 
 
+export const listMatchupReportsResponseMetadataSeasonMin = 2020;
+export const listMatchupReportsResponseMetadataSeasonMax = 2100;
+
+export const listMatchupReportsResponseMetadataStartWeekMax = 22;
+
+export const listMatchupReportsResponseMetadataEndWeekMax = 22;
+
+export const listMatchupReportsResponseMetadataPositionsMax = 6;
+
+export const listMatchupReportsResponseMetadataSourceUrlMax = 1000;
+
+export const listMatchupReportsResponseRowsItemRankMax = 32;
+
+
+
+export const ListMatchupReportsResponseItem = zod.object({
+  "id": zod.string(),
+  "metadata": zod.object({
+  "publisher": zod.enum(['pff', 'fantasypros']),
+  "season": zod.number().int().min(listMatchupReportsResponseMetadataSeasonMin).max(listMatchupReportsResponseMetadataSeasonMax),
+  "phase": zod.enum(['preseason', 'regular', 'postseason']),
+  "startWeek": zod.number().int().min(1).max(listMatchupReportsResponseMetadataStartWeekMax),
+  "endWeek": zod.number().int().min(1).max(listMatchupReportsResponseMetadataEndWeekMax),
+  "publishedAt": zod.coerce.date(),
+  "asOf": zod.coerce.date(),
+  "positions": zod.array(zod.enum(['secondary', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'])).min(1).max(listMatchupReportsResponseMetadataPositionsMax),
+  "rankOneMeans": zod.enum(['strongest', 'most-allowed']),
+  "sourceUrl": zod.string().max(listMatchupReportsResponseMetadataSourceUrlMax)
+}),
+  "rows": zod.array(zod.object({
+  "team": zod.string(),
+  "position": zod.string(),
+  "rank": zod.number().int().min(1).max(listMatchupReportsResponseRowsItemRankMax)
+})),
+  "fullCoverage": zod.boolean(),
+  "coverage": zod.record(zod.string(), zod.number().int()),
+  "status": zod.enum(['preview', 'approved']),
+  "createdAt": zod.coerce.date()
+})
+export const ListMatchupReportsResponse = zod.array(ListMatchupReportsResponseItem)
+
+
+export const previewMatchupReportBodyMetadataSeasonMin = 2020;
+export const previewMatchupReportBodyMetadataSeasonMax = 2100;
+
+export const previewMatchupReportBodyMetadataStartWeekMax = 22;
+
+export const previewMatchupReportBodyMetadataEndWeekMax = 22;
+
+export const previewMatchupReportBodyMetadataPositionsMax = 6;
+
+export const previewMatchupReportBodyMetadataSourceUrlMax = 1000;
+
+export const previewMatchupReportBodyContentMax = 200000;
+
+
+
+export const PreviewMatchupReportBody = zod.object({
+  "metadata": zod.object({
+  "publisher": zod.enum(['pff', 'fantasypros']),
+  "season": zod.number().int().min(previewMatchupReportBodyMetadataSeasonMin).max(previewMatchupReportBodyMetadataSeasonMax),
+  "phase": zod.enum(['preseason', 'regular', 'postseason']),
+  "startWeek": zod.number().int().min(1).max(previewMatchupReportBodyMetadataStartWeekMax),
+  "endWeek": zod.number().int().min(1).max(previewMatchupReportBodyMetadataEndWeekMax),
+  "publishedAt": zod.coerce.date(),
+  "asOf": zod.coerce.date(),
+  "positions": zod.array(zod.enum(['secondary', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'])).min(1).max(previewMatchupReportBodyMetadataPositionsMax),
+  "rankOneMeans": zod.enum(['strongest', 'most-allowed']),
+  "sourceUrl": zod.string().max(previewMatchupReportBodyMetadataSourceUrlMax)
+}),
+  "authorized": zod.boolean(),
+  "format": zod.enum(['csv', 'json']),
+  "content": zod.string().min(1).max(previewMatchupReportBodyContentMax)
+})
+
+export const previewMatchupReportResponseMetadataSeasonMin = 2020;
+export const previewMatchupReportResponseMetadataSeasonMax = 2100;
+
+export const previewMatchupReportResponseMetadataStartWeekMax = 22;
+
+export const previewMatchupReportResponseMetadataEndWeekMax = 22;
+
+export const previewMatchupReportResponseMetadataPositionsMax = 6;
+
+export const previewMatchupReportResponseMetadataSourceUrlMax = 1000;
+
+export const previewMatchupReportResponseRowsItemRankMax = 32;
+
+
+
+export const PreviewMatchupReportResponse = zod.object({
+  "id": zod.string(),
+  "metadata": zod.object({
+  "publisher": zod.enum(['pff', 'fantasypros']),
+  "season": zod.number().int().min(previewMatchupReportResponseMetadataSeasonMin).max(previewMatchupReportResponseMetadataSeasonMax),
+  "phase": zod.enum(['preseason', 'regular', 'postseason']),
+  "startWeek": zod.number().int().min(1).max(previewMatchupReportResponseMetadataStartWeekMax),
+  "endWeek": zod.number().int().min(1).max(previewMatchupReportResponseMetadataEndWeekMax),
+  "publishedAt": zod.coerce.date(),
+  "asOf": zod.coerce.date(),
+  "positions": zod.array(zod.enum(['secondary', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'])).min(1).max(previewMatchupReportResponseMetadataPositionsMax),
+  "rankOneMeans": zod.enum(['strongest', 'most-allowed']),
+  "sourceUrl": zod.string().max(previewMatchupReportResponseMetadataSourceUrlMax)
+}),
+  "rows": zod.array(zod.object({
+  "team": zod.string(),
+  "position": zod.string(),
+  "rank": zod.number().int().min(1).max(previewMatchupReportResponseRowsItemRankMax)
+})),
+  "fullCoverage": zod.boolean(),
+  "coverage": zod.record(zod.string(), zod.number().int()),
+  "status": zod.enum(['preview', 'approved']),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const ApproveMatchupReportParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ApproveMatchupReportBody = zod.object({
+  "confirmed": zod.boolean(),
+  "replaceId": zod.string().nullish()
+})
+
+export const approveMatchupReportResponseMetadataSeasonMin = 2020;
+export const approveMatchupReportResponseMetadataSeasonMax = 2100;
+
+export const approveMatchupReportResponseMetadataStartWeekMax = 22;
+
+export const approveMatchupReportResponseMetadataEndWeekMax = 22;
+
+export const approveMatchupReportResponseMetadataPositionsMax = 6;
+
+export const approveMatchupReportResponseMetadataSourceUrlMax = 1000;
+
+export const approveMatchupReportResponseRowsItemRankMax = 32;
+
+
+
+export const ApproveMatchupReportResponse = zod.object({
+  "id": zod.string(),
+  "metadata": zod.object({
+  "publisher": zod.enum(['pff', 'fantasypros']),
+  "season": zod.number().int().min(approveMatchupReportResponseMetadataSeasonMin).max(approveMatchupReportResponseMetadataSeasonMax),
+  "phase": zod.enum(['preseason', 'regular', 'postseason']),
+  "startWeek": zod.number().int().min(1).max(approveMatchupReportResponseMetadataStartWeekMax),
+  "endWeek": zod.number().int().min(1).max(approveMatchupReportResponseMetadataEndWeekMax),
+  "publishedAt": zod.coerce.date(),
+  "asOf": zod.coerce.date(),
+  "positions": zod.array(zod.enum(['secondary', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'])).min(1).max(approveMatchupReportResponseMetadataPositionsMax),
+  "rankOneMeans": zod.enum(['strongest', 'most-allowed']),
+  "sourceUrl": zod.string().max(approveMatchupReportResponseMetadataSourceUrlMax)
+}),
+  "rows": zod.array(zod.object({
+  "team": zod.string(),
+  "position": zod.string(),
+  "rank": zod.number().int().min(1).max(approveMatchupReportResponseRowsItemRankMax)
+})),
+  "fullCoverage": zod.boolean(),
+  "coverage": zod.record(zod.string(), zod.number().int()),
+  "status": zod.enum(['preview', 'approved']),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const DeleteMatchupReportParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteMatchupReportResponse = zod.void()
+
+
 /**
  * @summary Owner-only saved historical evaluations and verified imports
  */
@@ -533,7 +706,7 @@ export const GetModelProjectionsResponse = zod.object({
   "sourceUrl": zod.string(),
   "period": zod.string(),
   "asOf": zod.coerce.date().nullable(),
-  "status": zod.enum(['available', 'unavailable', 'unsupported']),
+  "status": zod.enum(['available', 'unavailable', 'unsupported', 'stale']),
   "note": zod.string()
 })).optional(),
   "stats": zod.array(zod.object({

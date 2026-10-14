@@ -5,6 +5,8 @@ import { loadHistory, resolveModelSlate, slateCandidates, unstartedModelEvents }
 import type { ModelSettings, ModelSport } from "./types";
 import { list, obj, str } from "./normalize";
 import { publishedMatchups } from "./published-rankings";
+import { approvedReports } from "./report-store";
+import { nflTeamKey } from "./nfl-teams";
 import { forecastHistoryCutoff, verifiedFinalsAsOf } from "./history-cutoff";
 import { db, modelSnapshots } from "@workspace/db";
 import { logger } from "../logger";
@@ -12,6 +14,9 @@ import { HISTORY_VERSION } from "./types";
 
 interface Job { expiresAt: number; sheet: ModelProjectionSheet; }
 const jobs = new Map<string, Job>();
+export function invalidatePublishedReports() {
+  for (const key of jobs.keys()) if (key.startsWith("nfl:")) jobs.delete(key);
+}
 const historyLoads = new Map<string, {
   expiresAt: number;
   promise: ReturnType<typeof loadHistory>;
@@ -108,7 +113,18 @@ async function build(job: Job, sport: ModelSport, date: string, settings: ModelS
     const eligible = (forward ? verifiedFinalsAsOf(history.games, cutoff) : history.games).filter(game => game.phase === slate.phase);
     const candidates = await slateCandidates(sport, slate, eligible);
     const calculated = calculatePlayers(sport, candidates.players, eligible, settings, cutoff, slate.phase, slate.venue, Number(obj(slate.events[0]?.season).year));
-    const published = await publishedMatchups(calculated.players, sport, Number(obj(slate.events[0]?.season).year), slate.date, new Date(cutoff));
+    const weeks: Record<string, number | null> = {};
+    for (const event of slate.events) for (const competition of list(event.competitions)) for (const competitor of list(obj(competition).competitors)) {
+      const key = nflTeamKey(str(obj(obj(competitor).team).abbreviation));
+      const week = Number(obj(event.week).number ?? slate.week);
+      if (key) weeks[key] = Number.isInteger(week) && week >= 1 && week <= 22 ? week : null;
+    }
+    let reports: Awaited<ReturnType<typeof approvedReports>> = [];
+    if (sport === "nfl") {
+      try { reports = await approvedReports(); }
+      catch (err) { logger.error({ err }, "Approved matchup reports unavailable"); job.sheet.notes.push("Stored report access failed; only separately labeled public coverage is available."); }
+    }
+    const published = await publishedMatchups(calculated.players, sport, Number(obj(slate.events[0]?.season).year), slate.date, new Date(cutoff), reports, { phase: slate.phase, weeks });
     job.sheet.players = published.players;
     job.sheet.generatedAt = new Date();
     job.sheet.notes.push(...published.notes);

@@ -9,6 +9,7 @@ import { useModelProjections } from '@/hooks/use-model-projections';
 import { buildModelSheetCsv, findUniqueSelectedSlateSalary } from '@/lib/model-sheet-export';
 import { InjuryBadge } from '@/components/injury-badge';
 import { PublishedMatchupCell } from '@/components/published-matchup-cell';
+import { MatchupReportManager } from '@/components/matchup-report-manager';
 import { positionRanks, formatValueMultiple } from '@/lib/position-ranks';
 import { deriveLineupInsights } from '@/lib/lineup-insights';
 import {
@@ -340,7 +341,7 @@ export function PlayerTable({ sheet, dashboard, platform, onPlatformChange }: { 
        {sheet.sport === 'nfl' && <div className="model-published-notes" aria-label="Published matchup source coverage">
          {(['pff', 'fantasypros'] as const).map(source => {
            const ranking = sheet.players.flatMap(player => player.publishedMatchups ?? []).find(row => row.source === source && row.asOf);
-           return <span key={source}><strong>{source === 'pff' ? 'PFF SECONDARY' : 'FANTASYPROS vs POSITION'}</strong> {ranking?.period ?? 'Source unavailable'} · {source === 'pff' ? '#1 strongest / hardest' : '#1 most allowed / easiest'}{source === 'fantasypros' && <small>{ranking?.note ?? 'Unverified or inaccessible teams stay blank.'}</small>}</span>;
+           return <span key={source}><strong>{source === 'pff' ? 'PFF SECONDARY' : 'FANTASYPROS vs POSITION'}</strong> {ranking?.period ?? 'Source unavailable'} · {source === 'pff' ? '#1 strongest / hardest' : '#1 most allowed / easiest'}<small>{ranking?.note ?? 'Unverified or inaccessible teams stay unavailable.'} Periods and coverage can differ by position; each cell carries its own provenance.</small></span>;
          })}
          <small>Published ratings are matchup context, not replacements for ALLPLAY forecasts. Other sports need sport-specific published sources.</small>
        </div>}
@@ -517,6 +518,7 @@ export default function ModelProjectionsPage() {
         </section>}
       </div>
        <div className="model-disclaimer"><Info size={14} /><p><strong>{selectedSport} estimates are ALLPLAY's independent historical-stat model.</strong> Fantasy views apply published site scoring rules to the model forecasts. Partial tracked points are not full projections; unsupported inputs stay blank with an explanation. Simulation percentiles are outcome distributions, not confidence intervals. Estimates are conditional on participation, and this model is not backtested. Raw-stat rank 1 is the lowest observed metric; it is not a universal defense grade.{sport === 'nascar' && ' NASCAR uses official inspected Cup results reconciled to ESPN finals. Lap rates scale to scheduled race length. Starting positions are observed official grids where published, otherwise labeled ALLPLAY forecasts. Fastest laps remain unavailable; DraftKings full totals stay blank. Entry-pool estimates are conditional on publication.'}</p></div>
+      {verified && membership.data?.isOwner && <MatchupReportManager key={userId} />}
       {!verified ? <AccessGate signedIn={signedIn} membership={membership} onRefresh={() => void retry()} />
         : <section className="model-sheet panel" aria-labelledby="model-sheet-title">
           <div className="model-sheet-bar"><div><div className="model-sheet-mark"><BarChart3 size={17} /></div><div><span className="model-kicker">ALLPLAY / MATCHUP STAT PROJECTIONS</span><h2 id="model-sheet-title">{selectedSport} research sheet</h2></div></div><span className={`model-status-tag ${sheet?.status === 'ready' ? 'status-ready' : sheet?.status === 'warming' ? 'status-warming' : ''}`}>{query.isError ? 'ERROR' : sheet?.status?.toUpperCase() ?? (query.data?.status === 'locked' ? 'LOCKED' : query.isLoading ? 'REQUESTING' : 'PENDING')}</span></div>

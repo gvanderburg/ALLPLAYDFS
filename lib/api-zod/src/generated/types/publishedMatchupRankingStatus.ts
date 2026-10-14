@@ -13,4 +13,5 @@ export const PublishedMatchupRankingStatus = {
   available: 'available',
   unavailable: 'unavailable',
   unsupported: 'unsupported',
+  stale: 'stale',
 } as const;

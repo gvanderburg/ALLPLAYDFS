@@ -50,7 +50,7 @@ export async function fetchSportsJson(url: string): Promise<unknown> {
     return await response.json();
   } finally { release(); }
 }
-export interface ModelSlate { date: string; events: Json[]; phase: number; venue: string; }
+export interface ModelSlate { date: string; events: Json[]; phase: number; venue: string; week?: number | null; }
 export async function resolveModelSlate(sport: ModelSport, requestedDate: string): Promise<ModelSlate> {
   const base = `${SITE}/${MODEL_SPORTS[sport].path}`;
   let date = requestedDate;
@@ -67,6 +67,7 @@ export async function resolveModelSlate(sport: ModelSport, requestedDate: string
   const events = forward || date >= today ? unstartedModelEvents(discovered) : discovered;
   return {
     date, events, phase: numeric(obj(events[0]?.season).type) ?? 0,
+    week: numeric(obj(payload.week).number),
     venue: sport === "nascar" ? str(events[0]?.name) : "",
   };
 }

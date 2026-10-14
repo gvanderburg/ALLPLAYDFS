@@ -6,6 +6,7 @@ import takesRouter from "./takes";
 import feedbackRouter from "./feedback";
 import modelProjectionsRouter from "./model-projections";
 import evaluationsRouter from "./evaluations";
+import matchupReportsRouter from "./matchup-reports";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(takesRouter);
 router.use(feedbackRouter);
 router.use(modelProjectionsRouter);
 router.use(evaluationsRouter);
+router.use(matchupReportsRouter);
 
 export default router;

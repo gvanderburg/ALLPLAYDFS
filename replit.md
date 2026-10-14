@@ -22,6 +22,14 @@ A personal, dark multi-sport dashboard with daily slates, available game totals,
 
 Owner access is checked from the verified server session before every projection response, including cached dashboard data. An unset allowlist grants nobody owner access.
 
+### NFL published report imports
+
+Verified owners can open **Projections → Owner tools · NFL published matchup reports**. Confirm permitted report access/use before selecting a local CSV or JSON. CSV columns are `team,position,rank`; JSON is an array of equivalent objects. This is a structured-data import: original file bytes stay in the browser, and only validated records/provenance enter the existing PostgreSQL database.
+
+Supply publisher, season/phase, applicable week range, publication and data-as-of timestamps (UTC), positional scope, rank-one meaning and publisher URL. PFF supports `secondary` with #1 strongest; FantasyPros supports `QB/RB/WR/TE/K/DST` with #1 most allowed. Preview all rows and coverage before approving a new report or replacement. Previews expire after one hour and are never applied to players.
+
+Matching requires published slate season, phase, opponent week and pre-cutoff dates. Unknown weeks, stale periods and missing teams never produce inferred ranks. Matching incomplete reports are not filled from unrelated live data. Without a matching stored report, separately labeled public coverage can remain available. Imported reports do not change independent numerical forecasts or membership restrictions.
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9

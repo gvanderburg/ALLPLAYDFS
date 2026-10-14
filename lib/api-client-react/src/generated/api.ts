@@ -39,6 +39,9 @@ import type {
   ListEvaluations200,
   ListFeedbackTicketsParams,
   ListGameTakes200,
+  MatchupReport,
+  MatchupReportApproval,
+  MatchupReportImport,
   MembershipStatus,
   ModelProjectionSheet,
   PublishTakeInput,
@@ -73,6 +76,310 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListMatchupReportsUrl = () => {
+
+
+
+
+  return `/api/matchup-reports`
+}
+
+export const listMatchupReports = async ( options?: Parameters<typeof customFetch>[1]): Promise<MatchupReport[]> => {
+
+  return customFetch<MatchupReport[]>(getListMatchupReportsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMatchupReportsQueryKey = () => {
+    return [
+    `/api/matchup-reports`
+    ] as const;
+    }
+
+
+export const getListMatchupReportsQueryOptions = <TData = Awaited<ReturnType<typeof listMatchupReports>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMatchupReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMatchupReportsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatchupReports>>> = ({ signal }) => listMatchupReports({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatchupReports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMatchupReportsQueryResult = NonNullable<Awaited<ReturnType<typeof listMatchupReports>>>
+export type ListMatchupReportsQueryError = ErrorType<unknown>
+
+
+
+export function useListMatchupReports<TData = Awaited<ReturnType<typeof listMatchupReports>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMatchupReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMatchupReportsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPreviewMatchupReportUrl = () => {
+
+
+
+
+  return `/api/matchup-reports/preview`
+}
+
+export const previewMatchupReport = async (matchupReportImport: MatchupReportImport, options?: Parameters<typeof customFetch>[1]): Promise<MatchupReport> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MatchupReport>(getPreviewMatchupReportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(matchupReportImport)
+  }
+);}
+
+
+
+
+
+export const getPreviewMatchupReportMutationKey = () => ['previewMatchupReport'] as const;
+
+export const getPreviewMatchupReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewMatchupReport>>, TError,PreviewMatchupReportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewMatchupReport>>, TError,PreviewMatchupReportMutationVariables, TContext> => {
+
+const mutationKey = getPreviewMatchupReportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewMatchupReport>>, PreviewMatchupReportMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewMatchupReport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewMatchupReportMutationResult = NonNullable<Awaited<ReturnType<typeof previewMatchupReport>>>
+    export type PreviewMatchupReportMutationBody = BodyType<MatchupReportImport>
+    export type PreviewMatchupReportMutationError = ErrorType<unknown>
+    export type PreviewMatchupReportMutationVariables = {data: BodyType<MatchupReportImport>}
+
+    export const usePreviewMatchupReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewMatchupReport>>, TError,PreviewMatchupReportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewMatchupReport>>,
+        TError,
+        PreviewMatchupReportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewMatchupReportMutationOptions(options));
+    }
+
+export const getApproveMatchupReportUrl = (id: string,) => {
+
+
+
+
+  return `/api/matchup-reports/${id}/approve`
+}
+
+export const approveMatchupReport = async (id: string,
+    matchupReportApproval: MatchupReportApproval, options?: Parameters<typeof customFetch>[1]): Promise<MatchupReport> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MatchupReport>(getApproveMatchupReportUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(matchupReportApproval)
+  }
+);}
+
+
+
+
+
+export const getApproveMatchupReportMutationKey = () => ['approveMatchupReport'] as const;
+
+export const getApproveMatchupReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveMatchupReport>>, TError,ApproveMatchupReportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveMatchupReport>>, TError,ApproveMatchupReportMutationVariables, TContext> => {
+
+const mutationKey = getApproveMatchupReportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveMatchupReport>>, ApproveMatchupReportMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  approveMatchupReport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveMatchupReportMutationResult = NonNullable<Awaited<ReturnType<typeof approveMatchupReport>>>
+    export type ApproveMatchupReportMutationBody = BodyType<MatchupReportApproval>
+    export type ApproveMatchupReportMutationError = ErrorType<unknown>
+    export type ApproveMatchupReportMutationVariables = {id: string;data: BodyType<MatchupReportApproval>}
+
+    export const useApproveMatchupReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveMatchupReport>>, TError,ApproveMatchupReportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveMatchupReport>>,
+        TError,
+        ApproveMatchupReportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApproveMatchupReportMutationOptions(options));
+    }
+
+export const getDeleteMatchupReportUrl = (id: string,) => {
+
+
+
+
+  return `/api/matchup-reports/${id}`
+}
+
+export const deleteMatchupReport = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteMatchupReportUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteMatchupReportMutationKey = () => ['deleteMatchupReport'] as const;
+
+export const getDeleteMatchupReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMatchupReport>>, TError,DeleteMatchupReportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMatchupReport>>, TError,DeleteMatchupReportMutationVariables, TContext> => {
+
+const mutationKey = getDeleteMatchupReportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMatchupReport>>, DeleteMatchupReportMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMatchupReport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMatchupReportMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMatchupReport>>>
+
+    export type DeleteMatchupReportMutationError = ErrorType<unknown>
+    export type DeleteMatchupReportMutationVariables = {id: string}
+
+    export const useDeleteMatchupReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMatchupReport>>, TError,DeleteMatchupReportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMatchupReport>>,
+        TError,
+        DeleteMatchupReportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteMatchupReportMutationOptions(options));
+    }
 
 export const getListEvaluationsUrl = () => {
 
