@@ -1,0 +1,14 @@
+[build]
+  command = "pnpm --filter @workspace/dfs-dashboard... run build"
+  # Vite writes the build to dist/public (path is relative to the repo root base directory)
+  publish = "artifacts/dfs-dashboard/dist/public"
+
+[build.environment]
+  BASE_PATH = "/"
+  PORT = "5173"
+
+# Single-page app: serve index.html for every client-side route
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
