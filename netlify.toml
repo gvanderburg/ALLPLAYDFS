@@ -1,0 +1,13 @@
+# Build from the repository root so pnpm can resolve workspace dependencies.
+[build]
+base = "."
+command = "pnpm --filter @workspace/dfs-dashboard run build"
+publish = "artifacts/dfs-dashboard/dist"
+
+[build.environment]
+BASE_PATH = "/"
+PORT = "3000"
+
+# The SPA fallback is copied from artifacts/dfs-dashboard/public/_redirects.
+# This only deploys the frontend. API and authentication routing must be
+# configured separately before this site can replace the full Replit app.
