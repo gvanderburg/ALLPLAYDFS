@@ -1,7 +1,7 @@
 - [Transport validation](transport-validation.md) — generated validators need real HTTP smoke checks; passing typechecks can hide rejected URL filters.
 - [Workflow handoff state](workflow-handoff-state.md) — fresh workflow-state updates can invalidate an earlier successful preview check.
 - [X feed policy](x-feed-policy.md) — feed removed by user request; any explicitly requested return must use free embeds, not paid API reads.
-- [Dashboard reference scope](reference-design.md) — latest reference is a compact near-black table; match visuals without inventing betting metrics.
+- [Dashboard reference scope](reference-design.md) — approved black/red branding, compact tables and bottom game ticker; reference sites never justify invented metrics.
 - [Membership scope](membership-policy.md) — $1.99/month locks player data and owner-uploaded Game Takes; news and game slates remain free.
 - [Private feedback access](feedback-policy.md) — support is free for signed-in accounts; reports and replies are visible only to their author and app owners.
 - [Whop membership bridge](whop-membership-bridge.md) — bind purchases to verified app identity; verify checkout ownership, provider access and period-end cancellation.

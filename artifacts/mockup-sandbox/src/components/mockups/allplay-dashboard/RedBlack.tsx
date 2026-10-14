@@ -25,11 +25,11 @@ function todayLocal() {
 
 export function RedBlack() {
   const [date, setDate] = useState(todayLocal);
-  const [sport, setSport] = useState<(typeof SPORTS)[number]>('NFL');
+  const [sport, setSport] = useState<(typeof SPORTS)[number]>('NHL');
   const [installOpen, setInstallOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
   const chosenDate = new Date(`${date}T12:00:00`);
   const dateLabel = chosenDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
   const weekday = chosenDate.toLocaleDateString(undefined, { weekday: 'long' });
@@ -47,7 +47,9 @@ export function RedBlack() {
     else if (event.key === 'End') next = SPORTS.length - 1;
     else return;
     event.preventDefault();
-    setSport(SPORTS[next]);
+    const nextSport = SPORTS[next];
+    setSport(nextSport);
+    setShowHistory(nextSport === 'NHL');
     document.getElementById(`rb-tab-${SPORTS[next]}`)?.focus();
   };
 
@@ -85,7 +87,7 @@ export function RedBlack() {
       .rb-note-mark { flex:none; display:grid; place-items:center; width:16px; height:16px; margin-top:1px; border:1px solid #9e655f; border-radius:50%; color:#ff9b92; font:700 10px 'Space Mono',monospace; }
       .rb-rail-foot { margin-top:auto; padding:15px 9px 0; border-top:1px solid var(--rb-line); }
       .rb-sport-list { margin-top:9px; color:#aaa5a4; font:10px/1.9 'Space Mono',monospace; }
-      .rb-main { width:min(1500px,100%); min-width:0; padding:28px clamp(18px,3vw,42px) 38px; }
+      .rb-main { width:min(1500px,100%); min-width:0; padding:28px clamp(18px,3vw,42px) 98px; }
       .rb-preview-label { display:flex; align-items:center; gap:8px; margin-bottom:17px; padding:8px 11px; border:1px solid #65413e; background:#261b1a; color:#e1aba6; font:9px/1.5 'Space Mono',monospace; letter-spacing:.025em; }
       .rb-preview-label svg { flex:none; color:#ff8a80; }
       .rb-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:19px; }
@@ -162,6 +164,33 @@ export function RedBlack() {
       .rb-small-note { margin:9px 0 0; color:#aaa4a3; font-size:9px; line-height:1.55; }
       .rb-install-copy { margin:0 0 11px; color:#b4afae; font-size:10px; line-height:1.6; }
       .rb-bottom-line { margin-top:19px; color:#85807f; font:8px 'Space Mono',monospace; letter-spacing:.1em; }
+      .rb-ticker {
+        position:fixed; z-index:25; inset-inline:0; bottom:0; display:grid;
+        grid-template-columns:205px minmax(0,1fr); align-items:center; gap:12px;
+        min-height:68px; padding:7px 12px calc(7px + env(safe-area-inset-bottom));
+        border-top:1px solid #4a3432; background:rgba(16,16,17,.97);
+        box-shadow:0 -8px 28px rgba(0,0,0,.26); backdrop-filter:blur(12px);
+      }
+      .rb-ticker-label { display:grid; gap:2px; min-width:0; }
+      .rb-ticker-kicker { color:#ff8a80; font:700 8px 'Space Mono',monospace; letter-spacing:.1em; text-transform:uppercase; }
+      .rb-ticker-title { color:#eee9e8; font:600 11px 'Space Grotesk',sans-serif; }
+      .rb-ticker-hint { overflow:hidden; color:#aaa5a4; font:7px 'Space Mono',monospace; text-overflow:ellipsis; white-space:nowrap; }
+      .rb-ticker-track { display:flex; gap:7px; min-width:0; overflow-x:auto; overscroll-behavior-x:contain; padding:2px 0; scrollbar-color:#65413e #1b1b1d; scrollbar-width:thin; scroll-snap-type:x proximity; touch-action:pan-x; }
+      .rb-ticker-game { flex:0 0 184px; display:grid; gap:2px; min-width:0; min-height:48px; padding:5px 8px; border:1px solid #39383b; border-radius:4px; background:#1d1d1f; color:var(--rb-ink); cursor:pointer; text-align:left; scroll-snap-align:start; transition:transform .16s,border-color .16s,background .16s; }
+      .rb-ticker-game:hover { transform:translateY(-1px); border-color:#ce554d; background:#272122; }
+      .rb-ticker-game:focus-visible { outline:2px solid #ff8a80; outline-offset:2px; }
+      .rb-ticker-meta,.rb-ticker-markets { display:flex; justify-content:space-between; align-items:center; gap:6px; }
+      .rb-ticker-meta { color:#aba6a5; font:7px 'Space Mono',monospace; letter-spacing:.04em; }
+      .rb-ticker-sport { color:#ff8a80; font-weight:700; }
+      .rb-ticker-scoreline { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:5px; font:700 9px 'Space Mono',monospace; }
+      .rb-ticker-scoreline span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .rb-ticker-scoreline span:last-child { overflow:hidden; text-align:right; text-overflow:ellipsis; white-space:nowrap; }
+      .rb-ticker-scoreline strong { color:#f0e9e7; white-space:nowrap; }
+      .rb-ticker-markets { color:#bbb4b2; font:7px 'Space Mono',monospace; }
+      .rb-ticker-empty { display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; color:#b9b3b2; font-size:10px; }
+      .rb-ticker-empty span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .rb-ticker-action { display:inline-flex; align-items:center; gap:5px; flex:none; padding:6px 8px; border:1px solid #58403d; border-radius:4px; background:#261e1d; color:#ffaaa3; cursor:pointer; font-size:9px; font-weight:700; }
+      .rb-ticker-action:hover { border-color:#b45049; background:#332220; }
       .rb-modal-backdrop { position:fixed; z-index:50; inset:0; display:grid; place-items:center; padding:18px; background:rgba(5,5,6,.78); }
       .rb-modal { width:min(440px,100%); padding:21px; border:1px solid #51413f; border-radius:7px; background:#222123; box-shadow:0 20px 60px rgba(0,0,0,.42); }
       .rb-modal-top { display:flex; justify-content:space-between; gap:12px; }
@@ -179,7 +208,7 @@ export function RedBlack() {
         .rb-top-right { gap:7px; }
         .rb-rail { display:none; }
         .rb-rail.rb-mobile-open { position:fixed; z-index:30; top:56px; left:0; bottom:0; display:flex; width:min(260px,84vw); min-height:0; box-shadow:12px 0 30px rgba(0,0,0,.4); }
-        .rb-main { grid-column:1; padding:19px 12px 28px; }
+        .rb-main { grid-column:1; padding:19px 12px 126px; }
         .rb-preview-label { align-items:flex-start; margin-bottom:14px; font-size:8px; }
         .rb-heading { display:block; margin-bottom:15px; }
         .rb-heading h1 { font-size:34px; }
@@ -199,6 +228,15 @@ export function RedBlack() {
         .rb-body { padding:10px; }
         .rb-game-grid { grid-template-columns:minmax(0,1fr); }
         .rb-game-main { grid-template-columns:minmax(0,1fr); }
+        .rb-ticker { grid-template-columns:minmax(0,1fr); gap:4px; min-height:86px; padding:5px 8px calc(5px + env(safe-area-inset-bottom)); }
+        .rb-ticker-label { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .rb-ticker-kicker { font-size:7px; }
+        .rb-ticker-title { font-size:9px; }
+        .rb-ticker-hint { max-width:43%; font-size:8px; }
+        .rb-ticker-track { margin-right:-8px; padding-right:8px; }
+        .rb-ticker-game { flex-basis:166px; min-height:44px; padding:4px 7px; }
+        .rb-ticker-empty { min-height:42px; font-size:8px; }
+        .rb-ticker-action { padding:5px 6px; font-size:8px; }
         .rb-empty { grid-template-columns:31px minmax(0,1fr); gap:9px; padding:11px; }
         .rb-empty-icon { width:29px; height:29px; }
         .rb-empty-actions { display:grid; grid-template-columns:1fr; }
@@ -254,7 +292,7 @@ export function RedBlack() {
       </div>
 
       <div className="rb-tabs" role="tablist" aria-label="Choose a sport">
-        {SPORTS.map((item, index) => <button key={item} id={`rb-tab-${item}`} className="rb-tab" type="button" role="tab" aria-selected={sport === item} aria-controls="rb-sport-panel" tabIndex={sport === item ? 0 : -1} onClick={() => { setSport(item); setShowHistory(false); }} onKeyDown={(event) => onSportKey(event, index)}>{item}</button>)}
+        {SPORTS.map((item, index) => <button key={item} id={`rb-tab-${item}`} className="rb-tab" type="button" role="tab" aria-selected={sport === item} aria-controls="rb-sport-panel" tabIndex={sport === item ? 0 : -1} onClick={() => { setSport(item); setShowHistory(item === 'NHL'); }} onKeyDown={(event) => onSportKey(event, index)}>{item}</button>)}
       </div>
 
       <section className="rb-summary" aria-label={`${sport} slate summary`}>
@@ -331,6 +369,29 @@ export function RedBlack() {
         </section>
       </div>}
     </main>
+    <section className="rb-ticker" aria-label="Historical game ticker preview">
+      <div className="rb-ticker-label">
+        <span className="rb-ticker-kicker">Games · scannable at a glance</span>
+        <strong className="rb-ticker-title">{sport === 'NHL' ? 'NHL · finished examples' : `${sport} · feed unavailable`}</strong>
+        <span className="rb-ticker-hint">Historical sample only · not live</span>
+      </div>
+      {sport === 'NHL' ? <div className="rb-ticker-track" role="region" aria-label="Scroll through historical NHL game examples" tabIndex={0}>
+        {HISTORICAL_NHL.map((game) => <button
+          className="rb-ticker-game"
+          key={`ticker-${game.time}-${game.away[0]}`}
+          type="button"
+          aria-label={`Historical NHL final: ${game.away[1]} ${game.away[2]} at ${game.home[1]} ${game.home[2]}, ${game.time}. Over under ${game.total}, spread ${game.spread}. Open matchup examples.`}
+          onClick={() => { setShowHistory(true); document.getElementById('slate')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }}
+        >
+          <span className="rb-ticker-meta"><span className="rb-ticker-sport">NHL</span><span>FINAL · {game.time}</span></span>
+          <span className="rb-ticker-scoreline"><span>{game.away[0]}</span><strong>{game.away[2]} — {game.home[2]}</strong><span>{game.home[0]}</span></span>
+          <span className="rb-ticker-markets"><span>O/U {game.total}</span><span>SPREAD {game.spread}</span></span>
+        </button>)}
+      </div> : <div className="rb-ticker-empty" role="status">
+        <span>No verified {sport} games are connected in this preview; live results aren’t being filled in.</span>
+        <button className="rb-ticker-action" type="button" onClick={() => { setSport('NHL'); setShowHistory(true); document.getElementById('slate')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }}>See NHL examples <ChevronRight size={12} /></button>
+      </div>}
+    </section>
   </div>;
 }
 

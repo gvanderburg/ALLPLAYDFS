@@ -9,11 +9,17 @@ ALLPLAY's supplied screenshots are visual references, not requests to copy anoth
 
 **How to apply:** Match the reference's presentation while retaining ALLPLAY's source disclosures and functional scope. New betting metrics or workflows require their own explicit requirements and real data sources.
 
-The latest direction is to match the near-black NASCAR analytics-table reference across the website and projection sheets: compact aligned rows, subtle separation, small historical trends and green/red numeric badges.
+Use the near-black NASCAR analytics-table reference for projection-sheet density: compact aligned rows, subtle separation and small historical trends. The subsequently approved brand direction is black and red, not mint/green.
 
 **Why:** On 2026-10-13 the user explicitly requested that both the website layout/look and projection sheets look like the newly supplied dark table. This supersedes the earlier palette-only blue-gray instruction.
 
 **How to apply:** Use the latest reference for presentation, while preserving ALLPLAY's real sport-specific columns, separate tabs, membership gates, navigation and working features. The cropped table does not define a replacement for necessary navigation. Any visible history trend must use actual observations; do not invent racing fields, confidence ratings or lineup actions solely because the reference shows them.
+
+The user approved the red-and-black direction and named thespreadsports.com as a layout/feature reference, specifically requesting games scrolling along the bottom and compact slate cards.
+
+**Why:** On 2026-10-13 the user said, "i like the red color scheme" and requested the reference site's experience in ALLPLAY's black-and-red palette.
+
+**How to apply:** Preserve ALLPLAY branding, separate sports, real data and access gates. Keep prototype-only historical examples clearly labeled and never move them into live feeds. Additional reference photos may refine the layout.
 
 Hiding salary from projection charts is a presentation change, not a request to disconnect salary sources or stop salary-based research calculations.
 
