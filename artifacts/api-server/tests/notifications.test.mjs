@@ -271,6 +271,29 @@ test("a recent Clerk signup is accepted once; an old account is ignored", async 
   assert.equal(globalThis.__notificationRows.receipts[0].eventType, "signup");
 });
 
+test("missing, malformed, non-finite, and future signup timestamps create no receipt or push", async () => {
+  reset();
+  await saveOwnerPushSubscription("user_ownerFixture", subscription("https://push.example/signup-invalid"));
+
+  const invalidUsers = [
+    ["user_signupMissingFixture", {}],
+    ["user_signupMalformedFixture", { createdAt: "not-a-timestamp" }],
+    ["user_signupNaNFixture", { createdAt: Number.NaN }],
+    ["user_signupPositiveInfinityFixture", { createdAt: Number.POSITIVE_INFINITY }],
+    ["user_signupNegativeInfinityFixture", { createdAt: Number.NEGATIVE_INFINITY }],
+    ["user_signupFutureFixture", { createdAt: Date.now() + 60_000 }],
+  ];
+
+  for (const [userId, user] of invalidUsers) {
+    globalThis.__clerkUsers[userId] = user;
+    assert.deepEqual((await request(userId, "signup-event")).data, { accepted: false });
+  }
+
+  assert.equal(globalThis.__notificationRows.receipts.length, 0);
+  assert.equal(globalThis.__notificationRows.deliveries.length, 0);
+  assert.deepEqual(globalThis.__sentPushes, []);
+});
+
 test("a verified membership alert is deduplicated across retries", async () => {
   reset();
   await saveOwnerPushSubscription("user_ownerFixture", subscription("https://push.example/membership"));

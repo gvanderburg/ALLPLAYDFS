@@ -135,8 +135,12 @@ router.post("/notifications/signup-event", async (req, res) => {
 
   try {
     const user = await clerkClient.users.getUser(userId);
-    const age = Date.now() - user.createdAt;
-    const isRecent = age >= 0 && age <= signupWindowMs;
+    const createdAt = user.createdAt;
+    const now = Date.now();
+    const isRecent = typeof createdAt === "number"
+      && Number.isFinite(createdAt)
+      && createdAt <= now
+      && now - createdAt <= signupWindowMs;
     const accepted = isRecent ? await notifyOwners("signup", userId) : false;
     res.json({ accepted });
   } catch (error) {
