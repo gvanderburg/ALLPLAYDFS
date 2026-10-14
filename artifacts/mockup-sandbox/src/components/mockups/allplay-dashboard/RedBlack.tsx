@@ -243,6 +243,17 @@ export function RedBlack() {
         .rb-empty-actions .rb-btn { justify-content:center; }
       }
       @media(prefers-reduced-motion:reduce) { .rb-app * { scroll-behavior:auto!important; transition:none!important; } }
+      /* Keep the preview's box surfaces rounded like the supplied reference. */
+      .rb-top,.rb-rail,.rb-controls,.rb-summary,.rb-panel,.rb-ticker,.rb-modal {
+        border-radius:14px!important;
+      }
+      .rb-game,.rb-empty,.rb-news,.rb-model-card,.rb-markets,.rb-ticker-game,.rb-menu {
+        border-radius:10px!important;
+      }
+      .rb-btn,.rb-link-pill,.rb-tab,.rb-field input,.rb-ticker-action,
+      .rb-team-code,.rb-final,.rb-empty-icon,.rb-news-icon {
+        border-radius:8px!important;
+      }
       .rb-top { position:sticky; top:0; z-index:30; }
       .rb-rail { grid-row:3; }
       .rb-main { grid-column:2; grid-row:3; padding-bottom:32px; }

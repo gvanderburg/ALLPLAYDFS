@@ -8,6 +8,69 @@
 import * as zod from 'zod';
 
 
+/**
+ * @summary Return push-alert setup status for the signed-in account
+ */
+export const getNotificationStatusResponseDeviceCountMin = 0;
+
+
+
+export const GetNotificationStatusResponse = zod.object({
+  "isOwner": zod.boolean(),
+  "isSupported": zod.boolean(),
+  "deviceCount": zod.number().int().min(getNotificationStatusResponseDeviceCountMin),
+  "publicKey": zod.string().nullable()
+})
+
+
+/**
+ * @summary Register this owner device for push alerts
+ */
+export const subscribePushNotificationsBodyEndpointMax = 4096;
+
+export const subscribePushNotificationsBodyKeysP256dhMin = 20;
+export const subscribePushNotificationsBodyKeysP256dhMax = 256;
+
+export const subscribePushNotificationsBodyKeysAuthMin = 8;
+export const subscribePushNotificationsBodyKeysAuthMax = 128;
+
+
+
+export const SubscribePushNotificationsBody = zod.object({
+  "endpoint": zod.string().url().max(subscribePushNotificationsBodyEndpointMax),
+  "keys": zod.object({
+  "p256dh": zod.string().min(subscribePushNotificationsBodyKeysP256dhMin).max(subscribePushNotificationsBodyKeysP256dhMax),
+  "auth": zod.string().min(subscribePushNotificationsBodyKeysAuthMin).max(subscribePushNotificationsBodyKeysAuthMax)
+})
+})
+
+export const SubscribePushNotificationsResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Remove this owner device from push alerts
+ */
+export const unsubscribePushNotificationsBodyEndpointMax = 4096;
+
+
+
+export const UnsubscribePushNotificationsBody = zod.object({
+  "endpoint": zod.string().url().max(unsubscribePushNotificationsBodyEndpointMax)
+})
+
+export const UnsubscribePushNotificationsResponse = zod.void()
+
+
+/**
+ * @summary Record a newly created signed-in account for owner notification
+ */
+export const RecordRecentSignupNotificationResponse = zod.object({
+  "accepted": zod.boolean()
+})
+
+
 export const listMatchupReportsResponseMetadataSeasonMin = 2020;
 export const listMatchupReportsResponseMetadataSeasonMax = 2100;
 

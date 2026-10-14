@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowUpRight, Check, CircleAlert, Clock3, Copy, LoaderCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import useMembership from '@/hooks/use-membership';
 import MembershipCheckoutButton from '@/components/membership-checkout-button';
+import OwnerNotifications from '@/components/owner-notifications';
 
 function formatPeriod(value: string | null | undefined) {
   if (!value) return null;
@@ -106,6 +107,7 @@ export default function Account() {
           catch { setCopyStatus('Could not copy automatically. Select and copy the account ID above.'); }
         }}><Copy size={14} /> Copy account ID</button>
         <p role="status" style={{ fontSize: 12 }}>{copyStatus}</p>
+        {!owner && !entitled && <p className="account-panel-intro">If you own ALLPLAY and use both preview and published sites, each may have a different account ID. Both exact IDs must be included in the private owner access list.</p>}
       </section>
       <section className="account-panel" aria-labelledby="membership-title">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
@@ -125,6 +127,7 @@ export default function Account() {
         {entitled && !status?.cancelAtPeriodEnd && <div className="membership-actions"><button className="btn btn-quiet" onClick={() => setConfirmCancel(true)} disabled={cancel.isPending}>{cancel.isPending && <LoaderCircle size={14} className="spin" />}{owner ? 'Stop existing paid renewal' : 'Stop renewal'}</button></div>}
         {!entitled && !unavailable && !checkoutReturned && <div className="membership-actions"><MembershipCheckoutButton signedIn={isSignedIn === true} label="Continue to secure checkout" /></div>}
         {unavailable && <div className="membership-actions"><button className="btn btn-quiet" onClick={() => void verify()} disabled={membershipQuery.isFetching || refreshing}><RefreshCw size={14} className={membershipQuery.isFetching || refreshing ? 'spin' : ''} /> Retry status</button></div>}
+        {owner && <OwnerNotifications />}
         <p className="membership-footnote"><strong>{owner ? 'Owner access: no monthly fee.' : '$1.99 USD / month, plus applicable taxes.'}</strong> Includes player data and Game Takes. ALLPLAY calculates its own stat estimates from historical performances and matchups, not DraftKings, FanDuel or ESPN forecasts. Coverage depends on published data. This initial model is not backtested and does not guarantee an outcome.</p>
       </section>
     </div>

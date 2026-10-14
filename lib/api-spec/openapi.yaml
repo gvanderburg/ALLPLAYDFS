@@ -13,6 +13,62 @@ tags:
   - name: dfs
     description: Daily fantasy sports dashboard
 paths:
+  /notifications/status:
+    get:
+      operationId: getNotificationStatus
+      tags: [notifications]
+      summary: Return push-alert setup status for the signed-in account
+      responses:
+        "200":
+          description: Notification setup status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PushNotificationStatus" }
+        "401": { description: Sign in required }
+  /notifications/subscribe:
+    post:
+      operationId: subscribePushNotifications
+      tags: [notifications]
+      summary: Register this owner device for push alerts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushSubscriptionInput" }
+      responses:
+        "200":
+          description: Device registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PushMutationResponse" }
+        "400": { description: Invalid push subscription }
+        "401": { description: Sign in required }
+        "403": { description: Owner access required }
+    delete:
+      operationId: unsubscribePushNotifications
+      tags: [notifications]
+      summary: Remove this owner device from push alerts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PushUnsubscribeInput" }
+      responses:
+        "204": { description: Device removed }
+        "401": { description: Sign in required }
+        "403": { description: Owner access required }
+  /notifications/signup-event:
+    post:
+      operationId: recordRecentSignupNotification
+      tags: [notifications]
+      summary: Record a newly created signed-in account for owner notification
+      responses:
+        "200":
+          description: Signup notification evaluated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignupNotificationResponse" }
+        "401": { description: Sign in required }
   /matchup-reports:
     get:
       operationId: listMatchupReports
@@ -453,6 +509,40 @@ paths:
           description: Invalid date or sport
 components:
   schemas:
+    PushNotificationStatus:
+      type: object
+      required: [isOwner, isSupported, deviceCount, publicKey]
+      properties:
+        isOwner: { type: boolean }
+        isSupported: { type: boolean }
+        deviceCount: { type: integer, minimum: 0 }
+        publicKey: { type: ["string", "null"] }
+    PushSubscriptionInput:
+      type: object
+      required: [endpoint, keys]
+      properties:
+        endpoint: { type: string, format: uri, maxLength: 4096 }
+        keys:
+          type: object
+          required: [p256dh, auth]
+          properties:
+            p256dh: { type: string, minLength: 20, maxLength: 256 }
+            auth: { type: string, minLength: 8, maxLength: 128 }
+    PushUnsubscribeInput:
+      type: object
+      required: [endpoint]
+      properties:
+        endpoint: { type: string, format: uri, maxLength: 4096 }
+    PushMutationResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }
+    SignupNotificationResponse:
+      type: object
+      required: [accepted]
+      properties:
+        accepted: { type: boolean }
     MatchupReportMetadata:
       type: object
       required: [publisher, season, phase, startWeek, endWeek, publishedAt, asOf, positions, rankOneMeans, sourceUrl]

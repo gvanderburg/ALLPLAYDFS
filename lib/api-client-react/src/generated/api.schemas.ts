@@ -5,6 +5,47 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface PushNotificationStatus {
+  isOwner: boolean;
+  isSupported: boolean;
+  /** @minimum 0 */
+  deviceCount: number;
+  /** @nullable */
+  publicKey: string | null;
+}
+
+export type PushSubscriptionInputKeys = {
+  /**
+     * @minLength 20
+     * @maxLength 256
+     */
+  p256dh: string;
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  auth: string;
+};
+
+export interface PushSubscriptionInput {
+  /** @maxLength 4096 */
+  endpoint: string;
+  keys: PushSubscriptionInputKeys;
+}
+
+export interface PushUnsubscribeInput {
+  /** @maxLength 4096 */
+  endpoint: string;
+}
+
+export interface PushMutationResponse {
+  ok: boolean;
+}
+
+export interface SignupNotificationResponse {
+  accepted: boolean;
+}
+
 export type MatchupReportMetadataPublisher = typeof MatchupReportMetadataPublisher[keyof typeof MatchupReportMetadataPublisher];
 
 

@@ -49,9 +49,11 @@ await build({
       b.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "fixture" }));
       b.onResolve({ filter: /^drizzle-orm$/ }, () => ({ path: "orm", namespace: "fixture" }));
       b.onResolve({ filter: /whopClient$/ }, () => ({ path: "whop", namespace: "fixture" }));
+      b.onResolve({ filter: /^\.\/push-notifications$/ }, () => ({ path: "push", namespace: "fixture" }));
       b.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({
         contents: path === "db" ? mockDb : path === "orm"
           ? "export const eq=(column,value)=>({column,value}); export const desc=x=>x;"
+          : path === "push" ? "export async function notifyOwners(){ return false; }"
           : "export async function getWhopClient(){ return globalThis.__whopFixture; }",
         loader: "js",
       }));

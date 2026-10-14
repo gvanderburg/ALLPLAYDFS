@@ -3,6 +3,7 @@ import { db, membershipBindings, membershipCheckouts } from "@workspace/db";
 import type { MembershipStatus } from "@workspace/api-zod";
 import { getWhopClient } from "./whopClient";
 import { isOwnerAccount } from "./owner-access";
+import { notifyOwners } from "./push-notifications";
 
 export const membershipConfig = () => ({
   companyId: process.env.WHOP_COMPANY_ID,
@@ -114,6 +115,9 @@ export async function getVerifiedMembership(userId: string, refresh = false, pai
       }).onConflictDoUpdate({
         target: membershipBindings.userId,
         set: { membershipId: payment.membership.id, whopUserId: payment.user.id, updatedAt: new Date() },
+      });
+      await notifyOwners("membership", payment.membership.id).catch(() => {
+        console.warn("Could not send the ALLPLAY membership alert.");
       });
       verified = candidate;
       break;

@@ -26,3 +26,9 @@ Hiding salary from projection charts is a presentation change, not a request to 
 **Why:** On 2026-10-13 the user requested no salary on the charts and compact injury tags, not removal of the underlying DFS salary functionality.
 
 **How to apply:** Keep salaries available behind the scenes for value, supported ownership calculations and exports. Use compact injury badges rather than a large status column; OUT is red and QUESTIONABLE is yellow.
+
+The user wants ALLPLAY's card and panel boxes to use soft rounded corners rather than square corners, matching the supplied dark UI crop.
+
+**Why:** This is an explicit visual preference for the product's dashboard and projection layouts.
+
+**How to apply:** Round card-like surfaces and controls consistently across the live app and design previews while preserving clear alignment in dense projection tables.

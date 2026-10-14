@@ -45,8 +45,13 @@ import type {
   MembershipStatus,
   ModelProjectionSheet,
   PublishTakeInput,
+  PushMutationResponse,
+  PushNotificationStatus,
+  PushSubscriptionInput,
+  PushUnsubscribeInput,
   RequestEvaluationUpload200,
   RequestTakeUpload200,
+  SignupNotificationResponse,
   TakeUploadInput
 } from './api.schemas';
 
@@ -76,6 +81,333 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetNotificationStatusUrl = () => {
+
+
+
+
+  return `/api/notifications/status`
+}
+
+/**
+ * @summary Return push-alert setup status for the signed-in account
+ */
+export const getNotificationStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<PushNotificationStatus> => {
+
+  return customFetch<PushNotificationStatus>(getGetNotificationStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNotificationStatusQueryKey = () => {
+    return [
+    `/api/notifications/status`
+    ] as const;
+    }
+
+
+export const getGetNotificationStatusQueryOptions = <TData = Awaited<ReturnType<typeof getNotificationStatus>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNotificationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNotificationStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotificationStatus>>> = ({ signal }) => getNotificationStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNotificationStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNotificationStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getNotificationStatus>>>
+export type GetNotificationStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Return push-alert setup status for the signed-in account
+ */
+
+export function useGetNotificationStatus<TData = Awaited<ReturnType<typeof getNotificationStatus>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNotificationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNotificationStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubscribePushNotificationsUrl = () => {
+
+
+
+
+  return `/api/notifications/subscribe`
+}
+
+/**
+ * @summary Register this owner device for push alerts
+ */
+export const subscribePushNotifications = async (pushSubscriptionInput: PushSubscriptionInput, options?: Parameters<typeof customFetch>[1]): Promise<PushMutationResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PushMutationResponse>(getSubscribePushNotificationsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(pushSubscriptionInput)
+  }
+);}
+
+
+
+
+
+export const getSubscribePushNotificationsMutationKey = () => ['subscribePushNotifications'] as const;
+
+export const getSubscribePushNotificationsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof subscribePushNotifications>>, TError,SubscribePushNotificationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof subscribePushNotifications>>, TError,SubscribePushNotificationsMutationVariables, TContext> => {
+
+const mutationKey = getSubscribePushNotificationsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof subscribePushNotifications>>, SubscribePushNotificationsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  subscribePushNotifications(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubscribePushNotificationsMutationResult = NonNullable<Awaited<ReturnType<typeof subscribePushNotifications>>>
+    export type SubscribePushNotificationsMutationBody = BodyType<PushSubscriptionInput>
+    export type SubscribePushNotificationsMutationError = ErrorType<void>
+    export type SubscribePushNotificationsMutationVariables = {data: BodyType<PushSubscriptionInput>}
+
+    /**
+ * @summary Register this owner device for push alerts
+ */
+export const useSubscribePushNotifications = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof subscribePushNotifications>>, TError,SubscribePushNotificationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof subscribePushNotifications>>,
+        TError,
+        SubscribePushNotificationsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubscribePushNotificationsMutationOptions(options));
+    }
+
+export const getUnsubscribePushNotificationsUrl = () => {
+
+
+
+
+  return `/api/notifications/subscribe`
+}
+
+/**
+ * @summary Remove this owner device from push alerts
+ */
+export const unsubscribePushNotifications = async (pushUnsubscribeInput: PushUnsubscribeInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getUnsubscribePushNotificationsUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(pushUnsubscribeInput)
+  }
+);}
+
+
+
+
+
+export const getUnsubscribePushNotificationsMutationKey = () => ['unsubscribePushNotifications'] as const;
+
+export const getUnsubscribePushNotificationsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsubscribePushNotifications>>, TError,UnsubscribePushNotificationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unsubscribePushNotifications>>, TError,UnsubscribePushNotificationsMutationVariables, TContext> => {
+
+const mutationKey = getUnsubscribePushNotificationsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unsubscribePushNotifications>>, UnsubscribePushNotificationsMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  unsubscribePushNotifications(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnsubscribePushNotificationsMutationResult = NonNullable<Awaited<ReturnType<typeof unsubscribePushNotifications>>>
+    export type UnsubscribePushNotificationsMutationBody = BodyType<PushUnsubscribeInput>
+    export type UnsubscribePushNotificationsMutationError = ErrorType<void>
+    export type UnsubscribePushNotificationsMutationVariables = {data: BodyType<PushUnsubscribeInput>}
+
+    /**
+ * @summary Remove this owner device from push alerts
+ */
+export const useUnsubscribePushNotifications = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unsubscribePushNotifications>>, TError,UnsubscribePushNotificationsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unsubscribePushNotifications>>,
+        TError,
+        UnsubscribePushNotificationsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUnsubscribePushNotificationsMutationOptions(options));
+    }
+
+export const getRecordRecentSignupNotificationUrl = () => {
+
+
+
+
+  return `/api/notifications/signup-event`
+}
+
+/**
+ * @summary Record a newly created signed-in account for owner notification
+ */
+export const recordRecentSignupNotification = async ( options?: Parameters<typeof customFetch>[1]): Promise<SignupNotificationResponse> => {
+
+  return customFetch<SignupNotificationResponse>(getRecordRecentSignupNotificationUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRecordRecentSignupNotificationMutationKey = () => ['recordRecentSignupNotification'] as const;
+
+export const getRecordRecentSignupNotificationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordRecentSignupNotification>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordRecentSignupNotification>>, TError,void, TContext> => {
+
+const mutationKey = getRecordRecentSignupNotificationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordRecentSignupNotification>>, void> = () => {
+
+
+          return  recordRecentSignupNotification(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordRecentSignupNotificationMutationResult = NonNullable<Awaited<ReturnType<typeof recordRecentSignupNotification>>>
+
+    export type RecordRecentSignupNotificationMutationError = ErrorType<void>
+
+
+    /**
+ * @summary Record a newly created signed-in account for owner notification
+ */
+export const useRecordRecentSignupNotification = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordRecentSignupNotification>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordRecentSignupNotification>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRecordRecentSignupNotificationMutationOptions(options));
+    }
 
 export const getListMatchupReportsUrl = () => {
 

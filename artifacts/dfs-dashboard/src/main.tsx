@@ -11,7 +11,8 @@ import './styles/red-black.css';
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((error: unknown) => {
+    const appBasePath = import.meta.env.BASE_URL;
+    navigator.serviceWorker.register(`${appBasePath}sw.js`, { scope: appBasePath }).catch((error: unknown) => {
       console.warn('ALLPLAY offline shell registration failed.', error);
     });
   });

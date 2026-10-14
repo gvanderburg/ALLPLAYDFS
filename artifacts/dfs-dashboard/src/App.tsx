@@ -100,8 +100,10 @@ function SignUpPage() {
 
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
+  const { userId } = useAuth();
   const queryClient = useQueryClient();
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
+  const signupCheckUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = addListener(({ user }) => {
@@ -113,6 +115,17 @@ function ClerkQueryClientCacheInvalidator() {
     });
     return unsubscribe;
   }, [addListener, queryClient]);
+
+  useEffect(() => {
+    if (!userId || signupCheckUserRef.current === userId) return;
+    signupCheckUserRef.current = userId;
+    void fetch(`${basePath}/api/notifications/signup-event`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {
+      signupCheckUserRef.current = null;
+    });
+  }, [userId]);
 
   return null;
 }

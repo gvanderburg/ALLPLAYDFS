@@ -264,3 +264,41 @@ textarea:focus-visible, [tabindex="0"]:focus-visible { outline-color: #ff8d83; }
   .game-strip-item { flex-basis: 180px !important; }
   .slate-game { scroll-margin-top: 74px; scroll-margin-bottom: calc(126px + env(safe-area-inset-bottom)); }
 }
+
+/* Soft rounded surfaces across the live dashboard and its supporting pages. */
+:root {
+  --ap-radius-card: 14px;
+  --ap-radius-inner: 10px;
+  --ap-radius-control: 8px;
+  --ap-radius-badge: 6px;
+}
+
+.topbar, .side-rail,
+.control-bar, .panel, .summary-strip, .coverage-strip,
+.model-sheet, .model-controls, .install-modal, .fantasy-detail,
+.account-hero, .account-panel, .member-confirm, .model-preview,
+.slate-game, .game-strip-item, .top-game-strip, .ap-feature,
+.model-gate, .takes-app .take-card, .news-item, .news-card,
+.feedback-card, .feedback-ticket, .evaluation-card, .owner-notifications {
+  border-radius: var(--ap-radius-card) !important;
+}
+
+.panel-head, .panel-head-accent {
+  border-radius: var(--ap-radius-card) var(--ap-radius-card) 0 0 !important;
+}
+
+.slate-game-markets, .model-grid, .projection-table-wrap, .news-thumb,
+.published-matchup, .error-box, .slate-notice {
+  border-radius: var(--ap-radius-inner) !important;
+}
+
+.btn, .sport-tab, .model-sport-tab, .date-field, input, select, textarea,
+.model-search, .model-role-filter, .model-salary-filter, .salary-controls select,
+.pt-search, .game-strip-arrow, .rail-link, .research-style-switch {
+  border-radius: var(--ap-radius-control) !important;
+}
+
+.state-icon, .model-gate-icon, .model-sheet-mark, .type-tag,
+.slate-game-status, .slate-team-code, .model-number {
+  border-radius: var(--ap-radius-badge) !important;
+}
