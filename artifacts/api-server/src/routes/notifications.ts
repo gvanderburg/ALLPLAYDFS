@@ -15,7 +15,7 @@ const signupWindowMs = 24 * 60 * 60 * 1000;
 
 function sameOriginRequest(req: Request) {
   const origin = req.get("origin");
-  if (!origin) return true;
+  if (!origin) return false;
   const host = req.get("x-forwarded-host")?.split(",")[0]?.trim() || req.get("host");
   try {
     const parsed = new URL(origin);
@@ -136,8 +136,8 @@ router.post("/notifications/signup-event", async (req, res) => {
   try {
     const user = await clerkClient.users.getUser(userId);
     const age = Date.now() - user.createdAt;
-    const accepted = age >= 0 && age <= signupWindowMs;
-    if (accepted) await notifyOwners("signup", userId);
+    const isRecent = age >= 0 && age <= signupWindowMs;
+    const accepted = isRecent ? await notifyOwners("signup", userId) : false;
     res.json({ accepted });
   } catch (error) {
     req.log?.warn({ error }, "Could not verify a recent ALLPLAY signup");

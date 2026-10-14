@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test:matchup-reports": "node --test tests/matchup-reports.test.mjs tests/published-rankings.test.mjs",
+    "test:notifications": "node --test tests/notifications.test.mjs",
     "test:evaluation": "node --test tests/model-evaluation.test.mjs",
     "test:model": "node --test tests/projection-model.test.mjs",
     "test:nascar": "node --test tests/nascar-model.test.mjs",
