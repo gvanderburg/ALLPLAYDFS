@@ -169,3 +169,98 @@ textarea:focus-visible, [tabindex="0"]:focus-visible { outline-color: #ff8d83; }
   .game-strip-arrow { width: 24px; }
   .game-strip-empty { font-size: 10px; }
 }
+
+/* Full-width ALLPLAY workspace: utility navigation lives in the masthead, not a rail. */
+.app-shell {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  min-height: 100dvh;
+}
+.app-shell > .side-rail { display: none !important; }
+.app-shell > .main-wrap {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  width: min(1780px, 100%) !important;
+  max-width: 1780px !important;
+  margin-inline: auto;
+}
+.app-shell > .topbar {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 100%;
+  min-width: 0;
+}
+.app-shell .topbar-right,
+.app-shell .takes-top-nav,
+.app-shell .feedback-top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.app-shell .topbar-right::-webkit-scrollbar,
+.app-shell .takes-top-nav::-webkit-scrollbar,
+.app-shell .feedback-top-nav::-webkit-scrollbar { display: none; }
+
+/* A true persistent score ticker, below the work surface and above the device home inset. */
+.dashboard-red.has-game-strip {
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important;
+}
+.dashboard-red.has-game-strip > .main-wrap {
+  grid-row: 2 !important;
+  width: min(1780px, 100%) !important;
+  max-width: 1780px !important;
+  padding-bottom: 40px;
+}
+.top-game-strip {
+  position: fixed !important;
+  inset: auto 0 0 0 !important;
+  z-index: 50 !important;
+  grid-row: auto !important;
+  width: 100%;
+  height: calc(88px + env(safe-area-inset-bottom)) !important;
+  padding: 7px 16px calc(7px + env(safe-area-inset-bottom)) !important;
+  grid-template-columns: 170px 28px minmax(0, 1fr) 28px !important;
+  background: rgba(10, 8, 8, .97) !important;
+  border-top: 1px solid var(--ap-line) !important;
+  border-bottom: 0 !important;
+  box-shadow: 0 -10px 28px rgba(0,0,0,.28) !important;
+  backdrop-filter: blur(14px);
+}
+.game-strip-track { min-width: 0; }
+.game-strip-item { flex-basis: 210px !important; }
+.slate-game { scroll-margin-top: 86px; scroll-margin-bottom: calc(112px + env(safe-area-inset-bottom)); }
+
+@media (max-width: 950px) {
+  .app-shell > .main-wrap { grid-row: 2 !important; }
+  .dashboard-red .main-wrap { width: 100% !important; }
+}
+@media (max-width: 680px) {
+  .app-shell > .topbar { gap: 10px; padding-inline: 10px !important; }
+  .app-shell .topbar-right,
+  .app-shell .takes-top-nav,
+  .app-shell .feedback-top-nav { justify-content: flex-start; flex: 1; }
+  .app-shell .today-label { display: none !important; }
+  .app-shell .account-header-link,
+  .app-shell .takes-top-nav .btn,
+  .app-shell .feedback-top-nav .btn { flex: 0 0 auto; padding-inline: 8px !important; }
+  .app-shell > .main-wrap { padding-inline: 12px !important; }
+  .dashboard-red.has-game-strip { padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important; }
+  .dashboard-red.has-game-strip > .main-wrap { padding-bottom: 24px; }
+  .top-game-strip {
+    height: calc(104px + env(safe-area-inset-bottom)) !important;
+    grid-template-columns: 25px minmax(0,1fr) 25px !important;
+    grid-template-rows: 20px minmax(0,1fr) !important;
+    gap: 3px 6px !important;
+    padding: 5px 8px calc(5px + env(safe-area-inset-bottom)) !important;
+  }
+  .game-strip-label { grid-column: 1 / -1; }
+  .game-strip-item { flex-basis: 180px !important; }
+  .slate-game { scroll-margin-top: 74px; scroll-margin-bottom: calc(126px + env(safe-area-inset-bottom)); }
+}

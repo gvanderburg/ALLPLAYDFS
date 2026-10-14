@@ -15,11 +15,11 @@ Use the near-black NASCAR analytics-table reference for projection-sheet density
 
 **How to apply:** Use the latest reference for presentation, while preserving ALLPLAY's real sport-specific columns, separate tabs, membership gates, navigation and working features. The cropped table does not define a replacement for necessary navigation. Any visible history trend must use actual observations; do not invent racing fields, confidence ratings or lineup actions solely because the reference shows them.
 
-The user approved the red-and-black direction and named thespreadsports.com as a layout/feature reference. Keep compact slate cards and a scrolling game strip directly below the main header.
+The user approved ALLPLAY's red-and-black identity and now wants the overall page structure to follow thespreadsports.com, but without an optimizer. Sports remain distinct, with the game ticker at the bottom.
 
-**Why:** On 2026-10-13 the user approved red-and-black branding. They subsequently requested moving the scrolling game strip to the top; this supersedes the earlier bottom placement.
+**Why:** On 2026-10-14 the user explicitly requested that ALLPLAY's layout and feature organization follow thespreadsports.com. That newer reference has full-width navigation and a bottom ticker, superseding the earlier request for a top ticker.
 
-**How to apply:** Preserve ALLPLAY branding, separate sports, real data and access gates. Keep prototype-only historical examples clearly labeled and never move them into live feeds. Additional reference photos may refine the layout.
+**How to apply:** Preserve ALLPLAY branding, separate sport tabs, real data and access gates; do not copy the reference site's logo, copy or betting identity. Do not add an optimizer. Keep prototype-only historical examples clearly labeled and never move them into live feeds.
 
 Hiding salary from projection charts is a presentation change, not a request to disconnect salary sources or stop salary-based research calculations.
 

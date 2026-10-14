@@ -7,7 +7,7 @@ import SalaryControls from '@/components/salary-controls';
 import { ModelPreview } from '@/components/model-projections';
 import MembershipCheckoutButton from '@/components/membership-checkout-button';
 import useMembership from '@/hooks/use-membership';
-import { EventSlate, GameTicker } from '@/components/slate-games';
+import { EventSlate, GameTicker, gameState } from '@/components/slate-games';
 import {
   Activity, AlertCircle, ArrowDownToLine, CalendarDays,
   Download, ExternalLink, Newspaper, RefreshCw, ShieldCheck,
@@ -90,6 +90,19 @@ function InstallDialog({ onClose, onInstall, canInstall, isInstalled, installing
       <div className="modal-actions"><button className="btn btn-quiet" onClick={onClose}>Not now</button>{canInstall && !isInstalled && <button className="btn btn-primary" onClick={onInstall} disabled={installing}><ArrowDownToLine size={15} /> {installing ? 'Installing…' : 'Install app'}</button>}</div>
     </section>
   </div>;
+}
+
+function FeaturedMatchup({ event, sportName }: { event?: DfsEvent; sportName: string }) {
+  if (!event) return null;
+  const away = event.competitors.find((t) => t.homeAway === 'away');
+  const home = event.competitors.find((t) => t.homeAway === 'home');
+  const sl = (v?: number | null) => v == null ? '—' : v === 0 ? 'PK' : v > 0 ? `+${v}` : String(v);
+  return <section className="ap-feature" aria-label={`Featured ${sportName} matchup`} data-testid="featured-matchup">
+    <div className="ap-feature-top"><span><b>Featured matchup</b> · {event.league}</span><span>{formatDate(event.startTime, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} · {event.status}</span></div>
+    {away && home ? <div className="ap-vs"><div className="ap-team"><span className="ap-team-code">{away.abbreviation}</span><span className="ap-team-name">{away.name}{away.score != null ? ` · ${away.score}` : ''}</span></div><span className="ap-at" aria-hidden="true">AT</span><div className="ap-team home"><span className="ap-team-code">{home.abbreviation}</span><span className="ap-team-name">{home.name}{home.score != null ? ` · ${home.score}` : ''}</span></div></div> : <h2 className="ap-race">{event.name}</h2>}
+    <div className="ap-markets"><div><small>{event.sport === 'nascar' ? 'RACE TOTAL' : 'TOTAL'}</small><strong>{event.totalPoints ?? '—'}</strong></div><div><small>SPREAD</small><strong>{away && home ? `${away.abbreviation} ${sl(away.spread)} / ${home.abbreviation} ${sl(home.spread)}` : '—'}</strong></div><div><small>VENUE · LINES</small><strong>{event.venue || 'Venue TBD'}</strong><small>{event.oddsSource || 'Lines unavailable'}</small></div></div>
+    <div className="ap-feature-actions"><Link href="/projections" className="btn btn-primary"><TrendingUp size={15} /> Open projections</Link><a className="btn btn-quiet" href={`#game-${event.id}`}><CalendarDays size={15} /> Full slate</a></div>
+  </section>;
 }
 
 export default function Dashboard({ projectionsOnly = false }: { projectionsOnly?: boolean }) {
@@ -190,23 +203,23 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
   return <div className={`app-shell dashboard-red ${projectionsOnly ? '' : 'has-game-strip'}`}>
     <header className="topbar">
       <Link href="/" className="brand" aria-label="ALLPLAY home" data-testid="link-home"><span className="brand-mark"><Activity size={18} strokeWidth={2.4} /></span><span className="brand-name">ALLPLAY</span></Link>
-      <div className="topbar-right"><span className="today-label">Personal fantasy cockpit</span><Link href="/projections" className="btn btn-quiet account-header-link" aria-label="ALLPLAY model sheet" data-testid="link-model-mobile"><TrendingUp size={14} />Model</Link><Link href="/news" className="btn btn-quiet account-header-link" aria-label="Sports news desk" data-testid="link-news-mobile"><Newspaper size={14} />News</Link><Link href="/takes" className="btn btn-quiet account-header-link" aria-label="Game takes" data-testid="link-takes-mobile"><Film size={14} />Takes</Link><Link href="/feedback" className="btn btn-quiet account-header-link" data-testid="link-feedback-mobile">Feedback</Link>{signedIn ? <Link href="/account" className="btn btn-quiet account-header-link" data-testid="link-account">Account</Link> : <Link href="/sign-in" className="btn btn-quiet account-header-link" data-testid="link-sign-in">Sign in</Link>}<button className="btn btn-primary header-install-btn" onClick={quickInstall} disabled={installed || installing} data-testid="button-install-top"><ArrowDownToLine size={15} />{installed ? 'Installed' : installing ? 'Installing…' : 'Install app'}</button><span className="user-dot" aria-label={signedIn ? 'Signed-in personal dashboard' : 'Personal dashboard'}>{signedIn ? 'ME' : 'FREE'}</span></div>
+      <nav className="topbar-right" aria-label="ALLPLAY workspace navigation">
+        <span className="today-label">Personal fantasy cockpit</span>
+        <Link href={overviewPath} className="btn btn-quiet account-header-link" aria-label="Dashboard overview"><Activity size={14} />Overview</Link>
+        <Link href={projectionsOnly ? `${overviewPath}#slate-section` : '#slate-section'} className="btn btn-quiet account-header-link"><CalendarDays size={14} />Slate</Link>
+        <Link href="/projections" className="btn btn-quiet account-header-link" aria-label="ALLPLAY model sheet" data-testid="link-model-mobile"><TrendingUp size={14} />Model</Link>
+        <a href={`${import.meta.env.BASE_URL}news?sport=${sport}`} target="_blank" rel="noopener noreferrer" className="btn btn-quiet account-header-link" aria-label="Sports news desk (opens in a new tab)" data-testid="link-news-mobile"><Newspaper size={14} />News</a>
+        <Link href="/takes" className="btn btn-quiet account-header-link" aria-label="Game takes" data-testid="link-takes-mobile"><Film size={14} />Takes</Link>
+        <Link href="/feedback" className="btn btn-quiet account-header-link" data-testid="link-feedback-mobile">Feedback</Link>
+        {signedIn ? <Link href="/account" className="btn btn-quiet account-header-link" data-testid="link-account">Account</Link> : <Link href="/sign-in" className="btn btn-quiet account-header-link" data-testid="link-sign-in">Sign in</Link>}
+        <button className="btn btn-primary header-install-btn" onClick={quickInstall} disabled={installed || installing} data-testid="button-install-top"><ArrowDownToLine size={15} />{installed ? 'Installed' : installing ? 'Installing…' : 'Install app'}</button>
+        <span className="user-dot" aria-label={signedIn ? 'Signed-in personal dashboard' : 'Personal dashboard'}>{signedIn ? 'ME' : 'FREE'}</span>
+      </nav>
     </header>
     {!projectionsOnly && <GameTicker events={events} sport={sportName} date={date} loading={loading} error={query.isError} updatedAt={data?.updatedAt} />}
-    <aside className="side-rail" aria-label="Dashboard navigation">
-      <div className="rail-caption">YOUR WORKSPACE</div>
-      <Link className={`rail-link ${projectionsOnly ? '' : 'selected'}`} href={overviewPath} aria-current={projectionsOnly ? undefined : 'page'}><Activity size={15} />Overview</Link>
-      <Link className="rail-link" href={projectionsOnly ? `${overviewPath}#slate-section` : '#slate-section'}><CalendarDays size={15} />Live slate</Link>
-      <Link className={`rail-link ${projectionsOnly ? 'selected' : ''}`} href="/projections" aria-current={projectionsOnly ? 'page' : undefined} data-testid="link-projections"><TrendingUp size={15} />Projections</Link>
-      <Link className="rail-link" href="/takes" data-testid="link-takes-sidebar"><Film size={15} />Game takes</Link>
-      <Link className="rail-link" href="/feedback" data-testid="link-feedback-sidebar">Feedback</Link>
-        <a className="rail-link" href={`${import.meta.env.BASE_URL}news?sport=${sport}`} target="_blank" rel="noopener noreferrer" aria-label="News desk (opens in a new tab)" data-testid="link-news-desk"><Newspaper size={15} />News desk</a>
-       <div className="rail-note"><span className="rail-live-dot" />Slates refresh every 5 minutes · News is free</div>
-      <div className="rail-bottom"><span className="rail-caption">BUILT FOR EVERY LEAGUE</span><div className="rail-sports">NFL · NHL · WNBA<br />NBA · MLB · NASCAR · CFB</div></div>
-    </aside>
     <main className={`main-wrap ${projectionsOnly ? 'projections-main' : ''}`} id="overview">
       <div className="page-heading">
-          <div><div className="eyebrow">{projectionsOnly ? 'Your player research' : 'The research desk'} <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>{projectionsOnly ? 'Player projections' : 'Slate. Then signal.'}</h1><p className="subhead">{projectionsOnly ? 'ALLPLAY custom raw-stat estimates, with the calculation trail in view.' : 'Scan the schedule and game context first. Open the independent ALLPLAY model when you want the deeper work.'}</p></div>
+          <div><div className="eyebrow">{projectionsOnly ? 'Your player research' : 'The research desk'} <span style={{ color: 'var(--slate-muted)' }}> / </span> {new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</div><h1>{projectionsOnly ? 'Player projections' : <>Read the slate. <span>Then the signal.</span></>}</h1><p className="subhead">{projectionsOnly ? 'ALLPLAY custom raw-stat estimates, with the calculation trail in view.' : 'Scan the schedule and game context first. Open the independent ALLPLAY model when you want the deeper work.'}</p></div>
         <div className="date-stamp"><div>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div><div style={{ marginTop: 5, color: 'var(--slate-muted)' }}>{formatUpdatedAt ? `DATA UPDATED ${formatUpdatedAt.toUpperCase()}` : 'AWAITING DATA'}</div></div>
       </div>
       <div className="control-bar">
@@ -268,6 +281,7 @@ export default function Dashboard({ projectionsOnly = false }: { projectionsOnly
       </section>}
       {coverageList.length > 0 && <div className="coverage-legend"><span><i className="coverage-dot" /> Events</span><span><i className="coverage-dot" /> Projections</span><span><i className="coverage-dot" /> News</span><span className="coverage-legend-note">Dimmed indicator means this feed is not available for that sport.</span></div>}
 
+      {!projectionsOnly && <FeaturedMatchup event={events.find((e) => !gameState(e.status).final) ?? events[0]} sportName={sportName} />}
       {!projectionsOnly && <section className="summary-strip" aria-label={`${sportName} slate summary`} data-testid="summary-slate">
         <div className="summary-intro"><span className="summary-kicker">AT A GLANCE</span><span className="summary-sport">{sportName}</span></div>
         <div className="summary-metric"><strong>{events.length}</strong><span>EVENTS</span></div>

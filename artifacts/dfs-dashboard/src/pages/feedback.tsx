@@ -168,23 +168,14 @@ export default function FeedbackPage() {
     <header className="topbar">
       <Link href="/user-portal" className="brand" aria-label="ALLPLAY dashboard"><span className="brand-mark"><Activity size={17} /></span><span className="brand-name">ALLPLAY</span></Link>
       <nav className="feedback-top-nav" aria-label="Dashboard navigation">
-        <Link href="/user-portal" className="btn btn-quiet"><ArrowLeft size={14} />Dashboard</Link>
+        <Link href="/user-portal" className="btn btn-quiet"><Activity size={14} />Overview</Link>
+        <Link href="/user-portal#slate-section" className="btn btn-quiet">Slate</Link>
         <Link href="/projections" className="btn btn-quiet">Model</Link>
          <Link href="/takes" className="btn btn-quiet">Takes</Link>
-         <Link href="/news" className="btn btn-quiet">News</Link>
+         <a href={`${import.meta.env.BASE_URL}news`} target="_blank" rel="noopener noreferrer" className="btn btn-quiet" aria-label="News desk (opens in a new tab)">News</a>
         {signedIn ? <Link href="/account" className="btn btn-quiet">Account</Link> : <Link href="/sign-in" className="btn btn-quiet">Sign in</Link>}
       </nav>
     </header>
-    <aside className="side-rail" aria-label="Dashboard navigation">
-      <div className="rail-caption">YOUR WORKSPACE</div>
-      <Link className="rail-link" href="/user-portal"><Activity size={15} />Overview</Link>
-      <Link className="rail-link" href="/projections">Projections</Link>
-      <Link className="rail-link" href="/takes">Game takes</Link>
-       <a className="rail-link" href={`${import.meta.env.BASE_URL}news`} target="_blank" rel="noopener noreferrer" aria-label="News desk (opens in a new tab)">News desk</a>
-      <Link className="rail-link selected" href="/feedback" aria-current="page"><MessageSquareText size={15} />Feedback</Link>
-      <Link className="rail-link" href="/account">Account</Link>
-      <div className="rail-bottom"><span className="rail-caption">FEEDBACK & SUPPORT</span><div className="rail-sports">Issues · requests<br />Research feedback</div></div>
-    </aside>
     <main className="main-wrap feedback-main">
       <div className="feedback-breadcrumb"><Link href="/user-portal">Dashboard</Link><span>/</span><span>Feedback</span></div>
       <div className="feedback-heading">
