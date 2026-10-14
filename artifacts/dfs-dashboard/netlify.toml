@@ -1,0 +1,17 @@
+# Netlify config for the ALLPLAY dashboard (monorepo package: artifacts/dfs-dashboard).
+# Paths are relative to the repository root (the site's base directory).
+[build]
+  command = "pnpm --filter @workspace/dfs-dashboard... run build"
+  # Vite writes the site into dist/public (see vite.config.ts), not dist.
+  publish = "artifacts/dfs-dashboard/dist/public"
+
+[build.environment]
+  # vite.config.ts throws if these are missing.
+  PORT = "8080"
+  BASE_PATH = "/"
+
+# Single-page app: let the client-side router handle every path.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
