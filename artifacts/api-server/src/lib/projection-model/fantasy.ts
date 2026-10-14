@@ -1,5 +1,6 @@
 import type { ModelFantasyForecast, ModelHistoryAppearance, ModelStatEstimate } from "@workspace/api-zod";
 import type { HistoricalGame, ModelSettings, ModelSport, SlatePlayer } from "./types";
+import { DK_CUP_RULE_SOURCE, DK_CUP_FINISH, FD_CUP_FINISH, cupFinishPoints } from "./nascar-scoring";
 
 type Site = ModelFantasyForecast["site"];
 type Values = Record<string, number>;
@@ -13,6 +14,15 @@ const dkHockey = "https://dknetwork.draftkings.com/2020/07/02/beginner-nhl-dfs-s
 const fd = "https://www.fanduel.com/rules";
 const yahooHockey = "https://sports.yahoo.com/dailyfantasy/help/nhl/rules";
 export function scoringRule(sport: ModelSport, site: Site, goalie: boolean, position = ""): Rule | null {
+  if (sport === "nascar") {
+    if (site === "draftkings") return { source: DK_CUP_RULE_SOURCE,
+      weights: { start: 1, finish: -1, lapsLed: .25, fastestLaps: .5 },
+      bonus: v => cupFinishPoints(DK_CUP_FINISH, v.finish) };
+    if (site === "fanduel") return { source: fd,
+      weights: { qualifyingStart: .5, finish: -.5, lapsCompleted: .1, lapsLed: .1 },
+      bonus: v => cupFinishPoints(FD_CUP_FINISH, v.finish) };
+    return null;
+  }
   if (sport === "nhl") {
     if (site === "draftkings") return goalie
       ? { weights: { wins: 6, saves: .7, goalsAgainst: -3.5, shutouts: 4, overtimeLosses: 2 }, source: dkHockey, bonus: v => v.saves >= 35 ? 3 : 0 }
@@ -134,6 +144,29 @@ export function fantasyForecasts(
   };
   const sample = (rng: () => number): Values => {
     const v: Values = {};
+    if (sport === "nascar") {
+      const row = history.length ? history[Math.floor(rng() * history.length)].stats : {};
+      const field = player.raceContext?.fieldSize ?? 40;
+      for (const key of ["finish", "start", "qualifyingStart"]) {
+        if (means[key] === undefined) continue;
+        const observed = key === "start" ? player.raceContext?.observedStart :
+          key === "qualifyingStart" ? player.raceContext?.observedQualifyingStart : null;
+        const samples = history.flatMap(h => h.stats[key] === undefined ? [] : [h.stats[key]]);
+        const residual = row[key] !== undefined && samples.length ? row[key] - avg(samples) : 0;
+        v[key] = observed ?? Math.round(clamp(means[key] + residual, 1, field));
+      }
+      for (const key of ["lapsCompleted", "lapsLed", "fastestLaps"]) {
+        if (means[key] === undefined || player.raceContext?.scheduledLaps == null) continue;
+        const laps = player.raceContext.scheduledLaps;
+        const rows = history.filter(h => h.stats[key] !== undefined && h.stats.raceLaps > 0);
+        const rate = rows.length ? rows.reduce((n, h) => n + h.stats[key], 0) / rows.reduce((n, h) => n + h.stats.raceLaps, 0) : 0;
+        const residual = row[key] !== undefined && row.raceLaps > 0 ? row[key] / row.raceLaps - rate : 0;
+        v[key] = Math.round(clamp(means[key] + residual * laps, 0, laps));
+      }
+      for (const key of ["lapsLed", "fastestLaps"])
+        if (v[key] !== undefined && v.lapsCompleted !== undefined) v[key] = Math.min(v[key], v.lapsCompleted);
+      return v;
+    }
     for (const key of Object.keys(means)) v[key] = key === "plusMinus"
       ? Math.round(means[key] + Math.sqrt(dispersion[key]) * normal(rng)) : count(key, rng);
     if (sport === "nhl" && goalie) {
@@ -171,6 +204,8 @@ export function fantasyForecasts(
   for (const site of ["draftkings", "fanduel", "yahoo", "ownersbox"] as Site[]) {
     const rule = scoringRule(sport, site, goalie, player.position);
     const missingStats = rule ? Object.keys(rule.weights).filter(key => means[key] === undefined) : ["Verified scoring rules and complete model inputs not available for this sport/site"];
+    if (rule && sport === "nascar" && (player.raceContext?.fieldSize ?? 40) > 40)
+      missingStats.push("Official scoring table covers positions 1–40 only; larger fields are unsupported");
     if (rule && goalie && (means.shotsAgainst === undefined || means.goalsAgainst === undefined)) missingStats.push("shotsAgainst / goalsAgainst simulation inputs");
     const base: ModelFantasyForecast = {
       site, status: rule ? missingStats.length ? "partial" : "ready" : "unavailable",
@@ -191,9 +226,30 @@ export function fantasyForecasts(
       forecasts.push(base); continue;
     }
     if (!rule) { forecasts.push(base); continue; }
+    if (sport === "nascar") base.notes = [
+      "ALLPLAY forecasts from verified completed Cup history; no provider fantasy forecasts.",
+      `Lap rates scale to ${player.raceContext?.scheduledLaps ?? "unverified"} scheduled laps; overtime/shortened race length is not forecast.`,
+      `Starting input (${site === "fanduel" ? "original qualifying position" : "official starting position"}): ${
+        (site === "fanduel" ? player.raceContext?.observedQualifyingStart : player.raceContext?.observedStart) != null
+          ? "observed official grid" : "ALLPLAY historical starting-grid forecast, NOT an observed qualifying result"}.`,
+      "Ranges resample same-driver joint historical residuals; finish/start are bounded discrete positions and laps led cannot exceed laps completed. No field-wide order or lap allocation model; not backtested.",
+      "Finishing points use the published position table in each scenario, not a linear score on a fractional finish. Base scores only; no Captain/MVP multiplier.",
+      site === "draftkings" ? "NASCAR Classic coefficients verified from the official rules renderer: winner 46, fastest laps 0.5, laps led 0.25, differential 1. Pick6 publishes different coefficients and is not substituted. Weekend results contain no fastest-lap counts." :
+        "FanDuel: winner 43, laps completed/led 0.1 each, qualifying differential 0.5. Original qualifying grid is kept separately from adjusted starting position.",
+    ];
     const known = Object.entries(rule.weights).filter(([key]) => means[key] !== undefined);
     base.trackedMean = known.length ? round(known.reduce((n, [key, weight]) => n + means[key] * weight, 0)) : null;
-    if (missingStats.length) { base.notes.push("Tracked subtotal excludes missing scoring inputs and threshold bonuses; NOT a full fantasy projection."); forecasts.push(base); continue; }
+    if (sport === "nascar" && means.finish !== undefined && (player.raceContext?.fieldSize ?? 40) <= 40) {
+      if (!outcomes) {
+        const rng = seeded(`${sport}:${player.id}:${JSON.stringify(means)}:${JSON.stringify(player.raceContext)}`);
+        outcomes = Array.from({ length: 2048 }, () => sample(rng));
+      }
+      const finishPoints = avg(outcomes.map(v => rule.bonus!(v)));
+      base.trackedMean = round((base.trackedMean ?? 0) + finishPoints);
+    }
+    if (missingStats.length) { base.notes.push(sport === "nascar" ?
+      "Tracked subtotal includes supported finishing-table points but excludes every missing scoring input; NOT a full fantasy projection." :
+      "Tracked subtotal excludes missing scoring inputs and threshold bonuses; NOT a full fantasy projection."); forecasts.push(base); continue; }
     if (!outcomes) {
       const rng = seeded(`${sport}:${player.id}:${JSON.stringify(means)}:${JSON.stringify(dispersion)}`);
       outcomes = Array.from({ length: 2048 }, () => sample(rng));

@@ -11,5 +11,6 @@
 - [Current playing roles](playing-role-policy.md) — value requires supported next-game workload; backups cannot inherit fantasy scores from past starts.
 - [Owner-gated browser tests](owner-test-identities.md) — approve the actual synthetic Clerk subject; preserve recovery identity temporarily and restore owner configuration.
 - [Race-results integrity](race-results-integrity.md) — NASCAR schedules can prefill “actual” lap counts before a race; require verified completed results.
+- [NASCAR scoring verification](nascar-scoring-verification.md) — Classic primary rule feed differs from Pick6/secondary tables; verify the exact contest variant.
 - [New-window navigation](new-window-navigation.md) — use native artifact-prefixed anchors; the client router intercepts ordinary Link clicks despite a blank target.
 - [Historical evaluation integrity](historical-evaluation-integrity.md) — require completion evidence before cutoff; label pool/outcome bias and owner-attested ownership provenance.

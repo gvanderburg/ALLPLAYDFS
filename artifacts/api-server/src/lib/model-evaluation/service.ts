@@ -2,8 +2,8 @@ import { randomUUID, createHash } from "node:crypto";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { db, modelEvaluations, modelSnapshots, evaluationImports } from "@workspace/db";
 import type { EvaluationStartInput, ModelPlayerProjection } from "@workspace/api-zod";
-import { fetchSportsJson, loadCompletedEvent, loadHistory } from "../projection-model/provider";
-import { obj, list, str, normalizeRace } from "../projection-model/normalize";
+import { fetchSportsJson, loadCompletedEvent, loadCompletedCupEvent, loadHistory } from "../projection-model/provider";
+import { obj, list, str } from "../projection-model/normalize";
 import { MODEL_SPORTS, HISTORY_VERSION, type HistoricalGame, type ModelSettings, type SlatePlayer } from "../projection-model/types";
 import { RULES_AS_OF, scoringRule } from "../projection-model/fantasy";
 import { logger } from "../logger";
@@ -80,7 +80,7 @@ async function buildReplay(id: string, input: EvaluationStartInput, report: Eval
         let failed = 0;
         for (const raw of rawEvents) {
           try {
-            const game = input.sport === "nascar" ? normalizeRace(raw) : await loadCompletedEvent(input.sport, str(raw.id));
+            const game = input.sport === "nascar" ? await loadCompletedCupEvent(raw) : await loadCompletedEvent(input.sport, str(raw.id));
             if (game && Date.parse(game.date) >= day && Date.parse(game.date) < Date.now()) outcomes.push(game);
             else failed++;
           } catch { failed++; }

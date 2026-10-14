@@ -8,10 +8,29 @@ import { completedScheduleIds } from "./schedule-history";
 import { baseballBoxFor } from "./baseball-scoring";
 import { loadTeamRoles } from "./playing-roles";
 import { unstartedModelEvents } from "./history-cutoff";
+import { matchCupRace, reconcileCupHistory, weekendRace, cupGrid, nascarName, scheduledCupLaps } from "./nascar-sources";
 export { unstartedModelEvents } from "./history-cutoff";
 
 const SITE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE = "https://sports.core.api.espn.com/v2/sports";
+const NASCAR = "https://cf.nascar.com/cacher";
+const cupSchedules = new Map<number, { expires: number; promise: Promise<unknown> }>();
+async function cupSchedule(season: number) {
+  if (!Number.isInteger(season) || season < 2000 || season > 2100) throw new Error("Invalid NASCAR season");
+  const cached = cupSchedules.get(season);
+  if (cached && cached.expires > Date.now()) return cached.promise;
+  const entry = { expires: Date.now() + 300_000, promise: fetchSportsJson(`${NASCAR}/${season}/race_list_basic.json`) };
+  cupSchedules.set(season, entry);
+  try { return await entry.promise; } catch (err) { cupSchedules.delete(season); throw err; }
+}
+export async function loadCompletedCupEvent(event: Json): Promise<HistoricalGame | null> {
+  if (!normalizeRace(event)) return null;
+  const season = Number(obj(event.season).year);
+  const race = matchCupRace(event, await cupSchedule(season));
+  if (!race) return null;
+  const payload = await fetchSportsJson(`${NASCAR}/${season}/1/${race.race_id}/weekend-feed.json`);
+  return reconcileCupHistory(event, race, payload);
+}
 let activeRequests = 0;
 const pending: Array<() => void> = [];
 async function acquire() {
@@ -63,6 +82,11 @@ function storedHistory(value: unknown): value is HistoricalGame {
 /** Only normalized observed final results; never reads a provider forecast. */
 export async function loadCompletedEvent(sport: ModelSport, id: string): Promise<HistoricalGame | null> {
   if (!/^\d+$/.test(id)) throw new Error("Invalid provider event ID.");
+  if (sport === "nascar") {
+    const page = obj(await fetchSportsJson(`${SITE}/${MODEL_SPORTS.nascar.path}/scoreboard?dates=${id.slice(0, 8)}&limit=200`));
+    const event = list(page.events).map(obj).find(e => str(e.id) === id);
+    return event ? loadCompletedCupEvent(event) : null;
+  }
   const config = MODEL_SPORTS[sport];
   const corePath = config.path.replace("/", "/leagues/");
   const payload = obj(await fetchSportsJson(`${SITE}/${config.path}/summary?event=${id}`));
@@ -90,11 +114,23 @@ export async function loadHistory(
     // A multi-year racing query is HTTP 400, even though individual annual ranges work.
     const pages = await Promise.all(annualHistoryRanges(after, before).map(async range =>
       obj(await fetchSportsJson(`${SITE}/${config.path}/scoreboard?dates=${range}&limit=200`))));
-    const games = [...new Map(pages.flatMap(page => list(page.events)).map(normalizeRace)
-      .filter((game): game is HistoricalGame => !!game).map(game => [game.id, game])).values()]
-      .filter(game => Date.parse(game.date) < before.getTime());
-    progress(games.length, games.length, 0);
-    return { games, failed: 0, truncated: pages.some(page => list(page.events).length >= 200) };
+    const events = [...new Map(pages.flatMap(page => list(page.events)).map(obj)
+      .filter(event => !!normalizeRace(event) && Date.parse(str(event.date)) < before.getTime())
+      .map(event => [str(event.id), event])).values()];
+    const games: HistoricalGame[] = [];
+    let done = 0, failed = 0, next = 0;
+    progress(0, events.length, 0);
+    await Promise.all(Array.from({ length: Math.min(6, events.length) }, async () => {
+      while (next < events.length) {
+        const event = events[next++];
+        try {
+          const game = await loadCompletedCupEvent(event);
+          if (game) games.push(game); else failed++;
+        } catch { failed++; }
+        progress(++done, events.length, failed);
+      }
+    }));
+    return { games, failed, truncated: pages.some(page => list(page.events).length >= 200) };
   }
   // The site scoreboard rejects multi-day ranges for team sports; core events
   // accepts them. Parse numeric IDs from its references, never follow arbitrary URLs.
@@ -177,17 +213,40 @@ export async function slateCandidates(
       const c = obj(value), a = obj(c.athlete);
       return { id: str(c.id || a.id), name: str(a.displayName || a.fullName) };
     }) : [...new Map(latest.flatMap(game => game.players.map(p => [p.id, { id: p.id, name: p.name }] as const))).values()];
+    let scheduledLaps: number | null = null, sourceUrl: string | null = null;
+    let grid = new Map<string, number>();
+    let qualifyingGrid = new Map<string, number>();
+    try {
+      const event = slate.events[0], season = Number(obj(event?.season).year);
+      const race = event ? matchCupRace(event, await cupSchedule(season)) : null;
+      if (race) {
+        scheduledLaps = scheduledCupLaps(race);
+        sourceUrl = `${NASCAR}/${season}/1/${race.race_id}/weekend-feed.json`;
+        // Current feeds cannot supply an as-of grid for a past-date preview.
+        if (Date.parse(str(event.date)) > Date.now()) {
+          const weekend = weekendRace(race, await fetchSportsJson(sourceUrl));
+          if (weekend && !(numeric(race.winner_driver_id) ?? 0)) {
+            grid = cupGrid(weekend);
+            qualifyingGrid = cupGrid(weekend, "qualifying_position");
+          }
+        }
+      }
+    } catch { notes.push("Official upcoming race/grid lookup failed; unsupported race inputs remain unavailable."); }
     for (const driver of pool) if (driver.id) players.push({
       ...driver, team: "Driver pool", teamId: "field", opponent: slate.venue, opponentId: "",
       position: "Driver", availability: "Driver availability not verified",
-      participation: confirmed ? "Published entrant; start not guaranteed" : "Conditional pool: upcoming entry list not published",
+      participation: `${confirmed ? "Published entrant; start not guaranteed" : "Conditional pool: upcoming entry list not published"}. ${grid.has(nascarName(driver.name)) ? `Observed official grid: ${grid.get(nascarName(driver.name))}` : "Starting position: ALLPLAY historical forecast, not an observed grid"}`,
+      raceContext: { scheduledLaps, fieldSize: grid.size || pool.length, observedStart: grid.get(nascarName(driver.name)) ?? null,
+        observedQualifyingStart: qualifyingGrid.get(nascarName(driver.name)) ?? null, sourceUrl },
       roleContext: { status: confirmed ? "entrant" : "unknown", label: confirmed ? "Published entrant" : "Entry unverified",
-        eligible: confirmed, depthRank: null, source: "ESPN race entry list", sourceUrl: `https://www.espn.com/racing/race/_/id/${str(slate.events[0]?.id)}`,
+        eligible: confirmed && (!grid.size || grid.has(nascarName(driver.name))), depthRank: null, source: "ESPN race entry list / official NASCAR grid", sourceUrl: sourceUrl ?? `https://www.espn.com/racing/race/_/id/${str(slate.events[0]?.id)}`,
         asOf: new Date(), recentWorkload: null, workloadUnit: null, recentAppearances: 0, teamGames: 0,
-        note: "NASCAR uses race-entry eligibility, not a team depth chart; entry is not a guarantee of starting." },
+        note: grid.size && !grid.has(nascarName(driver.name)) ? "Driver is absent from the published official grid; no supported starting workload." :
+          "NASCAR uses race-entry eligibility, not a team depth chart; entry is not a guarantee of starting." },
     });
     if (!confirmed) notes.push("NASCAR's upcoming entry list is not published. These are conditional estimates for drivers from the last two completed races, not confirmed starters.");
-    notes.push("NASCAR forecasts finishing position only. Laps led, fastest laps, qualifying position and place differential are not available from this source and are not invented.");
+    notes.push("NASCAR uses inspected official Cup results reconciled to ESPN completed date, full final order and unique driver names. Historical lap rates scale to upcoming scheduled laps (not prefilled actual_laps). Starting positions use a published official grid where available, otherwise explicitly labeled ALLPLAY forecasts. Fastest-lap counts are absent from the weekend feed and remain unavailable.");
+    if (!scheduledLaps) notes.push("Upcoming scheduled race length is unverified; lap forecasts and full fantasy totals remain unavailable.");
     return { players, notes };
   }
   const matchups = new Map<string, { team: string; teamName: string; opponentName: string; opponentId: string; opponent: string; probable: string; startTime: string; season: number }>();

@@ -6,6 +6,8 @@
   "scripts": {
     "test:evaluation": "node --test tests/model-evaluation.test.mjs",
     "test:model": "node --test tests/projection-model.test.mjs",
+    "test:nascar": "node --test tests/nascar-model.test.mjs",
+    "smoke:nascar": "NASCAR_LIVE=1 node --test tests/nascar-model.test.mjs",
     "test:takes": "node --test tests/take-files.test.mjs",
     "test:membership": "node --test tests/membership.test.mjs",
     "test:slate": "node --test tests/slate.test.mjs",

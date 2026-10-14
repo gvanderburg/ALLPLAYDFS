@@ -183,6 +183,8 @@ export function calculatePlayers(
         game.teams.find(team => team.id !== player.teamId)?.abbreviation ?? "", stats: player.stats }] : [];
     }).slice(0, 10);
     const workload: Record<string, number> = {};
+    if (sport === "nascar" && candidate.raceContext?.scheduledLaps != null)
+      workload.raceLaps = candidate.raceContext.scheduledLaps;
     const stats = metrics.map(metric => {
       const estimateValue = estimate(metric, history, settings, profiles.get(metric.id)?.get(candidate.opponentId), workload,
         efficiencyPriors.get(`${candidate.position}:${metric.id}`) ?? efficiencyPriors.get(`UNSPECIFIED:${metric.id}`));
@@ -194,10 +196,43 @@ export function calculatePlayers(
         estimateValue.sampleSize >= 2) {
         estimateValue.projected = Math.min(metric.maximum ?? Infinity, Math.max(metric.minimum ?? 0, candidate.roleContext.recentWorkload));
       }
+      if (sport === "nascar" && metric.exposure === "raceLaps" &&
+        (workload.raceLaps === undefined || history.filter(h => h.stats[metric.id] !== undefined && h.stats.raceLaps > 0).length < 2))
+        estimateValue.projected = null;
+      if (sport === "nascar" && metric.exposure === "raceLaps")
+        estimateValue.matchupBasis = "Per verified race lap × upcoming scheduled laps";
       if (!metric.exposure && estimateValue.projected !== null) workload[metric.id] = estimateValue.projected;
       return estimateValue;
-    }).filter(stat => stat.sampleSize > 0);
+    }).filter(stat => stat.sampleSize > 0 || sport === "nascar");
     if (sport === "nascar") {
+      const field = candidate.raceContext?.fieldSize || Math.max(...games.map(g => g.players.length), 1);
+      for (const id of ["finish", "start", "qualifyingStart"]) {
+        const stat = stats.find(s => s.id === id);
+        if (stat?.projected != null) stat.projected = clamp(stat.projected, 1, field);
+      }
+      for (const [key, observed] of [
+        ["start", candidate.raceContext?.observedStart],
+        ["qualifyingStart", candidate.raceContext?.observedQualifyingStart],
+      ] as const) {
+        const start = stats.find(s => s.id === key);
+        if (start && observed != null && candidate.roleContext?.eligible !== false) {
+          start.projected = observed;
+          start.matchupBasis = "Observed official starting grid";
+          start.sampleSize = 1;
+          start.recentSampleSize = 0;
+        } else if (start) start.matchupBasis = "ALLPLAY starting-grid forecast; not observed";
+      }
+      for (const id of ["lapsCompleted", "lapsLed", "fastestLaps"]) {
+        const stat = stats.find(s => s.id === id);
+        if (stat?.projected != null && workload.raceLaps !== undefined)
+          stat.projected = Math.min(stat.projected, workload.raceLaps);
+      }
+      const completed = stats.find(s => s.id === "lapsCompleted");
+      for (const id of ["lapsLed", "fastestLaps"]) {
+        const stat = stats.find(s => s.id === id);
+        if (stat?.projected != null && completed?.projected != null)
+          stat.projected = Math.min(stat.projected, completed.projected);
+      }
       const finish = stats.find(stat => stat.id === "finish");
       // Published venue labels can combine different configurations; do not infer
       // Charlotte oval/Roval or Indianapolis/Bristol configurations from the city.
@@ -210,7 +245,7 @@ export function calculatePlayers(
         const trackAverage = mean(exactVenue);
         const factor = clamp(1 + (trackAverage / finish.baselineAverage - 1) *
           settings.matchupWeight / 100 * Math.min(1, exactVenue.length / 3), 0.8, 1.2);
-        finish.projected = round(clamp(finish.projected * factor, 1, Math.max(...games.map(game => game.players.length), 1)));
+        finish.projected = round(clamp(finish.projected * factor, 1, field));
         finish.matchupMultiplier = round(factor);
         finish.opponentMean = round(trackAverage);
         finish.leagueMean = finish.baselineAverage;
@@ -219,8 +254,9 @@ export function calculatePlayers(
     }
     enforceConsistency(stats);
     const available = stats.some(stat => stat.projected !== null);
+    const { raceContext: _raceContext, ...publicCandidate } = candidate;
     return {
-      ...candidate, historicalGames: history.length, history, stats,
+      ...publicCandidate, historicalGames: history.length, history, stats,
       fantasy: fantasyForecasts(sport, candidate, stats, history),
       modelTeamTotal: teamTotalFor(totals, candidate.teamId, candidate.opponentId),
       modelGameTotal: teamTotalFor(totals, candidate.teamId, candidate.opponentId) != null && teamTotalFor(totals, candidate.opponentId, candidate.teamId) != null

@@ -60,9 +60,14 @@ export function deriveLineupInsights(
     const favorable = player.stats.filter(s => s.projected !== null && s.defenseGames >= 2 &&
       (metricMap.get(s.id)?.higherIsBetter ? s.matchupMultiplier >= 1.03 : s.matchupMultiplier <= .97))
       .sort((a, b) => Math.abs(b.matchupMultiplier - 1) - Math.abs(a.matchupMultiplier - 1))[0];
-    if (favorable) reasons.push(`Opponent sample favors ${metricMap.get(favorable.id)?.label ?? favorable.id}: ${Math.round(Math.abs(favorable.matchupMultiplier - 1) * 100)}% adjustment from ${favorable.defenseGames} games.`);
-    else if (!player.stats.some(s => s.defenseGames >= 2)) cautions.push('Opponent sample unavailable; matchup adjustment is neutral.');
-    const workload = player.stats.find(s => ['minutes', 'timeOnIce', 'inningsPitched', 'targets', 'rushingAttempts', 'passingAttempts'].includes(s.id) && finite(s.projected) && s.projected > 0);
+    if (favorable) reasons.push(`${sheet.sport === 'nascar' ? 'Same-venue history' : 'Opponent sample'} favors ${metricMap.get(favorable.id)?.label ?? favorable.id}: ${Math.round(Math.abs(favorable.matchupMultiplier - 1) * 100)}% adjustment from ${favorable.defenseGames} ${sheet.sport === 'nascar' ? 'races' : 'games'}.`);
+    else if (!player.stats.some(s => s.defenseGames >= 2)) cautions.push(sheet.sport === 'nascar' ? 'Same-venue history unavailable; venue adjustment is neutral.' : 'Opponent sample unavailable; matchup adjustment is neutral.');
+    if (sheet.sport === 'nascar') {
+      const grid = player.stats.find(s => s.id === (site === 'fanduel' ? 'qualifyingStart' : 'start'));
+      if (grid?.projected != null) reasons.push(`${grid.matchupBasis || 'Starting input'}: ${grid.projected}.`);
+      if (!grid?.matchupBasis?.startsWith('Observed')) cautions.push('Starting position is an ALLPLAY forecast, not an observed qualifying grid. Refresh after qualifying.');
+    }
+    const workload = player.stats.find(s => ['minutes', 'timeOnIce', 'inningsPitched', 'targets', 'rushingAttempts', 'passingAttempts', 'lapsCompleted'].includes(s.id) && finite(s.projected) && s.projected > 0);
     if (workload) reasons.push(`Expected ${metricMap.get(workload.id)?.label ?? workload.id}: ${round(workload.projected!)}.`);
     if (value !== null) reasons.push(`${value.toFixed(1)}x projected value at the selected DFS site.`);
     for (const rating of player.publishedMatchups ?? []) {

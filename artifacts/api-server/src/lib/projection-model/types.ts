@@ -34,6 +34,7 @@ export interface SlatePlayer {
   availability: string;
   participation: string;
   roleContext?: import("@workspace/api-zod").ModelPlayerRole;
+  raceContext?: import("./nascar-sources").RaceContext;
 }
 export interface ModelSettings {
   recentGames: number;
@@ -50,4 +51,4 @@ export const MODEL_SPORTS: Record<ModelSport, { path: string; historyDays: numbe
   nascar: { path: "racing/nascar-premier", historyDays: 730 },
 };
 // Bump together when parsing, eligibility or historical-data meaning changes.
-export const HISTORY_VERSION = 5;
+export const HISTORY_VERSION = 6;

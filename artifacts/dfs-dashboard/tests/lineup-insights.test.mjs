@@ -29,6 +29,47 @@ test('real serialized ISO slate dates match date-only/day filters and salary met
   assert.equal(findUniqueSelectedSlateSalary(sheet.players[0], sheet, dashboard, 'draftkings').salary, 5000);
   assert.equal(deriveLineupInsights(sheet, dashboard, 'draftkings').salaryCoverage, 20);
 });
+test('NASCAR matches unique driver salary across car-team labels, but never crosses sport/site/day/slate', () => {
+  const { sheet, dashboard } = fixture();
+  sheet.sport = 'nascar';
+  const p = sheet.players[0];
+  p.team = 'Driver pool';
+  sheet.players = [p];
+  const row = dashboard.projections[0];
+  row.sport = 'nascar'; row.team = 'Race team 19';
+  dashboard.projections = [row];
+  assert.equal(findUniqueSelectedSlateSalary(p, sheet, dashboard, 'draftkings').salary, 5000);
+  for (const [key, value] of [['sport', 'nfl'], ['salarySlateId', 'other'], ['salaryPlatform', 'fanduel']]) {
+    const before = row[key]; row[key] = value;
+    assert.equal(findUniqueSelectedSlateSalary(p, sheet, dashboard, 'draftkings'), undefined);
+    row[key] = before;
+  }
+  dashboard.date = '2026-10-14T00:00:00Z';
+  assert.equal(findUniqueSelectedSlateSalary(p, sheet, dashboard, 'draftkings'), undefined);
+  dashboard.date = sheet.slateDate;
+  dashboard.projections.push({ ...row, team: 'Another car' });
+  assert.equal(findUniqueSelectedSlateSalary(p, sheet, dashboard, 'draftkings'), undefined);
+  dashboard.projections.pop();
+  sheet.players.push({ ...p, id: 'duplicate' });
+  assert.equal(findUniqueSelectedSlateSalary(p, sheet, dashboard, 'draftkings'), undefined);
+});
+test('NASCAR shortlist explains grid provenance and never uses a partial DraftKings subtotal as salary value', () => {
+  const { sheet, dashboard } = fixture();
+  sheet.sport = 'nascar'; sheet.players = [sheet.players[0]];
+  const p = sheet.players[0];
+  p.position = 'Driver';
+  p.stats = [{ id: 'qualifyingStart', projected: 25, matchupBasis: 'ALLPLAY starting-grid forecast; not observed', defenseGames: 0 },
+    { id: 'lapsCompleted', projected: 260, defenseGames: 0 }];
+  p.fantasy = [{ site: 'fanduel', status: 'ready', mean: 50, p25: 30, p85: 70 },
+    { site: 'draftkings', status: 'partial', mean: null, trackedMean: 48 }];
+  const fd = deriveLineupInsights(sheet, dashboard, 'draftkings', 'fanduel');
+  assert.equal(fd.rows.length, 1);
+  assert.ok(fd.rows[0].reasons.some(s => /forecast; not observed/.test(s)));
+  assert.ok(fd.rows[0].cautions.some(s => /not an observed qualifying/.test(s)));
+  assert.ok(fd.rows[0].cautions.some(s => /Same-venue/.test(s)));
+  assert.equal(fd.rows[0].salary, null);
+  assert.equal(deriveLineupInsights(sheet, dashboard, 'draftkings').rows.length, 0);
+});
 test('own full fantasy forecasts generate explained ranked picks, never provider predictions', () => {
   const { sheet, dashboard } = fixture();
   const first = deriveLineupInsights(sheet, dashboard, 'draftkings');

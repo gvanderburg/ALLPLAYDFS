@@ -80,5 +80,12 @@ export const METRICS: Record<ModelSport, MetricDefinition[]> = {
     ...[["wins", "W"], ["qualityStarts", "QS"], ["completeGames", "CG"], ["shutouts", "SO"], ["noHitters", "No-hitter"]]
       .map(([id, label]) => metric(id, label, "Pitcher", { maximum: 1 })),
   ],
-  nascar: [metric("finish", "Expected finish", "Driver", { unit: "position", higherIsBetter: false })],
+  nascar: [
+    metric("finish", "Expected finish", "Driver", { unit: "position", minimum: 1, higherIsBetter: false }),
+    metric("start", "Start (see grid source)", "Driver", { unit: "position", minimum: 1, higherIsBetter: false }),
+    metric("qualifyingStart", "Qualifying start (FD)", "Driver", { unit: "position", minimum: 1, higherIsBetter: false }),
+    metric("lapsCompleted", "Laps completed", "Driver", { exposure: "raceLaps" }),
+    metric("lapsLed", "Laps led", "Driver", { exposure: "raceLaps" }),
+    metric("fastestLaps", "Fastest laps", "Driver", { exposure: "raceLaps" }),
+  ],
 };

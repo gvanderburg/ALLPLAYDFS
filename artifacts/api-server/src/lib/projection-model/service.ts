@@ -31,7 +31,7 @@ export function emptyModelSheet(
     ...settings, gameCount: 0, processedGames: 0, totalGames: 0, failedGames: 0, observedTeams: 0,
     players: [], metrics: METRICS[sport].map(({ id, label, unit, group, higherIsBetter }) => ({ id, label, unit, group, higherIsBetter })),
     modelFormula: sport === "nascar" ?
-      "Blend recency-weighted finishes with up to 10 prior-race finishes, then shrink an exact published-venue adjustment toward neutral. No team-defense or fantasy-point scoring is used." :
+      "Blend recency-weighted verified Cup history (up to 10 races); scale recorded lap rates to scheduled race length. Use an observed official starting grid where published, otherwise explicitly labeled own grid forecasts. Exact safe venue labels adjust finish; published site rules score only supported inputs." :
       "Predict current workload × recorded per-opportunity efficiency, using recency-weighted completed games and a sample-shrunk matchup adjustment capped at ±20%. Football uses current-season form when at least two appearances exist; previous-season history is a sparse-sample fallback.",
     notes: status === "locked" ? ["Player stats, histories and model estimates require verified membership or owner access."] :
       ["ALLPLAY's independent statistical baseline—not a provider forecast and not an accuracy-tested machine-learning model."],

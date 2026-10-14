@@ -224,6 +224,7 @@ function enrichHockey(data: Json, competition: Json, players: Map<string, Histor
 export function normalizeRace(eventValue: unknown): HistoricalGame | null {
   const event = obj(eventValue), comp = obj(list(event.competitions)[0]);
   if (obj(obj(event.status || comp.status).type).completed !== true) return null;
+  if (obj(obj(comp.status).type).completed === false) return null;
   const date = str(event.date), id = str(event.id);
   if (!id || !Number.isFinite(Date.parse(date))) return null;
   const players = list(comp.competitors).flatMap((value) => {
