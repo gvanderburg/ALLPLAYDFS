@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { recoverInterruptedEvaluations } from "./lib/model-evaluation/service";
+import { startNascarQualifyingMonitor } from "./lib/projection-model/nascar-qualifying-monitor";
 
 const rawPort = process.env["PORT"];
 
@@ -25,4 +26,5 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  startNascarQualifyingMonitor();
 });

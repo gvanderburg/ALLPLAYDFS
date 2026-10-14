@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { db, projectionHistory } from "@workspace/db";
+import { db, nascarQualifyingGrids, projectionHistory } from "@workspace/db";
 import { findNextSlate } from "../next-slate";
 import { MODEL_SPORTS, HISTORY_VERSION, type HistoricalGame, type ModelSport, type SlatePlayer } from "./types";
 import { list, normalizeRace, normalizeSummary, numeric, obj, str, type Json } from "./normalize";
@@ -15,7 +15,7 @@ const SITE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE = "https://sports.core.api.espn.com/v2/sports";
 const NASCAR = "https://cf.nascar.com/cacher";
 const cupSchedules = new Map<number, { expires: number; promise: Promise<unknown> }>();
-async function cupSchedule(season: number) {
+export async function cupSchedule(season: number) {
   if (!Number.isInteger(season) || season < 2000 || season > 2100) throw new Error("Invalid NASCAR season");
   const cached = cupSchedules.get(season);
   if (cached && cached.expires > Date.now()) return cached.promise;
@@ -222,12 +222,24 @@ export async function slateCandidates(
       if (race) {
         scheduledLaps = scheduledCupLaps(race);
         sourceUrl = `${NASCAR}/${season}/1/${race.race_id}/weekend-feed.json`;
-        // Current feeds cannot supply an as-of grid for a past-date preview.
+        // Past slates use the already reconciled historical result rather than today's pre-race feed.
         if (Date.parse(str(event.date)) > Date.now()) {
-          const weekend = weekendRace(race, await fetchSportsJson(sourceUrl));
-          if (weekend && !(numeric(race.winner_driver_id) ?? 0)) {
-            grid = cupGrid(weekend);
-            qualifyingGrid = cupGrid(weekend, "qualifying_position");
+          const raceKey = `${season}:${race.race_id}`;
+          let captured: typeof nascarQualifyingGrids.$inferSelect | undefined;
+          try {
+            [captured] = await db.select().from(nascarQualifyingGrids).where(eq(nascarQualifyingGrids.id, raceKey)).limit(1);
+          } catch {
+            notes.push("Saved NASCAR pre-race grid is not available; checking the current official weekend feed.");
+          }
+          if (captured) {
+            grid = new Map(captured.startingOrder.map(entry => [nascarName(entry.driverName), entry.position]));
+            qualifyingGrid = new Map(captured.qualifyingOrder.map(entry => [nascarName(entry.driverName), entry.position]));
+          } else {
+            const weekend = weekendRace(race, await fetchSportsJson(sourceUrl));
+            if (weekend && !(numeric(race.winner_driver_id) ?? 0)) {
+              grid = cupGrid(weekend);
+              qualifyingGrid = cupGrid(weekend, "qualifying_position");
+            }
           }
         }
       }
@@ -235,8 +247,8 @@ export async function slateCandidates(
     for (const driver of pool) if (driver.id) players.push({
       ...driver, team: "Driver pool", teamId: "field", opponent: slate.venue, opponentId: "",
       position: "Driver", availability: "Driver availability not verified",
-      participation: `${confirmed ? "Published entrant; start not guaranteed" : "Conditional pool: upcoming entry list not published"}. ${grid.has(nascarName(driver.name)) ? `Observed official grid: ${grid.get(nascarName(driver.name))}` : "Starting position: ALLPLAY historical forecast, not an observed grid"}`,
-      raceContext: { scheduledLaps, fieldSize: grid.size || pool.length, observedStart: grid.get(nascarName(driver.name)) ?? null,
+      participation: `${confirmed ? "Published entrant; start not guaranteed" : "Conditional pool: upcoming entry list not published"}. ${grid.has(nascarName(driver.name)) ? `Observed official starting position: ${grid.get(nascarName(driver.name))}.` : "Official starting position not posted; ALLPLAY historical grid forecast only."} ${qualifyingGrid.has(nascarName(driver.name)) ? `Official qualifying position: ${qualifyingGrid.get(nascarName(driver.name))}.` : "Official qualifying position not posted."}`,
+      raceContext: { scheduledLaps, fieldSize: qualifyingGrid.size || grid.size || pool.length, observedStart: grid.get(nascarName(driver.name)) ?? null,
         observedQualifyingStart: qualifyingGrid.get(nascarName(driver.name)) ?? null, sourceUrl },
       roleContext: { status: confirmed ? "entrant" : "unknown", label: confirmed ? "Published entrant" : "Entry unverified",
         eligible: confirmed && (!grid.size || grid.has(nascarName(driver.name))), depthRank: null, source: "ESPN race entry list / official NASCAR grid", sourceUrl: sourceUrl ?? `https://www.espn.com/racing/race/_/id/${str(slate.events[0]?.id)}`,

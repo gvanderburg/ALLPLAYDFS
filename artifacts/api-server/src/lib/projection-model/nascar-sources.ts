@@ -84,7 +84,7 @@ export interface RaceContext {
   sourceUrl: string | null;
 }
 export function cupGrid(race: Json, key: "starting_position" | "qualifying_position" = "starting_position"): Map<string, number> {
-  const rows = list(race.results).map(obj).filter(r => (numeric(r.starting_position) ?? 0) > 0);
+  const rows = list(race.results).map(obj);
   if (!rows.length || integer(race.number_of_cars_in_field, 1) !== rows.length ||
     !permutation(rows.map(r => numeric(r[key]) ?? 0)) ||
     !unique(rows.map(r => nascarName(r.driver_fullname))) || !unique(rows.map(r => str(r.driver_id))) ||

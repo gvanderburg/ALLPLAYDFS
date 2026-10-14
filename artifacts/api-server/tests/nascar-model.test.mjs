@@ -89,6 +89,8 @@ test("published grid uses race starting positions, not practice or qualifying fi
   assert.equal(cupGrid(r, "qualifying_position").get("johnhunternemechek"), 1);
   f.results[0].starting_position = 0;
   assert.equal(cupGrid(r).size, 0);
+  assert.equal(cupGrid(r, "qualifying_position").size, 2,
+    "a complete official qualifying order is valid before adjusted starting positions are posted");
 });
 const candidate = context => ({ id: "es1", name: "John Hunter Nemechek", position: "Driver", team: "Driver pool", teamId: "field",
   opponent: "Cup test", opponentId: "", availability: "Unverified", participation: "Entrant", raceContext: context,
