@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "BASE_PATH=/ PORT=3000 VITE_CLERK_PROXY_URL=/api/__clerk pnpm --filter @workspace/dfs-dashboard run build",
-  "outputDirectory": "artifacts/dfs-dashboard/dist",
+  "buildCommand": "BASE_PATH=/ PORT=3000 VITE_CLERK_PROXY_URL=/api/__clerk pnpm --filter @workspace/dfs-dashboard run build && node scripts/stage-vercel-output.mjs",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/:path*",

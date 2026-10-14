@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
-assert.equal(config.outputDirectory, 'artifacts/dfs-dashboard/dist');
+assert.equal(config.outputDirectory, 'dist');
 assert.match(config.buildCommand, /BASE_PATH=\//);
 assert.match(config.buildCommand, /VITE_CLERK_PROXY_URL=\/api\/__clerk/);
+assert.match(config.buildCommand, /scripts\/stage-vercel-output\.mjs$/);
 assert.equal(config.rewrites[0].source, '/api/:path*');
 assert.match(config.rewrites[0].destination, /^https:\/\/[^/]+\.replit\.app\/api\/:path\*$/);
 assert.equal(config.rewrites[1].destination, '/index.html');

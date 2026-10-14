@@ -22,7 +22,10 @@ migration, and no domain registration transfer is required.
 5. Deploy to a generated Vercel URL first. Do not change DNS yet.
 
 The build command supplies `BASE_PATH=/`, `PORT=3000`, and
-`VITE_CLERK_PROXY_URL=/api/__clerk` only for the Vercel frontend build.
+`VITE_CLERK_PROXY_URL=/api/__clerk` only for the Vercel frontend build. The app
+builds under its workspace package and the staging script copies that result to
+the repository-root `dist/` folder that Vercel collects. This avoids depending
+on how Vercel resolves package-level output folders in a monorepo.
 Never put backend secrets, database credentials, or a Clerk secret key into a
 `VITE_*` variable or frontend source file.
 
