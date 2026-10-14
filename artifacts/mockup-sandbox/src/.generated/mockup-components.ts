@@ -5,6 +5,6 @@ export const modules: ModuleMap = {
   "./components/mockups/allplay-dashboard/Current.tsx": () => import("../components/mockups/allplay-dashboard/Current.tsx"),
   "./components/mockups/allplay-dashboard/RedBlack.tsx": () => import("../components/mockups/allplay-dashboard/RedBlack.tsx"),
   "./components/mockups/allplay-dashboard/SlateRefined.tsx": () => import("../components/mockups/allplay-dashboard/SlateRefined.tsx"),
-  "./components/mockups/allplay-reference/Current.tsx": () => import("../components/mockups/allplay-reference/Current.tsx"),
-  "./components/mockups/allplay-projection-reference/Current.tsx": () => import("../components/mockups/allplay-projection-reference/Current.tsx")
+  "./components/mockups/allplay-projection-reference/Current.tsx": () => import("../components/mockups/allplay-projection-reference/Current.tsx"),
+  "./components/mockups/allplay-reference/Current.tsx": () => import("../components/mockups/allplay-reference/Current.tsx")
 };
