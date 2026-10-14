@@ -2,7 +2,7 @@ import './_group.css';
 import { useState, type KeyboardEvent } from 'react';
 import {
   Activity, ArrowDownToLine, CalendarDays, ChevronRight, CircleHelp,
-  Clock3, Film, LockKeyhole, Menu, Newspaper, RefreshCw, ShieldCheck,
+  Clock3, Film, LockKeyhole, MapPin, Menu, Newspaper, RefreshCw, ShieldCheck,
   Smartphone, UserRound, X,
 } from 'lucide-react';
 
@@ -25,6 +25,17 @@ const NAV = [
   { label: 'Account', href: '/account', icon: UserRound },
 ];
 
+const NHL_REFERENCE_MATCHUPS = [
+  { time: '3:00 PM', venue: 'Little Caesars Arena', away: ['NJD', 'New Jersey Devils', 5], home: ['DET', 'Detroit Red Wings', 4], total: '6.5', spread: '−1.5' },
+  { time: '3:15 PM', venue: 'Nationwide Arena', away: ['FLA', 'Florida Panthers', 7], home: ['CBJ', 'Columbus Blue Jackets', 3], total: '5.5', spread: '−1.5' },
+  { time: '3:30 PM', venue: 'Bell Centre', away: ['BUF', 'Buffalo Sabres', 3], home: ['MTL', 'Montreal Canadiens', 4], total: '6.5', spread: '−1.5' },
+  { time: '3:45 PM', venue: 'Lenovo Center', away: ['WSH', 'Washington Capitals', 2], home: ['CAR', 'Carolina Hurricanes', 4], total: '6.5', spread: '−1.5' },
+  { time: '4:00 PM', venue: 'Xfinity Mobile Arena', away: ['SEA', 'Seattle Kraken', 3], home: ['PHI', 'Philadelphia Flyers', 2], total: '5.5', spread: '+1.5' },
+  { time: '4:15 PM', venue: 'Madison Square Garden', away: ['TBL', 'Tampa Bay Lightning', 1], home: ['NYR', 'New York Rangers', 4], total: '5.5', spread: '+1.5' },
+  { time: '4:30 PM', venue: 'Canadian Tire Centre', away: ['STL', 'St. Louis Blues', 7], home: ['OTT', 'Ottawa Senators', 2], total: '5.5', spread: '+1.5' },
+  { time: '4:45 PM', venue: 'UBS Arena', away: ['VAN', 'Vancouver Canucks', 2], home: ['NYI', 'New York Islanders', 3], total: '5.5', spread: '—' },
+] as const;
+
 function todayLocal() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -32,7 +43,7 @@ function todayLocal() {
 
 export function ClearDailyFlow() {
   const [date, setDate] = useState(todayLocal);
-  const [sport, setSport] = useState<(typeof SPORTS)[number]['id']>('nfl');
+  const [sport, setSport] = useState<(typeof SPORTS)[number]['id']>('nhl');
   const [installOpen, setInstallOpen] = useState(false);
   const [refreshRequested, setRefreshRequested] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -99,8 +110,28 @@ export function ClearDailyFlow() {
       .cdf .sport-tab { min-width:67px; padding:10px 15px; border:1px solid transparent; border-radius:5px; background:#1b1d1b; color:#c5cac3; }
       .cdf .sport-tab:hover:not(.active) { background:#272a27; border-color:#414641; }
       .cdf .sport-tab.active { background:var(--cdf-green); color:#102117; border-color:var(--cdf-green); }
-      .cdf .flow-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(265px,.8fr); gap:14px; align-items:start; }
+       .cdf .flow-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(265px,.8fr); gap:14px; align-items:start; }
       .cdf .flow-stack { display:grid; gap:14px; min-width:0; }
+       .cdf .slate-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+       .cdf .matchup-card { min-width:0; overflow:hidden; border:1px solid #353a45; border-radius:6px; background:#20232b; }
+       .cdf .matchup-top { display:flex; justify-content:space-between; align-items:center; min-height:32px; padding:6px 10px; background:#252933; border-bottom:1px solid #353a45; }
+       .cdf .matchup-time { color:#a7adb9; font:9px var(--app-font-mono); letter-spacing:.08em; text-transform:uppercase; }
+       .cdf .final-tag { padding:3px 6px; border:1px solid #315b45; border-radius:3px; background:#1b3025; color:#8fd5a9; font:8px var(--app-font-mono); letter-spacing:.08em; }
+       .cdf .matchup-main { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; padding:10px; }
+       .cdf .matchup-teams { display:grid; align-content:center; min-width:0; }
+       .cdf .matchup-team { display:grid; grid-template-columns:28px minmax(0,1fr) 22px; align-items:center; gap:7px; min-height:32px; }
+       .cdf .matchup-team + .matchup-team { border-top:1px solid #30343e; }
+       .cdf .team-mark { display:grid; place-items:center; width:25px; height:25px; border:1px solid #444a56; border-radius:5px; background:#2a2e38; color:#e0e5ed; font:8px var(--app-font-mono); }
+       .cdf .team-name { overflow:hidden; color:#dce0e7; font-size:10px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+       .cdf .team-score { color:#f0f2f5; font:600 15px 'Space Grotesk',sans-serif; text-align:right; }
+       .cdf .market-mini { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-self:center; overflow:hidden; border:1px solid #343946; border-radius:4px; background:#1c1f26; }
+       .cdf .market-mini > div { min-width:0; padding:7px 6px; }
+       .cdf .market-mini > div + div { border-left:1px solid #343946; }
+       .cdf .market-mini small { display:block; margin-bottom:5px; color:#aeb5c1; font:8px var(--app-font-mono); letter-spacing:.04em; white-space:nowrap; }
+       .cdf .market-mini strong { display:block; overflow:hidden; color:#e7eaee; font:600 12px var(--app-font-mono); text-overflow:ellipsis; white-space:nowrap; }
+       .cdf .matchup-foot { display:flex; justify-content:space-between; align-items:center; gap:7px; min-height:27px; padding:5px 10px; border-top:1px solid #343946; color:#989fac; font-size:9px; }
+       .cdf .matchup-venue { display:flex; align-items:center; gap:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+       .cdf .reference-note { margin:0 0 10px; color:#b6bdc8; font:9px/1.5 var(--app-font-mono); }
       .cdf .panel { background:var(--cdf-panel); border-color:var(--cdf-line); border-radius:7px; overflow:hidden; }
       .cdf .panel-head { min-height:49px; padding:12px 15px; background:#202220; border-color:var(--cdf-line); }
       .cdf .panel-title { display:flex; align-items:center; gap:9px; color:#e6e9e4; font-size:13px; }
@@ -154,6 +185,10 @@ export function ClearDailyFlow() {
         .cdf .action-group .btn { justify-content:center; }
         .cdf .sport-tabs { margin-right:-12px; padding-right:12px; }
         .cdf .sport-tab { min-height:40px; min-width:61px; padding:9px 12px; }
+         .cdf .slate-grid { grid-template-columns:minmax(0,1fr); }
+         .cdf .matchup-main { gap:7px; padding:9px; }
+         .cdf .matchup-team { grid-template-columns:25px minmax(0,1fr) 19px; gap:5px; }
+         .cdf .market-mini > div { padding:7px 8px; }
         .cdf .panel-head { padding:11px 12px; }
         .cdf .panel-body { padding:12px; }
         .cdf .slate-empty { grid-template-columns:34px minmax(0,1fr); gap:10px; padding:12px; }
@@ -183,7 +218,7 @@ export function ClearDailyFlow() {
     </aside>
 
     <main className="main-wrap">
-      <div className="sandbox-note"><CircleHelp size={13} /> PREVIEW MODE · Live slate and news feeds aren’t connected in this mockup.</div>
+       <div className="sandbox-note"><CircleHelp size={13} /> PREVIEW MODE · The compact NHL cards use finished-game examples from your attached image; live slate and news feeds aren’t connected here.</div>
       <div className="page-heading">
         <div>
           <div className="eyebrow">Your daily slate <span style={{ color: 'var(--slate-muted)' }}>/</span> {dayName}</div>
@@ -209,14 +244,33 @@ export function ClearDailyFlow() {
         <div className="flow-grid">
           <div className="flow-stack">
             <section className="panel" aria-labelledby="cdf-slate-heading">
-              <div className="panel-head panel-head-accent"><h2 className="panel-title" id="cdf-slate-heading"><CalendarDays size={16} /> {currentSport} slate</h2><span className="panel-meta">NOT AVAILABLE</span></div>
+              <div className="panel-head panel-head-accent"><h2 className="panel-title" id="cdf-slate-heading"><CalendarDays size={16} /> {currentSport} slate</h2><span className="panel-meta">{sport === 'nhl' ? '8 FINALS · REFERENCE SAMPLE' : 'NOT AVAILABLE'}</span></div>
               <div className="panel-body">
-                <div className="slate-empty">
+                {sport === 'nhl' ? <>
+                  <p className="reference-note">Finished scores, totals and lines are transcribed from the NHL screenshot you shared. Reference layout only — not today’s live slate.</p>
+                  <div className="slate-grid" aria-label="Compact two-column NHL matchup slate">
+                    {NHL_REFERENCE_MATCHUPS.map((game) => <article className="matchup-card" key={`${game.time}-${game.away[0]}`}>
+                      <div className="matchup-top"><span className="matchup-time">NHL · {game.time}</span><span className="final-tag">FINAL</span></div>
+                      <div className="matchup-main">
+                        <div className="matchup-teams">
+                          {[game.away, game.home].map(([code, name, score]) => <div className="matchup-team" key={code}>
+                            <span className="team-mark">{code}</span><span className="team-name">{name}</span><strong className="team-score">{score}</strong>
+                          </div>)}
+                        </div>
+                        <div className="market-mini" aria-label="Game totals and line">
+                          <div><small>VEGAS O/U</small><strong>{game.total}</strong></div>
+                          <div><small>SPREAD</small><strong>{game.spread}</strong></div>
+                        </div>
+                      </div>
+                      <div className="matchup-foot"><span className="matchup-venue"><MapPin size={11} />{game.venue}</span><span>DraftKings · Finished</span></div>
+                    </article>)}
+                  </div>
+                </> : <div className="slate-empty">
                   <div className="empty-icon"><CalendarDays size={17} /></div>
                   <div><h3>No slate data in this preview</h3><p>We can’t confirm games, totals, or available lines for {currentSport} on {chosenDate}. Nothing is being filled in with sample matchups.</p>
-                    <div className="slate-actions"><button className="btn btn-quiet" onClick={() => { setRefreshRequested(true); window.setTimeout(() => setRefreshRequested(false), 2200); }}><RefreshCw size={13} /> Try again</button><a className="btn btn-quiet" href="/news"><Newspaper size={13} /> Browse free news</a></div>
+                    <div className="slate-actions"><button className="btn btn-quiet" onClick={() => { setRefreshRequested(true); window.setTimeout(() => setRefreshRequested(false), 2200); }}><RefreshCw size={13} /> Try again</button><button className="btn btn-quiet" onClick={() => setSport('nhl')}>See layout example · NHL</button></div>
                   </div>
-                </div>
+                </div>}
               </div>
             </section>
             <section className="panel" aria-labelledby="cdf-news-heading">
