@@ -18,7 +18,7 @@
   --model-dim: #737873;
   --model-mint: #56bd87;
   --model-mint-dim: #244433;
-  --model-amber: #d4b54a;
+  --model-amber: #e3263a;
   --model-coral: #d35a61;
   --background: 120 2% 7%;
   --foreground: 90 5% 91%;
@@ -174,7 +174,7 @@ html, body, .app-shell { background: #111211; color: #e7e9e6; }
 .model-legend { margin: 8px 0 0; color: #8f958e; font-size: 9px; }
 .legend-dot { width: 6px; height: 6px; }
 .legend-mint { background: #56bd87; }
-.legend-amber { background: #d4b54a; }
+.legend-amber { background: #e3263a; }
 .legend-coral { background: #d35a61; }
 .model-table-tools { gap: 7px; }
 .model-search { background: #131413; border-color: #343734; color: #a0a59f; }
